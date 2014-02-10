@@ -15,8 +15,8 @@
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
 
-typedef	bool (*VCMTP_BOF_Function)();
-typedef void (*VCMTP_Recv_Complete_Function)();
+typedef	bool (*VCMTP_BOF_Function)(void* arg);
+typedef void (*VCMTP_Recv_Complete_Function)(void* arg);
 
 struct VcmtpReceiverStats {
 	uint	current_msg_id;

@@ -15,23 +15,27 @@
 #include "ReceivingApplicationNotifier.h"
 
 PerFileNotifier& PerFileNotifier::get_instance(
-        VCMTP_BOF_Function             bof_func,
-        VCMTP_Recv_Complete_Function   eof_func) {
-    return *new PerFileNotifier(bof_func, eof_func);
+        VCMTP_BOF_Function              bof_func,
+        VCMTP_Recv_Complete_Function    eof_func,
+        void*                           arg) {
+    return *new PerFileNotifier(bof_func, eof_func, arg);
 }
 
 PerFileNotifier::PerFileNotifier(
-        VCMTP_BOF_Function             bof_func,
-        VCMTP_Recv_Complete_Function   eof_func)
+        VCMTP_BOF_Function              bof_func,
+        VCMTP_Recv_Complete_Function    eof_func,
+        void*                           arg)
 :   bof_func(bof_func),
-    eof_func(eof_func) {
+    eof_func(eof_func),
+    arg(arg) {
 }
 
 bool PerFileNotifier::notify_of_bof() {
-    return false;
+    return bof_func(arg);
 }
 
 void PerFileNotifier::notify_of_eof() {
+    eof_func(arg);
 }
 
 

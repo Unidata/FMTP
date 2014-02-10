@@ -51,11 +51,13 @@ public:
      *                  seen.
      * @param eof_func  The function to call when a file has been completely
      *                  received.
+     * @param arg       An argument to be passed to the given functions or NULL.
      * @return          A new instance.
      */
     static PerFileNotifier& get_instance(
-        VCMTP_BOF_Function             bof_func,
-        VCMTP_Recv_Complete_Function   eof_func);
+        VCMTP_BOF_Function              bof_func,
+        VCMTP_Recv_Complete_Function    eof_func,
+        void*                           arg = NULL);
 
     bool notify_of_bof();
     void notify_of_eof();
@@ -67,19 +69,26 @@ private:
      *                          has been seen.
      * @param   eof_func        The function to call when a file has been
      *                          completely received.
+     * @param   arg             An argument to be passed to the given functions
+     *                          or NULL.
      */
     PerFileNotifier(
-        VCMTP_BOF_Function             bof_func,
-        VCMTP_Recv_Complete_Function   eof_func);
+        VCMTP_BOF_Function              bof_func,
+        VCMTP_Recv_Complete_Function    eof_func,
+        void*                           arg);
 
     /**
      * The function to call when a beginning-of-file has been seen.
      */
-    VCMTP_BOF_Function                 bof_func;
+    VCMTP_BOF_Function                  bof_func;
     /**
      * The function to call when a file has been completely received.
      */
-    VCMTP_Recv_Complete_Function       eof_func;
+    VCMTP_Recv_Complete_Function        eof_func;
+    /**
+     * The argument passed to the given functions.
+     */
+    void* const                         arg;
 };
 
 
