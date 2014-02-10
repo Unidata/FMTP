@@ -17,9 +17,9 @@
 #include <VCMTPReceiver.h>
 
 /**
- * This class is the abstract base class for notify a receiving application
- * about files. This functionality is abstracted so that a VCMTP receiver
- * doesn't have to worry about how it's done.
+ * This is the abstract base class for notifying a receiving application about
+ * files. This functionality is abstracted so that a VCMTP receiver doesn't have
+ * to worry about how it's done.
  */
 class ReceivingApplicationNotifier {
 public:
