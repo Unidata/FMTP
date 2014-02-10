@@ -11,14 +11,43 @@
  * @author: Steven R. Emmerson
  */
 
+#include "VCMTPReceiver.h"
 #include "ReceivingApplicationNotifier.h"
 
-ReceivingApplicationNotifier::ReceivingApplicationNotifier() {
-    // TODO Auto-generated constructor stub
-
+PerFileNotifier& PerFileNotifier::get_instance(
+        VCMTP_BOF_Function             bof_func,
+        VCMTP_Recv_Complete_Function   eof_func) {
+    return *new PerFileNotifier(bof_func, eof_func);
 }
 
-ReceivingApplicationNotifier::~ReceivingApplicationNotifier() {
-    // TODO Auto-generated destructor stub
+PerFileNotifier::PerFileNotifier(
+        VCMTP_BOF_Function             bof_func,
+        VCMTP_Recv_Complete_Function   eof_func)
+:   bof_func(bof_func),
+    eof_func(eof_func) {
 }
 
+bool PerFileNotifier::notify_of_bof() {
+    return false;
+}
+
+void PerFileNotifier::notify_of_eof() {
+}
+
+
+BatchedNotifier& BatchedNotifier::get_instance(
+        VCMTPReceiver&      receiver) {
+    return *new BatchedNotifier(receiver);
+}
+
+BatchedNotifier::BatchedNotifier(
+        VCMTPReceiver& receiver)
+:   receiver(receiver) {
+}
+
+bool BatchedNotifier::notify_of_bof() {
+    return false;
+}
+
+void BatchedNotifier::notify_of_eof() {
+}

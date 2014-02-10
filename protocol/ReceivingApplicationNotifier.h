@@ -23,7 +23,6 @@
  */
 class ReceivingApplicationNotifier {
 public:
-    ReceivingApplicationNotifier();
     virtual ~ReceivingApplicationNotifier();
 
     /**
@@ -45,9 +44,12 @@ public:
  */
 class PerFileNotifier: public ReceivingApplicationNotifier {
 public:
-   static PerFileNotifier& get_instance(
-        VCMTP_BOF_Function&             bof_func,
-        VCMTP_Recv_Complete_Function&   eof_func);
+    static PerFileNotifier& get_instance(
+        VCMTP_BOF_Function             bof_func,
+        VCMTP_Recv_Complete_Function   eof_func);
+
+    bool notify_of_bof();
+    void notify_of_eof();
 
 private:
     /**
@@ -58,11 +60,11 @@ private:
      *                          completely received.
      */
     PerFileNotifier(
-        VCMTP_BOF_Function&             bof_func,
-        VCMTP_Recv_Complete_Function&   eof_func);
+        VCMTP_BOF_Function             bof_func,
+        VCMTP_Recv_Complete_Function   eof_func);
 
-    VCMTP_BOF_Function&                 bof_func;
-    VCMTP_Recv_Complete_Function&       eof_func;
+    VCMTP_BOF_Function                 bof_func;
+    VCMTP_Recv_Complete_Function       eof_func;
 };
 
 
@@ -72,6 +74,11 @@ private:
  */
 class BatchedNotifier: public ReceivingApplicationNotifier  {
 public:
+    static BatchedNotifier& get_instance(
+        VCMTPReceiver&  receiver);
+
+    bool notify_of_bof();
+    void notify_of_eof();
 
 private:
     /**
