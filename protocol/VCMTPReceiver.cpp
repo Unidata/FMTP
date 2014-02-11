@@ -45,7 +45,7 @@ void VCMTPReceiver::init(
 
     notify_of_bof = bof_func;
     notify_of_eof = eof_func;
-    this->arg = arg;
+    notify_arg = arg;
 }
 
 

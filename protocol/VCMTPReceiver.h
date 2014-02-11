@@ -215,7 +215,7 @@ private:
 	void                            add_eof_to_queue();
         VCMTP_BOF_Function              notify_of_bof;
         VCMTP_Recv_Complete_Function    notify_of_eof;
-        void*                           arg;
+        void*                           notify_arg;
 };
 
 #endif /* VCMTPRECEIVER_H_ */
