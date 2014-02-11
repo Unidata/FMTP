@@ -8,15 +8,13 @@
 #ifndef VCMTPRECEIVER_H_
 #define VCMTPRECEIVER_H_
 
+#include "ReceivingApplicationNotifier.h"
 #include "vcmtp.h"
 #include "VCMTPComm.h"
 #include "TcpClient.h"
 #include "VcmtpSenderMetadata.h"
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
-
-typedef	bool (*VCMTP_BOF_Function)(void*);
-typedef void (*VCMTP_Recv_Complete_Function)(void*);
 
 struct VcmtpReceiverStats {
 	uint	current_msg_id;
@@ -70,32 +68,20 @@ struct VcmtpReceiverConfig {
 	string  sender_ip_addr;
 	int		sender_tcp_port;
 	int		receive_mode;
-	VCMTP_BOF_Function    			bof_function;
-	VCMTP_Recv_Complete_Function	complete_function;
 };
 
 
 // VCMTPReceiver is the main class that communicates with the VCMTP Sender
-class VCMTPReceiver : public VCMTPComm {
+class VCMTPReceiver : public VCMTPComm, public ReceivingApplicationNotifier {
 public:
         /**
-         * Constructs a VCMTP receiver.
-         * @param buf_size      Size of the receiving buffer. Ignored.
+         * Constructs.
+         * @param buf_size      Size of the receiving buffer in bytes. Ignored.
+         * @param notifier      Notifier of the receiving application of files.
+         *                      The default is to batch the notifications via
+         *                      this class's notification queue.
          */
-	VCMTPReceiver(int size);
-	/**
-	 * Constructs a VCMTP receiver.
-         * @param bof_func  The function to call when a beginning-of-file has
-         *                  been seen or 0.
-         * @param eof_func  The function to call when a file has been completely
-         *                  received or 0.
-         * @param arg       An argument to be passed to the given functions or
-         *                  0.
-	 */
-	VCMTPReceiver(
-            VCMTP_BOF_Function                  bof_func,
-            VCMTP_Recv_Complete_Function        eof_func,
-            void*                               arg = 0);
+	VCMTPReceiver(int buf_size, ReceivingApplicationNotifier* notifier = 0);
 	virtual ~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -116,6 +102,8 @@ public:
 	void	ExecuteCommand(char* command);
 	void 	SetStatusProxy(StatusProxy* proxy);
 	const struct VcmtpReceiverStats GetBufferStats();
+	bool    notify_of_bof();
+	void    notify_of_eof();
 
 
 private:
@@ -136,16 +124,6 @@ private:
 	PerformanceCounter 	cpu_info;
 	bool				time_diff_measured;
 	double 				time_diff;
-
-        /**
-         * Because there are multiple constructors, this method exists to
-         * initialize those data members in which assignment works as well as
-         * true initialization.
-         */
-        void    init(
-            VCMTP_BOF_Function              bof_func,
-            VCMTP_Recv_Complete_Function    eof_func,
-            void*                           arg);
 
 	void 	ReconnectSender();
 
@@ -178,6 +156,10 @@ private:
 	VcmtpHeader* read_ahead_header;
 	char* read_ahead_data;
 
+	/**
+	 * Notifies the receiving application about files.
+	 */
+	ReceivingApplicationNotifier*   notifier;
 
 
 	//*********************** Main receiving thread functions ***********************
@@ -207,15 +189,6 @@ private:
 	size_t	received_retrans_bytes;
 	bool	is_multicast_finished;
 	bool	retrans_switch;		// a switch that allows/disallows on-the-fly retransmission
-
-	/*
-	 * Methods for notifying the application of files.
-	 */
-	bool                            add_bof_to_queue();
-	void                            add_eof_to_queue();
-        VCMTP_BOF_Function              notify_of_bof;
-        VCMTP_Recv_Complete_Function    notify_of_eof;
-        void*                           notify_arg;
 };
 
 #endif /* VCMTPRECEIVER_H_ */

@@ -18,6 +18,7 @@ lib_la_SOURCES		= \
     NetInterfaceManager.cpp NetInterfaceManager.h \
     RawSocketComm.cpp RawSocketComm.h \
     ReceiverStatusProxy.cpp ReceiverStatusProxy.h \
+    ReceivingApplicationNotifier.h \
     SenderStatusProxy.cpp SenderStatusProxy.h \
     TcpClient.cpp TcpClient.h \
     TcpServer.cpp TcpServer.h \
