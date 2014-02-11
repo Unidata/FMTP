@@ -7,44 +7,65 @@
 
 #include "VCMTPReceiver.h"
 
+void VCMTPReceiver::init(
+        VCMTP_BOF_Function              bof_func,
+        VCMTP_Recv_Complete_Function    eof_func,
+        void*                           arg)
+{
+    retrans_tcp_client = NULL;
+    max_sock_fd = 0;
+    multicast_sock = ptr_multicast_comm->GetSocket();
+    retrans_tcp_sock = 0;
+    packet_loss_rate = 0;
+    session_id = 0;
+    status_proxy = NULL;
+    time_diff_measured = false;
+    time_diff = 0;
+    read_ahead_header = (VcmtpHeader*)read_ahead_buffer;
+    read_ahead_data = read_ahead_buffer + VCMTP_HLEN;
+    recv_thread = 0;
+    retrans_thread = 0;
+    keep_retrans_alive = false;
+    vcmtp_seq_num = 0;
+    total_missing_bytes = 0;
+    received_retrans_bytes = 0;
+    is_multicast_finished = false;
+    retrans_switch = true;
+
+    //ptr_multicast_comm->SetBufferSize(10000000);
+
+    srand(time(NULL));
+    bzero(&recv_stats, sizeof(recv_stats));
+    bzero(&cpu_counter, sizeof(cpu_counter));
+    bzero(&global_timer, sizeof(global_timer));
+
+    read_ahead_header->session_id = -1;
+
+    AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+
+    notify_of_bof = bof_func;
+    notify_of_eof = eof_func;
+    this->arg = arg;
+}
+
 
 /**
  * Constructs a VCMTP receiver.
- *
  * @param buf_size      Size of the receiving buffer. Ignored.
  */
 VCMTPReceiver::VCMTPReceiver(const int buf_size)
-:   retrans_tcp_client(NULL),
-    max_sock_fd(0),
-    multicast_sock(ptr_multicast_comm->GetSocket()),
-    retrans_tcp_sock(0),
-    packet_loss_rate(0),
-    session_id(0),
-    status_proxy(NULL),
-    cpu_info(),
-    time_diff_measured(false),
-    time_diff(0),
-    read_ahead_header((VcmtpHeader*)read_ahead_buffer),
-    read_ahead_data(read_ahead_buffer + VCMTP_HLEN),
-    recv_thread(0),
-    retrans_thread(0),
-    keep_retrans_alive(false),
-    vcmtp_seq_num(0),
-    total_missing_bytes(0),
-    received_retrans_bytes(0),
-    is_multicast_finished(false),
-    retrans_switch(true)
+:   cpu_info()
 {
-	//ptr_multicast_comm->SetBufferSize(10000000);
+    init(0, 0, 0);
+}
 
-	srand(time(NULL));
-	bzero(&recv_stats, sizeof(recv_stats));
-	bzero(&cpu_counter, sizeof(cpu_counter));
-	bzero(&global_timer, sizeof(global_timer));
-
-	read_ahead_header->session_id = -1;
-
-	AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+VCMTPReceiver::VCMTPReceiver(
+        VCMTP_BOF_Function              bof_func,
+        VCMTP_Recv_Complete_Function    eof_func,
+        void*                           arg)
+:   cpu_info()
+{
+    init(bof_func, eof_func, arg);
 }
 
 VCMTPReceiver::~VCMTPReceiver() {

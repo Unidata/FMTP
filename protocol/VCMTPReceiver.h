@@ -15,8 +15,8 @@
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
 
-typedef	bool (*VCMTP_BOF_Function)(void* arg);
-typedef void (*VCMTP_Recv_Complete_Function)(void* arg);
+typedef	bool (*VCMTP_BOF_Function)(void*);
+typedef void (*VCMTP_Recv_Complete_Function)(void*);
 
 struct VcmtpReceiverStats {
 	uint	current_msg_id;
@@ -78,7 +78,24 @@ struct VcmtpReceiverConfig {
 // VCMTPReceiver is the main class that communicates with the VCMTP Sender
 class VCMTPReceiver : public VCMTPComm {
 public:
-	VCMTPReceiver(int buf_size);
+        /**
+         * Constructs a VCMTP receiver.
+         * @param buf_size      Size of the receiving buffer. Ignored.
+         */
+	VCMTPReceiver(int size);
+	/**
+	 * Constructs a VCMTP receiver.
+         * @param bof_func  The function to call when a beginning-of-file has
+         *                  been seen or 0.
+         * @param eof_func  The function to call when a file has been completely
+         *                  received or 0.
+         * @param arg       An argument to be passed to the given functions or
+         *                  0.
+	 */
+	VCMTPReceiver(
+            VCMTP_BOF_Function                  bof_func,
+            VCMTP_Recv_Complete_Function        eof_func,
+            void*                               arg = 0);
 	virtual ~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -119,6 +136,16 @@ private:
 	PerformanceCounter 	cpu_info;
 	bool				time_diff_measured;
 	double 				time_diff;
+
+        /**
+         * Because there are multiple constructors, this method exists to
+         * initialize those data members in which assignment works as well as
+         * true initialization.
+         */
+        void    init(
+            VCMTP_BOF_Function              bof_func,
+            VCMTP_Recv_Complete_Function    eof_func,
+            void*                           arg);
 
 	void 	ReconnectSender();
 
@@ -181,6 +208,14 @@ private:
 	bool	is_multicast_finished;
 	bool	retrans_switch;		// a switch that allows/disallows on-the-fly retransmission
 
+	/*
+	 * Methods for notifying the application of files.
+	 */
+	bool                            add_bof_to_queue();
+	void                            add_eof_to_queue();
+        VCMTP_BOF_Function              notify_of_bof;
+        VCMTP_Recv_Complete_Function    notify_of_eof;
+        void*                           arg;
 };
 
 #endif /* VCMTPRECEIVER_H_ */
