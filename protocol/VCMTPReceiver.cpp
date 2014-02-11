@@ -7,48 +7,58 @@
 
 #include "VCMTPReceiver.h"
 
-
-/**
- * Constructs a VCMTP receiver.
- *
- * @param buf_size      Size of the receiving buffer in bytes. Ignored.
- * @param notifier      Notifier of the receiving application about files.
- */
-VCMTPReceiver::VCMTPReceiver(
-        const int                       buf_size,
-        ReceivingApplicationNotifier*   notifier)
-:   retrans_tcp_client(NULL),
-    max_sock_fd(0),
-    multicast_sock(ptr_multicast_comm->GetSocket()),
-    retrans_tcp_sock(0),
-    packet_loss_rate(0),
-    session_id(0),
-    status_proxy(NULL),
-    cpu_info(),
-    time_diff_measured(false),
-    time_diff(0),
-    read_ahead_header((VcmtpHeader*)read_ahead_buffer),
-    read_ahead_data(read_ahead_buffer + VCMTP_HLEN),
-    notifier(notifier ? notifier : this),
-    recv_thread(0),
-    retrans_thread(0),
-    keep_retrans_alive(false),
-    vcmtp_seq_num(0),
-    total_missing_bytes(0),
-    received_retrans_bytes(0),
-    is_multicast_finished(false),
-    retrans_switch(true)
+void VCMTPReceiver::init()
 {
-        //ptr_multicast_comm->SetBufferSize(10000000);
+    retrans_tcp_client = 0;
+    max_sock_fd = 0;
+    multicast_sock = ptr_multicast_comm->GetSocket();
+    retrans_tcp_sock = 0;
+    packet_loss_rate = 0;
+    session_id = 0;
+    status_proxy = 0;
+    time_diff_measured = false;
+    time_diff = 0;
+    read_ahead_header = (VcmtpHeader*)read_ahead_buffer;
+    read_ahead_data = read_ahead_buffer + VCMTP_HLEN;
+    recv_thread = 0;
+    retrans_thread = 0;
+    keep_retrans_alive = false;
+    vcmtp_seq_num = 0;
+    total_missing_bytes = 0;
+    received_retrans_bytes = 0;
+    is_multicast_finished = false;
+    retrans_switch = true;
 
-        srand(time(NULL));
-        bzero(&recv_stats, sizeof(recv_stats));
-        bzero(&cpu_counter, sizeof(cpu_counter));
-        bzero(&global_timer, sizeof(global_timer));
+    //ptr_multicast_comm->SetBufferSize(10000000);
 
-        read_ahead_header->session_id = -1;
+    srand(time(NULL));
+    bzero(&recv_stats, sizeof(recv_stats));
+    bzero(&cpu_counter, sizeof(cpu_counter));
+    bzero(&global_timer, sizeof(global_timer));
 
-        AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+    read_ahead_header->session_id = -1;
+
+    AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+}
+
+
+VCMTPReceiver::VCMTPReceiver(
+    const int                       buf_size)
+:
+    cpu_info(),
+    notifier(*this)
+{
+    init();
+}
+
+
+VCMTPReceiver::VCMTPReceiver(
+    ReceivingApplicationNotifier&   notifier)
+:
+    cpu_info(),
+    notifier(notifier)
+{
+    init();
 }
 
 VCMTPReceiver::~VCMTPReceiver() {

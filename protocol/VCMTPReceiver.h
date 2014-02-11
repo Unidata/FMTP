@@ -75,13 +75,17 @@ struct VcmtpReceiverConfig {
 class VCMTPReceiver : public VCMTPComm, public ReceivingApplicationNotifier {
 public:
         /**
-         * Constructs.
+         * Constructs. The receiving application will be notified of file events
+         * via the notification queue.
          * @param buf_size      Size of the receiving buffer in bytes. Ignored.
-         * @param notifier      Notifier of the receiving application of files.
-         *                      The default is to batch the notifications via
-         *                      this class's notification queue.
          */
-	VCMTPReceiver(int buf_size, ReceivingApplicationNotifier* notifier = 0);
+	VCMTPReceiver(int buf_size);
+        /**
+         * Constructs.
+         * @param notifier      Notifier of the receiving application of file
+         *                      events.
+         */
+	VCMTPReceiver(ReceivingApplicationNotifier& notifier);
 	virtual ~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -107,23 +111,28 @@ public:
 
 
 private:
-	TcpClient*		retrans_tcp_client;
+	TcpClient*	        retrans_tcp_client;
 	// used in the select() system call
-	int			max_sock_fd;
-	int 		multicast_sock;
-	int			retrans_tcp_sock;
-	fd_set		read_sock_set;
-	ofstream 	retrans_info;
+	int		        max_sock_fd;
+	int 		        multicast_sock;
+	int		        retrans_tcp_sock;
+	fd_set		        read_sock_set;
+	ofstream 	        retrans_info;
 
-	int 				packet_loss_rate;
-	uint				session_id;
+	int 		        packet_loss_rate;
+	uint			session_id;
 	VcmtpReceiverStats 	recv_stats;
 	CpuCycleCounter		cpu_counter, global_timer;
 	StatusProxy*		status_proxy;
 
 	PerformanceCounter 	cpu_info;
-	bool				time_diff_measured;
-	double 				time_diff;
+	bool			time_diff_measured;
+	double 			time_diff;
+
+	/**
+	 * Initializes this instance.
+	 */
+	void    init();
 
 	void 	ReconnectSender();
 
@@ -159,7 +168,7 @@ private:
 	/**
 	 * Notifies the receiving application about files.
 	 */
-	ReceivingApplicationNotifier*   notifier;
+	ReceivingApplicationNotifier&   notifier;
 
 
 	//*********************** Main receiving thread functions ***********************
