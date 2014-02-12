@@ -526,6 +526,18 @@ void VCMTPReceiver::HandleUnicastPacket() {
 	}
 }
 
+bool VCMTPReceiver::notify_of_bof(VcmtpSenderMessage& msg) {
+    return false;       // TODO
+}
+
+void VCMTPReceiver::notify_of_eof(VcmtpSenderMessage& msg) {
+    // TODO
+}
+
+void VCMTPReceiver::notify_of_missed_file(VcmtpSenderMessage& msg) {
+    // TODO
+}
+
 
 /**
  * Handle a BOF message for a new file

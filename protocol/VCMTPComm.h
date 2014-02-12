@@ -16,7 +16,7 @@
 class VCMTPComm {
 public:
 	VCMTPComm();
-	~VCMTPComm();
+	virtual ~VCMTPComm();
 
 	virtual int JoinGroup(string addr, u_short port);
 	string 		GetInterfaceName();

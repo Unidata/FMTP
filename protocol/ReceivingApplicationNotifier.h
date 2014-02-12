@@ -14,25 +14,32 @@
 #ifndef RECEIVING_APPLICATION_NOTIFIER_H_
 #define RECEIVING_APPLICATION_NOTIFIER_H_
 
+#include "vcmtp.h"
+
 /**
  * This abstract base class notifies a receiving application about files.
  */
 class ReceivingApplicationNotifier {
 public:
-    virtual ~ReceivingApplicationNotifier();
+    virtual ~ReceivingApplicationNotifier() {};
 
     /**
      * Notifies the receiving application about the beginning of a file.
      *
      * @retval  true    If and only if the application wants the file.
      */
-    virtual bool notify_of_bof();
+    virtual bool notify_of_bof(VcmtpSenderMessage& msg) = 0;
 
     /**
      * Notifies the receiving application about the complete reception of a
      * file.
      */
-    virtual void notify_of_eof();
+    virtual void notify_of_eof(VcmtpSenderMessage& msg) = 0;
+
+    /**
+     * Notifies the receiving application about a missed file.
+     */
+    virtual void notify_of_missed_file(VcmtpSenderMessage& msg) = 0;
 };
 
 #endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */

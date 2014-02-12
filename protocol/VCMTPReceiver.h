@@ -86,7 +86,7 @@ public:
          *                      events.
          */
 	VCMTPReceiver(ReceivingApplicationNotifier& notifier);
-	virtual ~VCMTPReceiver();
+	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
 	int		ConnectSenderOnTCP();
@@ -106,8 +106,9 @@ public:
 	void	ExecuteCommand(char* command);
 	void 	SetStatusProxy(StatusProxy* proxy);
 	const struct VcmtpReceiverStats GetBufferStats();
-	bool    notify_of_bof();
-	void    notify_of_eof();
+	bool    notify_of_bof(VcmtpSenderMessage& msg);
+	void    notify_of_eof(VcmtpSenderMessage& msg);
+	void    notify_of_missed_file(VcmtpSenderMessage& msg);
 
 
 private:
