@@ -294,6 +294,29 @@ void VCMTPReceiver::SetSchedRR(bool is_rr) {
 
 
 
+/**
+ * Joins an Internet multicast group. This configures the socket locally to
+ * receive multicast packets destined to the given port, adds an Internet
+ * multicast group to the socket, and establishes a TCP connection to the VCMTP
+ * sender.
+ *
+ * @param[in] addr                   IPv4 address of the multicast group in
+ *                                   dotted-decimal format.
+ * @param[in] port                   Port number of the multicast group.
+ * @returns   1                      Success.
+ * @throws    std::invalid_argument  if \c addr couldn't be converted into a
+ *                                   binary IPv4 address.
+ * @throws    std::runtime_error     if the IP address of the PA interface
+ *                                   couldn't be obtained. (The PA address seems
+ *                                   to be specific to Linux and might cause
+ *                                   problems.)
+ * @throws    std::runtime_error     if the socket couldn't be bound to the
+ *                                   interface.
+ * @throws    std::runtime_error     if the socket couldn't be bound to the
+ *                                   Internet address.
+ * @throws    std::runtime_error     if the multicast group sa couldn't be added
+ *                                   to the socket.
+ */
 int VCMTPReceiver::JoinGroup(string addr, ushort port) {
 	VCMTPComm::JoinGroup(addr, port);
 	ConnectSenderOnTCP();

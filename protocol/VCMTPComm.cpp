@@ -6,6 +6,10 @@
  */
 
 #include "VCMTPComm.h"
+#include <errno.h>
+#include <exception>
+#include <stdexcept>
+#include <string.h>
 
 VCMTPComm::VCMTPComm() {
 	ptr_multicast_comm = new MulticastComm();
@@ -53,8 +57,28 @@ int VCMTPComm::GetPortNumber() {
 }
 
 
-// Not IGMP join
-// Local register of multicast address
+/**
+ * Joins an Internet multicast group. This configures the socket locally to
+ * receive multicast packets destined to the given port and adds an Internet
+ * multicast group to the socket.
+ *
+ * @param[in] addr                   IPv4 address of the multicast group in
+ *                                   dotted-decimal format.
+ * @param[in] port                   Port number of the multicast group.
+ * @returns   1                      Success.
+ * @throws    std::invalid_argument  if \c addr couldn't be converted into a
+ *                                   binary IPv4 address.
+ * @throws    std::runtime_error     if the IP address of the PA interface
+ *                                   couldn't be obtained. (The PA address seems
+ *                                   to be specific to Linux and might cause
+ *                                   problems.)
+ * @throws    std::runtime_error     if the socket couldn't be bound to the
+ *                                   interface.
+ * @throws    std::runtime_error     if the socket couldn't be bound to the
+ *                                   Internet address.
+ * @throws    std::runtime_error     if the multicast group sa couldn't be added
+ *                                   to the socket.
+ */
 int VCMTPComm::JoinGroup(string addr, ushort port) {
 	group_addr = addr;
 	port_num = port;
@@ -62,7 +86,13 @@ int VCMTPComm::JoinGroup(string addr, ushort port) {
 	sockaddr_in sa;
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(PORT_NUM);
-	inet_pton(AF_INET, addr.c_str(), &sa.sin_addr);
+
+	if (inet_pton(AF_INET, addr.c_str(), &sa.sin_addr) != 1) {
+	    throw std::invalid_argument(std::string("Couldn't convert Internet "
+	            "address \"") + addr + "\" into binary IPv4 address: " +
+	            strerror(errno));
+	}
+
 	ptr_multicast_comm->JoinGroup((SA *)&sa, sizeof(sa), if_name.c_str()); //(char*)NULL); //
 
 	vcmtp_group_id = sa.sin_addr.s_addr;
