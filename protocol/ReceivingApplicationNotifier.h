@@ -17,7 +17,7 @@
 #include "vcmtp.h"
 
 /**
- * This abstract base class notifies a receiving application about files.
+ * This base class notifies a receiving application about file events.
  */
 class ReceivingApplicationNotifier {
 public:
@@ -28,18 +28,18 @@ public:
      *
      * @retval  true    If and only if the application wants the file.
      */
-    virtual bool notify_of_bof(VcmtpSenderMessage& msg) = 0;
+    virtual bool notify_of_bof(VcmtpSenderMessage& msg);
 
     /**
      * Notifies the receiving application about the complete reception of a
      * file.
      */
-    virtual void notify_of_eof(VcmtpSenderMessage& msg) = 0;
+    virtual void notify_of_eof(VcmtpSenderMessage& msg);
 
     /**
      * Notifies the receiving application about a missed file.
      */
-    virtual void notify_of_missed_file(VcmtpSenderMessage& msg) = 0;
+    virtual void notify_of_missed_file(VcmtpSenderMessage& msg);
 };
 
 #endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */

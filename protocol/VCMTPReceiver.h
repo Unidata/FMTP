@@ -72,20 +72,10 @@ struct VcmtpReceiverConfig {
 
 
 // VCMTPReceiver is the main class that communicates with the VCMTP Sender
-class VCMTPReceiver : public VCMTPComm, public ReceivingApplicationNotifier {
+class VCMTPReceiver : public VCMTPComm {
 public:
-        /**
-         * Constructs. The receiving application will be notified of file events
-         * via the notification queue.
-         * @param buf_size      Size of the receiving buffer in bytes. Ignored.
-         */
 	VCMTPReceiver(int buf_size);
-        /**
-         * Constructs.
-         * @param notifier      Notifier of the receiving application of file
-         *                      events.
-         */
-	VCMTPReceiver(ReceivingApplicationNotifier& notifier);
+	VCMTPReceiver(const ReceivingApplicationNotifier& notifier);
 	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -167,9 +157,24 @@ private:
 	char* read_ahead_data;
 
 	/**
-	 * Notifies the receiving application about files.
+	 * Notifies the receiving application about file events.
 	 */
-	ReceivingApplicationNotifier&   notifier;
+	const ReceivingApplicationNotifier      notifier;
+
+	/**
+	 * This class implements the default method for notifying the receiving
+	 * application about file events by using the notification queue within
+	 * the VCMTPReceiver.
+	 */
+	class BatchedNotifier : public ReceivingApplicationNotifier {
+	public:
+	    BatchedNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
+            bool notify_of_bof(VcmtpSenderMessage& msg);
+            void notify_of_eof(VcmtpSenderMessage& msg);
+            void notify_of_missed_file(VcmtpSenderMessage& msg);
+	private:
+            VCMTPReceiver&      receiver;
+	};
 
 
 	//*********************** Main receiving thread functions ***********************

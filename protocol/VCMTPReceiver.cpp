@@ -42,18 +42,28 @@ void VCMTPReceiver::init()
 }
 
 
+/**
+ * Constructs. The receiving application will be notified of file events
+ * via the notification queue.
+ * @param buf_size      Size of the receiving buffer in bytes. Ignored.
+ */
 VCMTPReceiver::VCMTPReceiver(
     const int                       buf_size)
 :
     cpu_info(),
-    notifier(*this)
+    notifier(BatchedNotifier(*this))
 {
     init();
 }
 
 
+/**
+ * Constructs.
+ * @param notifier      Notifier of the receiving application of file
+ *                      events.
+ */
 VCMTPReceiver::VCMTPReceiver(
-    ReceivingApplicationNotifier&   notifier)
+    const ReceivingApplicationNotifier&   notifier)
 :
     cpu_info(),
     notifier(notifier)
@@ -549,15 +559,16 @@ void VCMTPReceiver::HandleUnicastPacket() {
 	}
 }
 
-bool VCMTPReceiver::notify_of_bof(VcmtpSenderMessage& msg) {
+bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
     return false;       // TODO
 }
 
-void VCMTPReceiver::notify_of_eof(VcmtpSenderMessage& msg) {
+void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
     // TODO
 }
 
-void VCMTPReceiver::notify_of_missed_file(VcmtpSenderMessage& msg) {
+void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
+        VcmtpSenderMessage& msg) {
     // TODO
 }
 
