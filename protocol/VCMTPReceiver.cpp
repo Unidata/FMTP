@@ -45,6 +45,7 @@ void VCMTPReceiver::init()
 /**
  * Constructs. The receiving application will be notified of file events
  * via the notification queue.
+ *
  * @param buf_size      Size of the receiving buffer in bytes. Ignored.
  */
 VCMTPReceiver::VCMTPReceiver(
@@ -58,7 +59,8 @@ VCMTPReceiver::VCMTPReceiver(
 
 
 /**
- * Constructs.
+ * Constructs from a notifier of the receiving application of file events.
+ *
  * @param notifier      Notifier of the receiving application of file
  *                      events.
  */
