@@ -28,18 +28,18 @@ public:
      *
      * @retval  true    If and only if the application wants the file.
      */
-    virtual bool notify_of_bof(VcmtpSenderMessage& msg);
+    virtual bool notify_of_bof(VcmtpSenderMessage& msg) {return false;};
 
     /**
      * Notifies the receiving application about the complete reception of a
      * file.
      */
-    virtual void notify_of_eof(VcmtpSenderMessage& msg);
+    virtual void notify_of_eof(VcmtpSenderMessage& msg) {};
 
     /**
      * Notifies the receiving application about a missed file.
      */
-    virtual void notify_of_missed_file(VcmtpSenderMessage& msg);
+    virtual void notify_of_missed_file(VcmtpSenderMessage& msg) {};
 };
 
 #endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */
