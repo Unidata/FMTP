@@ -62,7 +62,8 @@ VCMTPReceiver::VCMTPReceiver(
  * Constructs from a notifier of the receiving application of file events.
  *
  * @param notifier      Notifier of the receiving application of file
- *                      events.
+ *                      events. Defensively copied; the client may delete upon
+ *                      return.
  */
 VCMTPReceiver::VCMTPReceiver(
     const ReceivingApplicationNotifier&   notifier)
