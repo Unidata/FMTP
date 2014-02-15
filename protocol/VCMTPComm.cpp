@@ -79,7 +79,7 @@ int VCMTPComm::GetPortNumber() {
  * @throws    std::runtime_error     if the multicast group sa couldn't be added
  *                                   to the socket.
  */
-int VCMTPComm::JoinGroup(string addr, ushort port) {
+int VCMTPComm::JoinGroup(const string addr, const ushort port) {
 	group_addr = addr;
 	port_num = port;
 

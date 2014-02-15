@@ -16,7 +16,7 @@
  * Retransmission Requester.
  *
  * @param[in] serv_addr             Address of multicast sender. Can be hostname
- *                                  or dotted-quad IPv4 address
+ *                                  or dotted-decimal IPv4 address
  * @param[in] port                  Port number on @code{serv_addr} to which to
  *                                  connect
  * @throws    std::invalid_argument @code{serv_addr} is a hostname and doesn't
