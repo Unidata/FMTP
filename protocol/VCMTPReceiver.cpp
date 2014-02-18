@@ -383,7 +383,10 @@ void VCMTPReceiver::Start() {
 }
 
 
-// Main receiving thread functions
+/**
+ * Creates a thread on which the receiver is immediately executed. Returns
+ * immediately.
+ */
 void VCMTPReceiver::StartReceivingThread() {
 	pthread_create(&recv_thread, NULL, &VCMTPReceiver::StartReceivingThread, this);
 }
@@ -394,7 +397,9 @@ void* VCMTPReceiver::StartReceivingThread(void* ptr) {
 }
 
 
-// Main file receiving function
+/**
+ * Executes the receiver. Returns when the receiver terminates.
+ */
 void VCMTPReceiver::RunReceivingThread() {
 	fd_set 	read_set;
 	while (true) {

@@ -81,6 +81,7 @@ public:
 	int 	JoinGroup(string addr, u_short port);
 	int		ConnectSenderOnTCP();
 	void 	Start();
+	void 	StartReceivingThread();
 	void	SetSchedRR(bool is_rr);
 
 	void 	SetPacketLossRate(int rate);
@@ -179,7 +180,6 @@ private:
 
 	//*********************** Main receiving thread functions ***********************
 	pthread_t	recv_thread;
-	void 	StartReceivingThread();
 	static void* StartReceivingThread(void* ptr);
 	void	RunReceivingThread();
 	void	HandleMulticastPacket();
