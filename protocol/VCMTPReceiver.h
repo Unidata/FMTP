@@ -100,6 +100,7 @@ public:
 	bool    notify_of_bof(VcmtpSenderMessage& msg);
 	void    notify_of_eof(VcmtpSenderMessage& msg);
 	void    notify_of_missed_file(VcmtpSenderMessage& msg);
+	void	RunReceivingThread();
 
 
 private:
@@ -181,7 +182,6 @@ private:
 	//*********************** Main receiving thread functions ***********************
 	pthread_t	recv_thread;
 	static void* StartReceivingThread(void* ptr);
-	void	RunReceivingThread();
 	void	HandleMulticastPacket();
 	void	HandleUnicastPacket();
 	void	HandleBofMessage(VcmtpSenderMessage& sender_msg);
