@@ -8,6 +8,7 @@
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
+    BofResponse.cpp BofResponse.h \
     ConfigInfo.cpp ConfigInfo.h \
     EventQueue.cpp EventQueue.h \
     ExperimentManager2.cpp ExperimentManager2.h \

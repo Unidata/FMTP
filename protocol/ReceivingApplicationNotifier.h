@@ -15,6 +15,9 @@
 #define RECEIVING_APPLICATION_NOTIFIER_H_
 
 #include "vcmtp.h"
+#include "VcmtpFileEntry.h"
+
+#include <memory>
 
 /**
  * This base class notifies a receiving application about file events.
@@ -26,20 +29,22 @@ public:
     /**
      * Notifies the receiving application about the beginning of a file.
      *
-     * @retval  true    If and only if the application wants the file.
+     * @param[in,out] file_entry        The VCMTP entry for the file.
+     * @retval        0                 Success.
+     * @retval        -1                Failure.
      */
-    virtual bool notify_of_bof(VcmtpSenderMessage& msg) {return false;};
+    virtual void notify_of_bof(VcmtpFileEntry& file_entry) const {};
 
     /**
      * Notifies the receiving application about the complete reception of a
      * file.
      */
-    virtual void notify_of_eof(VcmtpSenderMessage& msg) {};
+    virtual void notify_of_eof(VcmtpFileEntry& file_entry) {};
 
     /**
      * Notifies the receiving application about a missed file.
      */
-    virtual void notify_of_missed_file(VcmtpSenderMessage& msg) {};
+    virtual void notify_of_missed_file(VcmtpFileEntry& file_entry) {};
 };
 
 #endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */

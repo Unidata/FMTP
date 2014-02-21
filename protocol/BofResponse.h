@@ -19,18 +19,18 @@
 
 class BofResponse {
 public:
-    BofResponse(bool is_wanted);
-    virtual ~BofResponse();
+    BofResponse(bool is_wanted) : is_wanted(is_wanted) {};
+    virtual ~BofResponse() {};
     /**
      * Indicates if the file should be received.
      *
      * @retval true     if and only if the file should be received.
      */
-    bool isWanted() {
+    bool isWanted() const {
         return this->is_wanted;
     }
     /**
-     * Accepts a portion of the file that's being received.
+     * Disposes of a portion of the file that's being received.
      *
      * @param[in] offset        The offset, in bytes, from the start of the file
      *                          to the first byte in the given buffer.
@@ -39,7 +39,8 @@ public:
      * @retval    0             Success.
      * @retval    -1            Failure.
      */
-    virtual int accept(off_t offset, unsigned char* buf, size_t size) =0;
+    virtual int dispose(off_t offset, unsigned char* buf, size_t size) const
+        = 0;
 
 private:
     bool is_wanted;
@@ -47,12 +48,12 @@ private:
 
 
 /**
- * This class is the BOF response for a memory transfer.
+ * This class is the BOF response for a transfer to memory.
  */
 class MemoryBofResponse : public BofResponse {
 public:
-    MemoryBofResponse(bool is_wanted, unsigned char* buf = 0);
-    int accept(off_t offset, unsigned char* buf, size_t size);
+    MemoryBofResponse(unsigned char* buf);
+    int dispose(off_t offset, unsigned char* buf, size_t size) const;
 
 private:
     unsigned char*      buf;

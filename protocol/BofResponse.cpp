@@ -18,30 +18,22 @@
 #include <string.h>
 
 /**
- * Constructs.
+ * Constructs from a memory buffer. The method \c isWanted() of the resulting
+ * instance file will return @code{buf != 0}.
  *
- * @param[in] is_wanted              Whether the file should be received by
- *                                   the VCMTP layer.
- * @param[in] buf                    The buffer into which to copy the
- *                                   received data. May not be 0 if \c
- *                                   is_wanted is true.
- * @throws    std::invalid_argument  @code{is_wanted && 0 == buf}.
+ * @param[in] buf       The buffer into which to copy the received data or 0.
  */
 MemoryBofResponse::MemoryBofResponse(
-    const bool                  is_wanted,
-    unsigned char* const        buf)
+    unsigned char*      buf)
 :
-    BofResponse(is_wanted),
+    BofResponse(buf != 0),
     buf(buf)
-{
-    if (is_wanted && 0 == buf)
-        throw std::invalid_argument(std::string("NULL buffer argument"));
-}
+{}
 
-int MemoryBofResponse::accept(
+int MemoryBofResponse::dispose(
     const off_t                 offset,
     unsigned char* const        buf,
-    const size_t                size)
+    const size_t                size) const
 {
     memcpy(this->buf + offset, buf, size);
     return 0;
