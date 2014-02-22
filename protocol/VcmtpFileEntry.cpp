@@ -13,7 +13,8 @@
 
 #include "VcmtpFileEntry.h"
 
-VcmtpFileEntry::~VcmtpFileEntry() {
-    // TODO Auto-generated destructor stub
+static const std::shared_ptr<BofResponse>& VcmtpFileEntry::ignoreBofResponse() {
+    static std::shared_ptr<BofResponse> ignore(BofResponse::getIgnore());
+    return ignore;
 }
 

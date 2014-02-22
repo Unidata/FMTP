@@ -41,6 +41,12 @@ public:
         return msg.text;
     }
     /**
+     * Sets the response to a beginning-of-file notification to ignore the file.
+     */
+    void setBofResponseToIgnore() {
+        bofResponse = ignoreBofResponse();
+    }
+    /**
      * Sets the response from the receiving application to the beginning-of-file
      * notification by the VCMTP layer.
      *
@@ -83,8 +89,9 @@ public:
     }
 
 private:
-    const struct VcmtpSenderMessage msg;
-    std::shared_ptr<BofResponse>    bofResponse;
+    const struct VcmtpSenderMessage             msg;
+    std::shared_ptr<BofResponse>                bofResponse;
+    static const std::shared_ptr<BofResponse>&  ignoreBofResponse();
 };
 
 #endif /* FILEENTRY_H_ */

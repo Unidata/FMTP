@@ -41,9 +41,10 @@ public:
      */
     virtual int dispose(off_t offset, unsigned char* buf, size_t size) const
         = 0;
+    static const BofResponse& getIgnore();
 
 private:
-    bool is_wanted;
+   bool is_wanted;
 };
 
 
