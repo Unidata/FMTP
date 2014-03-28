@@ -7,44 +7,71 @@
 
 #include "VCMTPReceiver.h"
 
+void VCMTPReceiver::init()
+{
+    retrans_tcp_client = 0;
+    max_sock_fd = 0;
+    multicast_sock = ptr_multicast_comm->GetSocket();
+    retrans_tcp_sock = 0;
+    packet_loss_rate = 0;
+    session_id = 0;
+    status_proxy = 0;
+    time_diff_measured = false;
+    time_diff = 0;
+    read_ahead_header = (VcmtpHeader*)read_ahead_buffer;
+    read_ahead_data = read_ahead_buffer + VCMTP_HLEN;
+    recv_thread = 0;
+    retrans_thread = 0;
+    keep_retrans_alive = false;
+    vcmtp_seq_num = 0;
+    total_missing_bytes = 0;
+    received_retrans_bytes = 0;
+    is_multicast_finished = false;
+    retrans_switch = true;
+
+    //ptr_multicast_comm->SetBufferSize(10000000);
+
+    srand(time(NULL));
+    bzero(&recv_stats, sizeof(recv_stats));
+    bzero(&cpu_counter, sizeof(cpu_counter));
+    bzero(&global_timer, sizeof(global_timer));
+
+    read_ahead_header->session_id = -1;
+
+    AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+}
+
 
 /**
- * Constructs a VCMTP receiver.
+ * Constructs. The receiving application will be notified of file events
+ * via the notification queue.
  *
- * @param buf_size      Size of the receiving buffer. Ignored.
+ * @param buf_size      Size of the receiving buffer in bytes. Ignored.
  */
-VCMTPReceiver::VCMTPReceiver(const int buf_size)
-:   retrans_tcp_client(NULL),
-    max_sock_fd(0),
-    multicast_sock(ptr_multicast_comm->GetSocket()),
-    retrans_tcp_sock(0),
-    packet_loss_rate(0),
-    session_id(0),
-    status_proxy(NULL),
+VCMTPReceiver::VCMTPReceiver(
+    const int                       buf_size)
+:
     cpu_info(),
-    time_diff_measured(false),
-    time_diff(0),
-    read_ahead_header((VcmtpHeader*)read_ahead_buffer),
-    read_ahead_data(read_ahead_buffer + VCMTP_HLEN),
-    recv_thread(0),
-    retrans_thread(0),
-    keep_retrans_alive(false),
-    vcmtp_seq_num(0),
-    total_missing_bytes(0),
-    received_retrans_bytes(0),
-    is_multicast_finished(false),
-    retrans_switch(true)
+    notifier(BatchedNotifier(*this))
 {
-	//ptr_multicast_comm->SetBufferSize(10000000);
+    init();
+}
 
-	srand(time(NULL));
-	bzero(&recv_stats, sizeof(recv_stats));
-	bzero(&cpu_counter, sizeof(cpu_counter));
-	bzero(&global_timer, sizeof(global_timer));
 
-	read_ahead_header->session_id = -1;
-
-	AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+/**
+ * Constructs from a notifier of the receiving application of file events.
+ *
+ * @param notifier      Notifier of the receiving application of file
+ *                      events. Defensively copied; the client may delete upon
+ *                      return.
+ */
+VCMTPReceiver::VCMTPReceiver(
+    const ReceivingApplicationNotifier&   notifier)
+:
+    cpu_info(),
+    notifier(notifier)
+{
+    init();
 }
 
 VCMTPReceiver::~VCMTPReceiver() {
@@ -280,6 +307,29 @@ void VCMTPReceiver::SetSchedRR(bool is_rr) {
 
 
 
+/**
+ * Joins an Internet multicast group. This configures the socket locally to
+ * receive multicast packets destined to the given port, adds an Internet
+ * multicast group to the socket, and establishes a TCP connection to the VCMTP
+ * sender.
+ *
+ * @param[in] addr                   IPv4 address of the multicast group in
+ *                                   dotted-decimal format.
+ * @param[in] port                   Port number of the multicast group.
+ * @returns   1                      Success.
+ * @throws    std::invalid_argument  if \c addr couldn't be converted into a
+ *                                   binary IPv4 address.
+ * @throws    std::runtime_error     if the IP address of the PA interface
+ *                                   couldn't be obtained. (The PA address seems
+ *                                   to be specific to Linux and might cause
+ *                                   problems.)
+ * @throws    std::runtime_error     if the socket couldn't be bound to the
+ *                                   interface.
+ * @throws    std::runtime_error     if the socket couldn't be bound to the
+ *                                   Internet address.
+ * @throws    std::runtime_error     if the multicast group sa couldn't be added
+ *                                   to the socket.
+ */
 int VCMTPReceiver::JoinGroup(string addr, ushort port) {
 	VCMTPComm::JoinGroup(addr, port);
 	ConnectSenderOnTCP();
@@ -333,7 +383,10 @@ void VCMTPReceiver::Start() {
 }
 
 
-// Main receiving thread functions
+/**
+ * Creates a thread on which the receiver is immediately executed. Returns
+ * immediately.
+ */
 void VCMTPReceiver::StartReceivingThread() {
 	pthread_create(&recv_thread, NULL, &VCMTPReceiver::StartReceivingThread, this);
 }
@@ -344,7 +397,9 @@ void* VCMTPReceiver::StartReceivingThread(void* ptr) {
 }
 
 
-// Main file receiving function
+/**
+ * Executes the receiver. Returns when the receiver terminates.
+ */
 void VCMTPReceiver::RunReceivingThread() {
 	fd_set 	read_set;
 	while (true) {
@@ -510,6 +565,19 @@ void VCMTPReceiver::HandleUnicastPacket() {
 			cout << "[VCMTP_RETRANS_TIMEOUT] Could not find message in recv_status_map for file " << header->session_id << endl;
 		}
 	}
+}
+
+bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
+    return false;       // TODO
+}
+
+void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
+    // TODO
+}
+
+void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
+        VcmtpSenderMessage& msg) {
+    // TODO
 }
 
 

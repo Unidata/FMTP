@@ -13,10 +13,14 @@ AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 
-AC_PROG_CXX
-
 LT_INIT
+
 AC_PROG_LIBTOOL
+
+AC_PROG_CXX
+if test "$GXX" = "yes"; then
+    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
+fi
 
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])

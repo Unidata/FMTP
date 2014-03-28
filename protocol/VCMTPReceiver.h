@@ -8,15 +8,13 @@
 #ifndef VCMTPRECEIVER_H_
 #define VCMTPRECEIVER_H_
 
+#include "ReceivingApplicationNotifier.h"
 #include "vcmtp.h"
 #include "VCMTPComm.h"
 #include "TcpClient.h"
 #include "VcmtpSenderMetadata.h"
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
-
-typedef	void (*VCMTP_BOF_Function)();
-typedef void (*VCMTP_Recv_Complete_Function)();
 
 struct VcmtpReceiverStats {
 	uint	current_msg_id;
@@ -70,8 +68,6 @@ struct VcmtpReceiverConfig {
 	string  sender_ip_addr;
 	int		sender_tcp_port;
 	int		receive_mode;
-	VCMTP_BOF_Function    			bof_function;
-	VCMTP_Recv_Complete_Function	complete_function;
 };
 
 
@@ -79,11 +75,13 @@ struct VcmtpReceiverConfig {
 class VCMTPReceiver : public VCMTPComm {
 public:
 	VCMTPReceiver(int buf_size);
-	virtual ~VCMTPReceiver();
+	VCMTPReceiver(const ReceivingApplicationNotifier& notifier);
+	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
 	int		ConnectSenderOnTCP();
 	void 	Start();
+	void 	StartReceivingThread();
 	void	SetSchedRR(bool is_rr);
 
 	void 	SetPacketLossRate(int rate);
@@ -99,26 +97,35 @@ public:
 	void	ExecuteCommand(char* command);
 	void 	SetStatusProxy(StatusProxy* proxy);
 	const struct VcmtpReceiverStats GetBufferStats();
+	bool    notify_of_bof(VcmtpSenderMessage& msg);
+	void    notify_of_eof(VcmtpSenderMessage& msg);
+	void    notify_of_missed_file(VcmtpSenderMessage& msg);
+	void	RunReceivingThread();
 
 
 private:
-	TcpClient*		retrans_tcp_client;
+	TcpClient*	        retrans_tcp_client;
 	// used in the select() system call
-	int			max_sock_fd;
-	int 		multicast_sock;
-	int			retrans_tcp_sock;
-	fd_set		read_sock_set;
-	ofstream 	retrans_info;
+	int		        max_sock_fd;
+	int 		        multicast_sock;
+	int		        retrans_tcp_sock;
+	fd_set		        read_sock_set;
+	ofstream 	        retrans_info;
 
-	int 				packet_loss_rate;
-	uint				session_id;
+	int 		        packet_loss_rate;
+	uint			session_id;
 	VcmtpReceiverStats 	recv_stats;
 	CpuCycleCounter		cpu_counter, global_timer;
 	StatusProxy*		status_proxy;
 
 	PerformanceCounter 	cpu_info;
-	bool				time_diff_measured;
-	double 				time_diff;
+	bool			time_diff_measured;
+	double 			time_diff;
+
+	/**
+	 * Initializes this instance.
+	 */
+	void    init();
 
 	void 	ReconnectSender();
 
@@ -151,13 +158,30 @@ private:
 	VcmtpHeader* read_ahead_header;
 	char* read_ahead_data;
 
+	/**
+	 * Notifies the receiving application about file events.
+	 */
+	const ReceivingApplicationNotifier      notifier;
+
+	/**
+	 * This class implements the default method for notifying the receiving
+	 * application about file events by using the notification queue within
+	 * the VCMTPReceiver.
+	 */
+	class BatchedNotifier : public ReceivingApplicationNotifier {
+	public:
+	    BatchedNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
+            bool notify_of_bof(VcmtpSenderMessage& msg);
+            void notify_of_eof(VcmtpSenderMessage& msg);
+            void notify_of_missed_file(VcmtpSenderMessage& msg);
+	private:
+            VCMTPReceiver&      receiver;
+	};
 
 
 	//*********************** Main receiving thread functions ***********************
 	pthread_t	recv_thread;
-	void 	StartReceivingThread();
 	static void* StartReceivingThread(void* ptr);
-	void	RunReceivingThread();
 	void	HandleMulticastPacket();
 	void	HandleUnicastPacket();
 	void	HandleBofMessage(VcmtpSenderMessage& sender_msg);
@@ -180,7 +204,6 @@ private:
 	size_t	received_retrans_bytes;
 	bool	is_multicast_finished;
 	bool	retrans_switch;		// a switch that allows/disallows on-the-fly retransmission
-
 };
 
 #endif /* VCMTPRECEIVER_H_ */
