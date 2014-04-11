@@ -22,7 +22,7 @@
 class VcmtpFileEntry {
 public:
     VcmtpFileEntry(const struct VcmtpSenderMessage& msg)
-        : msg(msg), bofResponse() {}
+        : msg(msg), bofResponse(false) {}
     ~VcmtpFileEntry();
     /**
      * Returns the size of the file in bytes.
@@ -44,7 +44,7 @@ public:
      * Sets the response to a beginning-of-file notification to ignore the file.
      */
     void setBofResponseToIgnore() {
-        bofResponse = ignoreBofResponse();
+        bofResponse = BofResponse::getIgnore();
     }
     /**
      * Sets the response from the receiving application to the beginning-of-file
@@ -53,7 +53,7 @@ public:
      * @param[in] bofResponse  The receiving application's response to the BOF
      *                         notification by the VCMTP layer.
      */
-    void setBofResponse(const std::shared_ptr<BofResponse>& bofResponse) {
+    void setBofResponse(const BofResponse& bofResponse) {
         this->bofResponse = bofResponse;
     }
     /**
@@ -72,7 +72,7 @@ public:
      * @retval true     if and only if the file should be received.
      */
     bool isWanted() const {
-        return bofResponse->isWanted();
+        return bofResponse.isWanted();
     }
     /**
      * Disposes of a portion of the file that's being received.
@@ -84,14 +84,13 @@ public:
      * @retval    0             Success.
      * @retval    -1            Failure.
      */
-    int dispose(off_t offset, unsigned char* buf, size_t size) const {
-        return bofResponse->dispose(offset, buf, size);
+    void dispose(off_t offset, unsigned char* buf, size_t size) const {
+        return bofResponse.dispose(offset, buf, size);
     }
 
 private:
-    const struct VcmtpSenderMessage             msg;
-    std::shared_ptr<BofResponse>                bofResponse;
-    static const std::shared_ptr<BofResponse>&  ignoreBofResponse();
+    const struct VcmtpSenderMessage     msg;
+    BofResponse                         bofResponse;
 };
 
 #endif /* FILEENTRY_H_ */

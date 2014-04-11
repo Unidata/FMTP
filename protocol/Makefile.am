@@ -28,6 +28,7 @@ lib_la_SOURCES		= \
     VCMTPComm.cpp VCMTPComm.h \
     vcmtp.cpp vcmtp.h \
     VcmtpEventQueueManager.cpp VcmtpEventQueueManager.h \
+    VcmtpFileEntry.h \
     VCMTPReceiver.cpp VCMTPReceiver.h \
     VCMTPSender.cpp VCMTPSender.h \
     VcmtpSenderMetadata.cpp VcmtpSenderMetadata.h

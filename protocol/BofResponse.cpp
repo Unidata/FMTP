@@ -18,24 +18,12 @@
 #include <string.h>
 
 /**
- * Returns a beginning-of-file response that causes the file to be ignored
- * by the VCMTP layer.
- *
- * @return A BOF response that causes the file to be ignored.
+ * Returns a beginning-of-file response that will cause the file to be ignored.
+ * @return A BOF response that will cause the file to be ignored.
  */
-const BofResponse& BofResponse::getIgnore()
+const BofResponse& BofResponse::getIgnore(void)
 {
-    /**
-     * This class is the BOF response for ignoring a file.
-     */
-    class IgnoreBofResponse : public BofResponse {
-    public:
-       IgnoreBofResponse() : BofResponse(false) {}
-       int dispose(off_t offset, unsigned char* buf, size_t size) const {
-           return -1;
-       }
-    };
-    static IgnoreBofResponse ignore;
+    static BofResponse ignore(false);
     return ignore;
 }
 
@@ -57,11 +45,10 @@ MemoryBofResponse::MemoryBofResponse(
         throw std::invalid_argument(std::string("NULL buffer argument"));
 }
 
-int MemoryBofResponse::dispose(
+void MemoryBofResponse::dispose(
     const off_t                 offset,
     unsigned char* const        buf,
     const size_t                size) const
 {
     memcpy(this->buf + offset, buf, size);
-    return 0;
 }

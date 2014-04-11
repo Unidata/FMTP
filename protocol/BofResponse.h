@@ -23,7 +23,6 @@ public:
     virtual ~BofResponse() {};
     /**
      * Indicates if the file should be received.
-     *
      * @retval true     if and only if the file should be received.
      */
     bool isWanted() const {
@@ -32,19 +31,23 @@ public:
     /**
      * Disposes of a portion of the file that's being received.
      *
+     * This default method does nothing.
      * @param[in] offset        The offset, in bytes, from the start of the file
      *                          to the first byte in the given buffer.
      * @param[in] buf           The buffer containing the data to be accepted.
      * @param[in] size          The amount of data in the buffer in bytes.
-     * @retval    0             Success.
-     * @retval    -1            Failure.
      */
-    virtual int dispose(off_t offset, unsigned char* buf, size_t size) const
-        = 0;
-    static const BofResponse& getIgnore();
+    virtual void              dispose(off_t offset, unsigned char* buf,
+            size_t size) const {};
+    /**
+     * Returns a response to a beginning-of-file notice that will cause the
+     * file to be ignored.
+     * @return A BOF response that will cause the file to be ignored.
+     */
+    static const BofResponse& getIgnore(void);
 
 private:
-   bool is_wanted;
+    bool is_wanted;
 };
 
 
@@ -54,7 +57,7 @@ private:
 class MemoryBofResponse : public BofResponse {
 public:
     MemoryBofResponse(unsigned char* buf);
-    int dispose(off_t offset, unsigned char* buf, size_t size) const;
+    void dispose(off_t offset, unsigned char* buf, size_t size) const;
 
 private:
     unsigned char*      buf;

@@ -11,7 +11,10 @@
 #include <stdexcept>
 #include <string.h>
 
-VCMTPComm::VCMTPComm() {
+VCMTPComm::VCMTPComm()
+:   port_num(0),
+    vcmtp_group_id(0)
+{
 	ptr_multicast_comm = new MulticastComm();
 
 	send_vcmtp_header = (PTR_VCMTP_HEADER)send_packet_buf;

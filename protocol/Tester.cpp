@@ -7,7 +7,11 @@
 
 #include "Tester.h"
 
-Tester::Tester() {
+Tester::Tester()
+:   ptr_status_proxy(0),
+    ptr_vcmtp_receiver(0),
+    ptr_vcmtp_sender(0)
+{
 }
 
 Tester::~Tester() {
