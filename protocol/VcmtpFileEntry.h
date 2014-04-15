@@ -41,7 +41,7 @@ public:
         return msg.text;
     }
     /**
-     * Sets the response to a beginning-of-file notification to ignore the file.
+     * Sets the beginning-of-file response to ignore the file.
      */
     void setBofResponseToIgnore() {
         bofResponse = BofResponse::getIgnore();
@@ -75,18 +75,17 @@ public:
         return bofResponse.isWanted();
     }
     /**
-     * Disposes of a portion of the file that's being received.
-     *
-     * @param[in] offset        The offset, in bytes, from the start of the file
-     *                          to the first byte in the given buffer.
-     * @param[in] buf           The buffer containing the data to be accepted.
-     * @param[in] size          The amount of data in the buffer in bytes.
-     * @retval    0             Success.
-     * @retval    -1            Failure.
+     * Receives a multicast data packet. Will ignore the data if
+     * @code{isWanted()} is \c false.
+     * @param[in] sock  The socket on which to receive the data.
      */
-    void dispose(off_t offset, unsigned char* buf, size_t size) const {
-        return bofResponse.dispose(offset, buf, size);
-    }
+    void receiveMulticast(int sock);
+    /**
+     * Receives a unicast data packet. Will ignore the data if @code{isWanted()}
+     * is \c false.
+     * @param[in] sock  The socket on which to receive the data.
+     */
+    void receiveUnicast(int sock);
 
 private:
     const struct VcmtpSenderMessage     msg;
