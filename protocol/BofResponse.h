@@ -21,20 +21,17 @@
 
 class BofResponse {
 public:
-    BofResponse(bool is_wanted) : is_wanted(is_wanted) {};
+    BofResponse(bool isWanted) : is_wanted(isWanted) {};
     virtual ~BofResponse() {};
     /**
-     * Indicates if the file should be received.
-     * @retval true     if and only if the file should be received.
+     * Indicates of the data is wanted or not.
+     * @retval true  if and only if the data is wanted.
      */
     bool isWanted() const {
-        return this->is_wanted;
+        return is_wanted;
     }
     /**
      * Disposes of a portion of the file that's being received.
-     *
-     * This default method attempts to read the given number of bytes from the
-     * socket but does nothing with them.
      * @param[in] sock               The socket on which to receive the data.
      * @param[in] offset             The offset, in bytes, from the start of the
      *                               file to the first byte read from the
@@ -42,37 +39,41 @@ public:
      * @param[in] nbytes             The amount of data to receive in bytes.
      * @retval    0                  The socket is closed.
      * @return                       The number of bytes read from the socket.
-     * @throws    invalid_argument   If @code{offset < 0 || nbytes > VCMTP_PACKET_LEN}.
+     * @throws    invalid_argument   If @code{offset < 0 ||
+     *                               nbytes > VCMTP_PACKET_LEN ||
+     *                               offset+nbytes >} size of file.
      * @throws    runtime_exception  If an I/O error occurs on the socket.
      */
-    virtual size_t dispose(int sock, off_t offset, size_t nbytes) const;
+    virtual size_t dispose(int sock, off_t offset, size_t nbytes) const = 0;
     /**
      * Returns a beginning-of-file response that will cause the file to be
      * ignored.
      * @return A BOF response that will cause the file to be ignored.
      */
-    static const BofResponse& getIgnore(void);
+    static const BofResponse* getIgnore();
 
 private:
-    bool                 is_wanted;
-    /**
-     * Buffer for ignoring received data.
-     */
-    static unsigned char ignoreBuf[VCMTP_PACKET_LEN];
+    bool is_wanted;
 };
 
 
 /**
- * This class is the BOF response for a transfer to memory.
+ * BOF response for a transfer to memory.
  */
 class MemoryBofResponse : public BofResponse {
 public:
-    MemoryBofResponse(unsigned char* buf, size_t size);
+    MemoryBofResponse(char* buf, size_t size, bool isWanted);
+    virtual ~MemoryBofResponse() {};
     size_t dispose(int sock, off_t offset, size_t size) const;
+    /**
+     * Returns the memory buffer.
+     * @return Pointer to the memory buffer.
+     */
+    char* getBuf() const { return buf; }
 
 private:
-    unsigned char*      buf;
-    size_t              size;
+    char*       buf;
+    size_t      size;
 };
 
 #endif /* BOFRESPONSE_H_ */

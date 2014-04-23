@@ -21,40 +21,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-size_t BofResponse::dispose(
-    const int    sock,
-    const off_t  offset,
-    const size_t nbytes) const
-{
-    ssize_t len;
-    /*
-     * Buffer for ignoring data.
-     */
-    static unsigned char ignoreBuf[VCMTP_PACKET_LEN];
-
-    if (offset < 0)
-        throw std::invalid_argument("Offset argument is negative");
-
-    if (nbytes > sizeof(ignoreBuf))
-        throw std::invalid_argument("Number of bytes argument is too large");
-
-    len = recv(sock, ignoreBuf, nbytes, MSG_WAITALL);
-
-    if (len < 0)
-        throw std::runtime_error(std::string("Couldn't read from socket: ") +
-                strerror(errno));
-
-    return len;
-};
-
 /**
  * Returns a beginning-of-file response that will cause the file to be ignored.
  * @return A BOF response that will cause the file to be ignored.
  */
-const BofResponse& BofResponse::getIgnore(void)
+const BofResponse* BofResponse::getIgnore()
 {
-    static BofResponse ignore(false);
-    return ignore;
+    static char                    ignoreBuf[VCMTP_PACKET_LEN];
+    static const MemoryBofResponse ignore(ignoreBuf, sizeof(ignoreBuf), false);
+
+    return &ignore;
 }
 
 /**
@@ -63,13 +39,17 @@ const BofResponse& BofResponse::getIgnore(void)
  * @param[in] buf                       The buffer into which to copy the
  *                                      received data.
  * @param[in] size                      The size of the buffer in bytes.
+ * @param[in] isWanted                  Whether or not the file is wanted.
+ * @param[in] ptr                       Optional pointer to receiving
+ *                                      application object. May be 0.
  * @throws    std::invalid_argument     if @code{buf == 0}.
  */
 MemoryBofResponse::MemoryBofResponse(
-    unsigned char*      buf,
-    const size_t        size)
+    char*        buf,
+    const size_t size,
+    const bool   isWanted)
 :
-    BofResponse(true),
+    BofResponse(isWanted),
     buf(buf),
     size(size)
 {
@@ -88,7 +68,7 @@ size_t MemoryBofResponse::dispose(
         throw std::invalid_argument("Offset argument is negative");
 
     if (offset+nbytes > size)
-        throw std::invalid_argument("Number of bytes argument is too large");
+        throw std::invalid_argument("(Offset + number of bytes) > file size");
 
     len = recv(sock, buf+offset, nbytes, MSG_WAITALL);
 
