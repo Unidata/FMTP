@@ -45,6 +45,14 @@ public:
         return msg.data_len;
     }
     /**
+     * Returns the identifier of the file.
+     *
+     * @return the identifier of the file.
+     */
+    const uint32_t getFileId() const {
+        return msg.session_id;
+    }
+    /**
      * Returns the name of the file.
      *
      * @return the name of the file.
