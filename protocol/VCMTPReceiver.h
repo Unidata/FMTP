@@ -75,7 +75,10 @@ struct VcmtpReceiverConfig {
 class VCMTPReceiver : public VCMTPComm {
 public:
 	VCMTPReceiver(int buf_size);
-	VCMTPReceiver(const ReceivingApplicationNotifier& notifier);
+	VCMTPReceiver(
+	        std::string&         tcpAddr,
+	        const unsigned short tcpPort,
+	        const                ReceivingApplicationNotifier& notifier);
 	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -199,11 +202,13 @@ private:
 	bool				keep_retrans_alive;
 	list<VcmtpRetransRequest> 	retrans_list;
 
+	std::string     tcpAddr; /* Address of TCP server for missed data */
+	unsigned short  tcpPort; /* Port number of TCP server for missed data */
 	int		vcmtp_seq_num;
-	size_t	total_missing_bytes;
-	size_t	received_retrans_bytes;
-	bool	is_multicast_finished;
-	bool	retrans_switch;		// a switch that allows/disallows on-the-fly retransmission
+	size_t	        total_missing_bytes;
+	size_t	        received_retrans_bytes;
+	bool	        is_multicast_finished;
+	bool	        retrans_switch;		// a switch that allows/disallows on-the-fly retransmission
 };
 
 #endif /* VCMTPRECEIVER_H_ */

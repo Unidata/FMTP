@@ -61,13 +61,20 @@ VCMTPReceiver::VCMTPReceiver(
 /**
  * Constructs from a notifier of the receiving application of file events.
  *
- * @param notifier      Notifier of the receiving application of file
+ * @param[in] tcpAddr   Address of the TCP server from which to retrieve missed
+ *                      data-blocks. May be hostname or formatted IP address.
+ * @param[in] tcpPort   Port number of the TCP server.
+ * @param[in] notifier  Notifier of the receiving application of file
  *                      events. Defensively copied; the client may delete upon
  *                      return.
  */
 VCMTPReceiver::VCMTPReceiver(
+    std::string&                          tcpAddr,
+    const unsigned short                  tcpPort,
     const ReceivingApplicationNotifier&   notifier)
 :
+    tcpAddr(tcpAddr),
+    tcpPort(tcpPort),
     cpu_info(),
     notifier(notifier)
 {
@@ -347,7 +354,7 @@ int VCMTPReceiver::ConnectSenderOnTCP() {
 	if (retrans_tcp_client != NULL)
 		delete retrans_tcp_client;
 
-	retrans_tcp_client =  new TcpClient("10.1.1.2", BUFFER_TCP_SEND_PORT);
+	retrans_tcp_client =  new TcpClient(tcpAddr, tcpPort);
 	retrans_tcp_client->Connect();
 	retrans_tcp_sock = retrans_tcp_client->GetSocket();
 	max_sock_fd = multicast_sock > retrans_tcp_sock ? multicast_sock : retrans_tcp_sock;
