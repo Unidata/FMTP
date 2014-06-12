@@ -405,7 +405,7 @@ void* VCMTPReceiver::StartReceivingThread(void* ptr) {
 
 
 /**
- * Executes the receiver. Returns when the receiver terminates.
+ * Executes the receiver. Returns when `stop()` is called.
  */
 void VCMTPReceiver::RunReceivingThread() {
 	fd_set 	read_set;
@@ -425,6 +425,15 @@ void VCMTPReceiver::RunReceivingThread() {
 			HandleUnicastPacket();
 		}
 	}
+}
+
+/**
+ * Stops the receiver. Undefined behavior results if called from a signal
+ * handler.
+ */
+void VCMTPReceiver::stop() {
+    (void)close(retrans_tcp_sock);
+    (void)close(multicast_sock);
 }
 
 

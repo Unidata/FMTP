@@ -104,6 +104,7 @@ public:
 	void    notify_of_eof(VcmtpSenderMessage& msg);
 	void    notify_of_missed_file(VcmtpSenderMessage& msg);
 	void	RunReceivingThread();
+	void	stop();
 
 
 private:
