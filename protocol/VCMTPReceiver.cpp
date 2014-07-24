@@ -583,6 +583,10 @@ void VCMTPReceiver::HandleUnicastPacket() {
 	}
 }
 
+/* TODO: This class must be modified to use these 3 notification methods --
+ * unless it's easier in some way to just just use the notifier.
+*/
+
 bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
     return false;       // TODO
 }
@@ -601,6 +605,7 @@ void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
  * Handle a BOF message for a new file
  */
 void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
+    // TODO: Make use of the notifier given to the constructor
 	switch (sender_msg.msg_type) {
 	case MEMORY_TRANSFER_START: {
 		char* buf = (char*) malloc(sender_msg.data_len);

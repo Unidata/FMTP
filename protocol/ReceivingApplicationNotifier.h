@@ -33,6 +33,10 @@ public:
      * @retval        0                 Success.
      * @retval        -1                Failure.
      */
+    /*
+     * TODO: Have this method return a BofResponse that the VCMTPReceiver will
+     * subsequently use to dispose of data packets.
+     */
     virtual void notify_of_bof(VcmtpFileEntry& file_entry) const {};
 
     /**

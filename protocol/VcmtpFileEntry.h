@@ -3,12 +3,12 @@
  * reserved. See the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file VcmtpFileEntry.h
+ * @file:   VcmtpFileEntry.h
+ * @author: Steven R. Emmerson
  *
  * This file declares a class that represents a file that's being received by
- * the VCMTP layer. Instances contain metadata about their file.
- *
- * @author: Steven R. Emmerson
+ * the VCMTP layer. Instances contain metadata about their file and a
+ * BofResponse that disposes of incoming data.
  */
 
 #ifndef FILEENTRY_H_
