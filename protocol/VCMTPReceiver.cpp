@@ -5,6 +5,8 @@
  *      Author: jie
  */
 
+// TODO: Modify this class to use VcmtpFileEntry
+
 #include "VCMTPReceiver.h"
 
 void VCMTPReceiver::init()
