@@ -74,7 +74,8 @@ VCMTPSender::VCMTPSender(
      */
     max_num_retrans_buffs(32),
     retrans_scheme(RETRANS_SERIAL), // set default retransmission scheme
-    num_retrans_threads(1)
+    num_retrans_threads(1),
+    status_proxy(0)
 {
     // This constructor is unfinished.
 
@@ -305,7 +306,9 @@ void VCMTPSender::SetReceiverLossRate(int recver_sock, int loss_rate) {
  * I don't think it makes sense to have this method be publicly visible
  * because a `VCMTPSender` only sends to one one multicast group -- so this
  * method could and should only be called by the constructor to obviate the
- * possibility of it being called multiple times. --Steve Emmerson 2014-07-29
+ * possibility of it being called multiple times. Note, however, that
+ * `SenderStatusProxy::InitializeExecutionProcess()` calls this method *after*
+ * setting the `VCMTPSender`'s status proxy. --Steve Emmerson 2014-07-29
  */
 int VCMTPSender::JoinGroup(string addr, u_short port) {
 	VCMTPComm::JoinGroup(addr, port);
