@@ -8,21 +8,34 @@
 #include "VCMTPSender.h"
 
 
-VCMTPSender::VCMTPSender(int buf_size) : VCMTPComm() {
-	retrans_tcp_server = new TcpServer(BUFFER_TCP_SEND_PORT, this);
-	cur_session_id = 0;
+/**
+ * This is Jie's original constructor (with the effect of some statements moved
+ * to the initialization list). It's kept because it's referenced by
+ * `SenderStatusProxy::InitializeExecutionProcess()`. If that method is deleted,
+ * then so can this constructor.
+ *
+ * @param buf_size  Ignored.
+ */
+VCMTPSender::VCMTPSender(
+    int buf_size)
+:
+    VCMTPComm(),
+    retrans_tcp_server(new TcpServer(BUFFER_TCP_SEND_PORT, this)),
+    cur_session_id(0),
+    /*
+     * Set the initial maximum size of the retransmission buffer to be 32 * 8 MB
+     * = 256 MB
+     */
+    max_num_retrans_buffs(32),
+    retrans_scheme(RETRANS_SERIAL), // set default retransmission scheme
+    num_retrans_threads(1)
+{
 	bzero(&send_stats, sizeof(send_stats));
 
-	// Initially set the maximum number of retransmission buffer to be 32 * 8 MB = 256 MB
-	max_num_retrans_buffs = 32;
-	// Initially set the send rate limit to 10Gpbs (effectively no limit)
-	rate_shaper.SetRate(10000 * 1000000.0);
+        // Initially set the send rate limit to 10Gpbs (effectively no limit)
+        rate_shaper.SetRate(10000 * 1000000.0);
 
-	// set default retransmission scheme
-	retrans_scheme = RETRANS_SERIAL;
-	num_retrans_threads = 1;
-
-	AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+        AccessCPUCounter(&global_timer.hi, &global_timer.lo);
 
 	// Set CPU affinity
 	/*cpu_set_t cpu_mask;
@@ -32,6 +45,45 @@ VCMTPSender::VCMTPSender(int buf_size) : VCMTPComm() {
 	 */
 
 	//event_queue_manager = new VcmtpEventQueueManager();
+}
+
+/**
+ * This new constructor takes specifications of the multicast group and the TCP
+ * server.
+ *
+ * @param[in] mcastAddr  Internet address of the multicast group. May be
+ *                       groupname or formatted IP address. The caller may
+ *                       delete.
+ * @param[in] mcastPort  Port number of the multicast group.
+ * @param[in] tcpAddr    Internet address of the TCP server. May be hostname or
+ *                       formatted IP address. The caller may delete.
+ * @param[in] tcpPort    Port number of the TCP server.
+ */
+VCMTPSender::VCMTPSender(
+    const string&        mcastAddr,
+    const unsigned short mcastPort,
+    const string&        tcpAddr,
+    const unsigned short tcpPort)
+:
+    VCMTPComm(),
+    retrans_tcp_server(new TcpServer(BUFFER_TCP_SEND_PORT, this)),
+    cur_session_id(0),
+    /*
+     * Set the initial maximum size of the retransmission buffer to 32 * 8 MB =
+     * 256 MB
+     */
+    max_num_retrans_buffs(32),
+    retrans_scheme(RETRANS_SERIAL), // set default retransmission scheme
+    num_retrans_threads(1)
+{
+    // This constructor is unfinished.
+
+    bzero(&send_stats, sizeof(send_stats));
+
+    // Set the initial send rate limit to 10 Gbps (effectively no limit)
+    rate_shaper.SetRate(10000 * 1000000.0);
+
+    AccessCPUCounter(&global_timer.hi, &global_timer.lo);
 }
 
 VCMTPSender::~VCMTPSender() {
@@ -249,6 +301,12 @@ void VCMTPSender::SetReceiverLossRate(int recver_sock, int loss_rate) {
 
 // After binding the multicast address, the sender also needs to
 // start the thread to accept incoming connection requests
+/*
+ * I don't think it makes sense to have this method be publicly visible
+ * because a `VCMTPSender` only sends to one one multicast group -- so this
+ * method could and should only be called by the constructor to obviate the
+ * possibility of it being called multiple times. --Steve Emmerson 2014-07-29
+ */
 int VCMTPSender::JoinGroup(string addr, u_short port) {
 	VCMTPComm::JoinGroup(addr, port);
 	retrans_tcp_server->Start();
