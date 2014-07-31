@@ -76,8 +76,6 @@ class VCMTPSender : public VCMTPComm {
 public:
 	VCMTPSender(int buf_size);
 	VCMTPSender(
-            const string&        mcastAddr,
-            const unsigned short mcastPort,
             const string&        tcpAddr,
             const unsigned short tcpPort);
 	virtual ~VCMTPSender();

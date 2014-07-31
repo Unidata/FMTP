@@ -48,20 +48,13 @@ VCMTPSender::VCMTPSender(
 }
 
 /**
- * This new constructor takes specifications of the multicast group and the TCP
- * server.
+ * This new constructor takes specifications of the TCP server.
  *
- * @param[in] mcastAddr  Internet address of the multicast group. May be
- *                       groupname or formatted IP address. The caller may
- *                       delete.
- * @param[in] mcastPort  Port number of the multicast group.
- * @param[in] tcpAddr    Internet address of the TCP server. May be hostname or
- *                       formatted IP address. The caller may delete.
+ * @param[in] tcpAddr    Dotted-decimal IPv4 address of the TCP server. The
+ *                       caller may delete.
  * @param[in] tcpPort    Port number of the TCP server.
  */
 VCMTPSender::VCMTPSender(
-    const string&        mcastAddr,
-    const unsigned short mcastPort,
     const string&        tcpAddr,
     const unsigned short tcpPort)
 :
@@ -300,16 +293,26 @@ void VCMTPSender::SetReceiverLossRate(int recver_sock, int loss_rate) {
 }
 
 
-// After binding the multicast address, the sender also needs to
-// start the thread to accept incoming connection requests
 /*
  * I don't think it makes sense to have this method be publicly visible
  * because a `VCMTPSender` only sends to one one multicast group -- so this
  * method could and should only be called by the constructor to obviate the
  * possibility of it being called multiple times. Note, however, that
  * `SenderStatusProxy::InitializeExecutionProcess()` calls this method *after*
- * setting the `VCMTPSender`'s status proxy. --Steve Emmerson 2014-07-29
+ * constructing a `VCMTPSender` and calling `VCMTPSender::SetStatusProxy()`.
+ * --Steve Emmerson 2014-07-29
  */
+/**
+ * Joins a multicast group for sending. Starts the TCP server on a separate
+ * thread.
+ *
+ * @param[in] addr  IPv4 address of the multicast group in dotted-decimal
+ *                  format.
+ * @param[in] port  Port number of the multicast group in native byte order.
+ * @retval    1     Always.
+ */
+// After binding the multicast address, the sender also needs to
+// start the thread to accept incoming connection requests
 int VCMTPSender::JoinGroup(string addr, u_short port) {
 	VCMTPComm::JoinGroup(addr, port);
 	retrans_tcp_server->Start();

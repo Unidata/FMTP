@@ -67,7 +67,8 @@ int VCMTPComm::GetPortNumber() {
  *
  * @param[in] addr                   IPv4 address of the multicast group in
  *                                   dotted-decimal format.
- * @param[in] port                   Port number of the multicast group.
+ * @param[in] port                   Port number of the multicast group in
+ *                                   native byte order.
  * @returns   1                      Success.
  * @throws    std::invalid_argument  if \c addr couldn't be converted into a
  *                                   binary IPv4 address.
