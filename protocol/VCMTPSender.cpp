@@ -28,23 +28,24 @@ VCMTPSender::VCMTPSender(
      */
     max_num_retrans_buffs(32),
     retrans_scheme(RETRANS_SERIAL), // set default retransmission scheme
-    num_retrans_threads(1)
+    num_retrans_threads(1),
+    status_proxy(0),
+    send_rate_in_mbps(10000) // 10 Gbps initial send rate limit
 {
-	bzero(&send_stats, sizeof(send_stats));
+    bzero(&send_stats, sizeof(send_stats));
 
-        // Initially set the send rate limit to 10Gpbs (effectively no limit)
-        rate_shaper.SetRate(10000 * 1000000.0);
+    rate_shaper.SetRate(send_rate_in_mbps * 1000000.0);
 
-        AccessCPUCounter(&global_timer.hi, &global_timer.lo);
+    AccessCPUCounter(&global_timer.hi, &global_timer.lo);
 
-	// Set CPU affinity
-	/*cpu_set_t cpu_mask;
-	CPU_SET(1, &cpu_mask);
-	if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_mask) == -1)
-		SysError("VCMTPSender::VCMTPSender()::sched_setaffinity() error");
-	 */
+    // Set CPU affinity
+    /*cpu_set_t cpu_mask;
+    CPU_SET(1, &cpu_mask);
+    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_mask) == -1)
+            SysError("VCMTPSender::VCMTPSender()::sched_setaffinity() error");
+     */
 
-	//event_queue_manager = new VcmtpEventQueueManager();
+    //event_queue_manager = new VcmtpEventQueueManager();
 }
 
 /**
@@ -68,14 +69,14 @@ VCMTPSender::VCMTPSender(
     max_num_retrans_buffs(32),
     retrans_scheme(RETRANS_SERIAL), // set default retransmission scheme
     num_retrans_threads(1),
-    status_proxy(0)
+    status_proxy(0),
+    send_rate_in_mbps(10000) // 10 Gbps initial send rate limit
 {
     // This constructor is unfinished.
 
     bzero(&send_stats, sizeof(send_stats));
 
-    // Set the initial send rate limit to 10 Gbps (effectively no limit)
-    rate_shaper.SetRate(10000 * 1000000.0);
+    rate_shaper.SetRate(send_rate_in_mbps * 1000000.0);
 
     AccessCPUCounter(&global_timer.hi, &global_timer.lo);
 }
