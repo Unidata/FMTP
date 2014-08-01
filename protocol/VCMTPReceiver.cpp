@@ -430,8 +430,9 @@ void VCMTPReceiver::RunReceivingThread() {
 }
 
 /**
- * Stops the receiver. Undefined behavior results if called from a signal
- * handler.
+ * Stops the receiver.  Undefined behavior will result if called from a signal
+ * handler that was invoked by the delivery of a signal during execution of an
+ * async-signal-unsafe function.
  */
 void VCMTPReceiver::stop() {
     (void)close(retrans_tcp_sock);
