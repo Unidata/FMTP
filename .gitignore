@@ -11,7 +11,6 @@ libtool
 *.lo
 *.lo
 *.log
-m4
 Makefile
 Makefile.in
 *.o
