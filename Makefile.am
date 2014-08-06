@@ -6,6 +6,7 @@
 
 SUBDIRS 		= CommUtil protocol
 ACLOCAL_AMFLAGS         = -I m4
+EXTRA_DIST		= m4
 lib_LTLIBRARIES		= libvcmtp.la
 libvcmtp_la_SOURCES	= dummy.c
 libvcmtp_la_LIBADD	= CommUtil/lib.la protocol/lib.la
