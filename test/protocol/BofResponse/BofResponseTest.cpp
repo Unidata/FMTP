@@ -16,6 +16,7 @@
  * 1. test file created                                 Aug  4, 2014
  * 2. test case against base class BofResponse added    Aug  8, 2014
  * 3. comments added.                                   Aug 10, 2014
+ * 4. test case against class MemoryBofResponse added   Aug 10, 2014
  */
 
 
