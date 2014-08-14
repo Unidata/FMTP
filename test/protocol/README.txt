@@ -2,7 +2,7 @@ Folder structure:
     vcmtp--protocol--*.cpp/*.h
            |
            |
-           test------protocol----BofResponse---*.cpp/*.h/*.sh
+           test------protocol----BofResponse---*.cpp/*.h/Makefile
                                  |
                                  |
                                  ...
@@ -21,9 +21,9 @@ To begin with the unit test, just type following commands in a terminal under
 Linux/Unix. Ubuntu 14.04 LTS is recommended.
 $ sudo apt-get install libcppunit-dev
 $ cd $(YOUR_PATH_TO)/vcmtp/test/protocol/BofResponse
-$ ./runcompile.sh
+$ make
 $ ls
-BofResponse.cpp    BofResponse.h    BofResponseTest.cpp    runcompile.sh    UnitTest
+BofResponse.cpp    BofResponse.h    BofResponseTest.cpp    UnitTest
 $ ./UnitTest
 Running Tests
 BofResponseTest::runBofResponseTest : OK
