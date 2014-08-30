@@ -62,7 +62,12 @@ struct MessageReceiveStatus {
 	double		multicast_time;
 };
 
-
+/****************************************************************************
+ * Struct Name: VcmtpReceiverConfig
+ *
+ * Description: Configuration structure providing information for user
+ * application (e.g. LDM) which contains configs of the receiver object.
+ ***************************************************************************/
 struct VcmtpReceiverConfig {
 	string 	multicast_addr;
 	string  sender_ip_addr;
@@ -100,9 +105,16 @@ public:
 	void	ExecuteCommand(char* command);
 	void 	SetStatusProxy(StatusProxy* proxy);
 	const   struct VcmtpReceiverStats GetBufferStats();
-	bool    notify_of_bof(VcmtpSenderMessage& msg);
-	void    notify_of_eof(VcmtpSenderMessage& msg);
-	void    notify_of_missed_file(VcmtpSenderMessage& msg);
+
+    /************************************************************************
+     * These three notifiers should be later removed since there are new
+     * implementations in subclass BatchedNotifier and PerFileNotifier. Those
+     * are the ones actually working.
+     ***********************************************************************/
+	//bool    notify_of_bof(VcmtpSenderMessage& msg);
+	//void    notify_of_eof(VcmtpSenderMessage& msg);
+	//void    notify_of_missed_file(VcmtpSenderMessage& msg);
+
 	void	RunReceivingThread();
 	void	stop();
 
@@ -110,21 +122,21 @@ public:
 private:
 	TcpClient*	        retrans_tcp_client;
 	// used in the select() system call
-	int		        max_sock_fd;
+	int		            max_sock_fd;
 	int 		        multicast_sock;
-	int		        retrans_tcp_sock;
+	int		            retrans_tcp_sock;
 	fd_set		        read_sock_set;
 	ofstream 	        retrans_info;
 
 	int 		        packet_loss_rate;
-	uint			session_id;
+	uint			    session_id;
 	VcmtpReceiverStats 	recv_stats;
 	CpuCycleCounter		cpu_counter, global_timer;
 	StatusProxy*		status_proxy;
 
 	PerformanceCounter 	cpu_info;
-	bool			time_diff_measured;
-	double 			time_diff;
+	bool			    time_diff_measured;
+	double 			    time_diff;
 
 	/**
 	 * Initializes this instance.
@@ -182,6 +194,22 @@ private:
             VCMTPReceiver&      receiver;
 	};
 
+    /************************************************************************
+     * Class Name: PerFileNotifier
+     *
+     * Description: Notifier for per-file mode. It sends a status report msg
+     * to user application (e.g. LDM) and then waits for a response from user
+     * application about how to proceed.
+     ***********************************************************************/
+	class PerFileNotifier : public ReceivingApplicationNotifier {
+	public:
+	    PerFileNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
+            bool notify_of_bof(VcmtpSenderMessage& msg);
+            void notify_of_eof(VcmtpSenderMessage& msg);
+            void notify_of_missed_file(VcmtpSenderMessage& msg);
+	private:
+            VCMTPReceiver&      receiver;
+	};
 
 	//*********************** Main receiving thread functions ***********************
 	pthread_t	recv_thread;
