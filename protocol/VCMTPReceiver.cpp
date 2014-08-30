@@ -639,6 +639,7 @@ void VCMTPReceiver::PerFileNotifier::notify_of_missed_file(
  * Handle a BOF message for a new file
  */
 void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
+    /*
     // call PerFileNotifier::notify_of_bof or BatchedNotifier::notify_of_bof
     // first. Then continue processing or drop, which depends on the return
     // value of notify_of_bof().
@@ -652,6 +653,7 @@ void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
     else {
         // drop the file, maybe dispose().
     }
+    */
 
 	switch (sender_msg.msg_type) {
 	case MEMORY_TRANSFER_START: {
