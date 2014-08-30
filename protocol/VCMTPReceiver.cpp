@@ -452,7 +452,7 @@ void VCMTPReceiver::HandleMulticastPacket() {
 	if (ptr_multicast_comm->RecvData(packet_buffer, VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
 		SysError("VCMTPReceiver::RunReceivingThread() multicast recv error");
 
-	// Check for BOF and EOF
+	// Check whether the header flag is a BOF or EOF or Data.
 	if (header->flags & VCMTP_BOF) {
 		HandleBofMessage(*ptr_sender_msg);
 	} else if (header->flags & VCMTP_EOF) {
@@ -586,10 +586,6 @@ void VCMTPReceiver::HandleUnicastPacket() {
 	}
 }
 
-/* TODO: This class must be modified to use these 3 notification methods --
- * unless it's easier in some way to just just use the notifier.
-*/
-
 bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
     return false;       // TODO
 }
@@ -603,12 +599,60 @@ void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
     // TODO
 }
 
+/****************************************************************************
+ * Function Name: notify_of_bof
+ *
+ * Description: Notifier for BOF. This is a notifier under PerFileNotifier,
+ * which is the per-file mode notifier. It should send a msg to user
+ * application (e.g. LDM) and wait for the response before proceeding any
+ * further operation. User application should return a bool value or a struct
+ * containing a bool value specifying whether to ignore this file or not.
+ * True means to ignore this file and false means to save it.
+ *
+ * Input:  VcmtpSenderMessage& msg
+ * Output: None
+ * Return: bool toBeIgnored
+ ***************************************************************************/
+bool VCMTPReceiver::PerFileNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
+    // LDM should be able to access the following parameters.
+    // msg->msg_type;
+    // msg->session_id;
+    // msg->data_len;
+    // msg->text;
+    // msg->timestamp;
+
+    // suppose LDM is able to set up the toBeIgnored flag somehow.
+    // maybe IPC should be used here.
+    return toBeIgnored;
+}
+
+void VCMTPReceiver::PerFileNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
+    // TODO
+}
+
+void VCMTPReceiver::PerFileNotifier::notify_of_missed_file(
+        VcmtpSenderMessage& msg) {
+    // TODO
+}
 
 /**
  * Handle a BOF message for a new file
  */
 void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
-    // TODO: Make use of the notifier given to the constructor
+    // call PerFileNotifier::notify_of_bof or BatchedNotifier::notify_of_bof
+    // first. Then continue processing or drop, which depends on the return
+    // value of notify_of_bof().
+    PerFileNotifier pfNotifier();
+    BatchedNotifier bNotifier();
+
+    //just providing some thoughts here, code is not correct
+    if( pfNotifier.notify_of_bof(msg) ) {
+        continue;
+    }
+    else {
+        // drop the file, maybe dispose().
+    }
+
 	switch (sender_msg.msg_type) {
 	case MEMORY_TRANSFER_START: {
 		char* buf = (char*) malloc(sender_msg.data_len);
