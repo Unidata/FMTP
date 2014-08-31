@@ -198,7 +198,15 @@ int TcpClient::Receive(void* buffer, size_t length) {
 //	return length;
 }
 
-// throw a System Error message and print on stderr.
+/*****************************************************************************
+ * Class Name: TcpClient
+ * Function Name: SysError()
+ *
+ * Description: throw a System Error message and print it on stderr.
+ *
+ * Input:  *info    Message to show on stderr
+ * Output: none
+ ****************************************************************************/
 void TcpClient::SysError(const char* info) {
 	perror(info);
 	exit(-1);
