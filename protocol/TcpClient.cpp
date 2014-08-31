@@ -65,8 +65,8 @@ TcpClient::TcpClient(const string serv_addr, const int port)
 
         // take the first ip address resolved in hostent h_addr_list as its
         // default ip address.
-        //temp_addr = ((in_addr*)ptrhost->h_addr_list[0])->s_addr;
-        temp_addr = ((in_addr*)ptrhost->h_addr;
+        temp_addr = ((in_addr*)ptrhost->h_addr_list[0])->s_addr;
+        //temp_addr = (in_addr*)ptrhost->h_addr;
 	}
 
     // set server address with the resolved ip address.
