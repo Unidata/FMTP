@@ -156,6 +156,7 @@ int TcpClient::GetSocket() {
  * Function Name: Send()
  *
  * Description: Send data to the other side of the connection (server-side)
+ * and return value is the return value of send()
  *
  * Input:  *data        Pointer to the message content to be sent
  *         length       Length of the message content
