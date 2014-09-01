@@ -171,10 +171,10 @@ int TcpClient::Send(const void* data, size_t length) {
  * Class Name: TcpClient
  * Function Name: Receive()
  *
- * Description: Send data to the other side of the connection (server-side)
+ * Description: Receive data from the other side of the connection
  *
  * Input:  *buffer      The buffer where to store received data
- *         length       Length of received data
+ *         length       Length of buffer
  * Output: none
  *
  * Notes: This receive function explicitly handles the zero length case to
