@@ -1,8 +1,14 @@
 /*
- * TcpClient.h
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Sep 15, 2011
- *      Author: jie
+ * @filename: TcpClient.h
+ *
+ * @history:
+ *      Created  : Sep 15, 2011
+ *      Author   : jie
+ *      Modified : Aug 31, 2014
+ *      Author   : Shawn <sc7cq@virginia.edu>
  */
 
 #ifndef TCPCLIENT_H_
