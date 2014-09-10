@@ -1,8 +1,14 @@
 /*
- * VCMTPReceiver.cpp
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Jul 21, 2011
- *      Author: jie
+ * @filename: VCMTPReceiver.cpp
+ *
+ * @history:
+ *      Created on : Jul 21, 2011
+ *      Author     : jie
+ *      Modified   : Sep 4, 2014
+ *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
 // TODO: Modify this class to use VcmtpFileEntry
@@ -452,7 +458,8 @@ void VCMTPReceiver::HandleMulticastPacket() {
 	if (ptr_multicast_comm->RecvData(packet_buffer, VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
 		SysError("VCMTPReceiver::RunReceivingThread() multicast recv error");
 
-	// Check whether the header flag is a BOF or EOF or Data.
+	// Check whether the header flag is BOF or Data or EOF. And call
+    // corresponding handler.
 	if (header->flags & VCMTP_BOF) {
 		HandleBofMessage(*ptr_sender_msg);
 	} else if (header->flags & VCMTP_EOF) {
@@ -586,6 +593,10 @@ void VCMTPReceiver::HandleUnicastPacket() {
 	}
 }
 
+/*
+ * These three notify_of_* methods should be implemented to return corresponding
+ * status to user application process (e.g. LDM). And it's the batched mode.
+ */
 bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
     return false;       // TODO
 }
@@ -599,31 +610,13 @@ void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
     // TODO
 }
 
-/****************************************************************************
- * Function Name: notify_of_bof
- *
- * Description: Notifier for BOF. This is a notifier under PerFileNotifier,
- * which is the per-file mode notifier. It should send a msg to user
- * application (e.g. LDM) and wait for the response before proceeding any
- * further operation. User application should return a bool value or a struct
- * containing a bool value specifying whether to ignore this file or not.
- * True means to ignore this file and false means to save it.
- *
- * Input:  VcmtpSenderMessage& msg
- * Output: None
- * Return: bool toBeIgnored
- ***************************************************************************/
+/*****************************************************************************
+ * These three notifiers under PerFileNotifier should be implemented to return
+ * corresponding status to user application process (e.g. LDM).
+ */
 bool VCMTPReceiver::PerFileNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
-    // LDM should be able to access the following parameters.
-    // msg->msg_type;
-    // msg->session_id;
-    // msg->data_len;
-    // msg->text;
-    // msg->timestamp;
-
-    // suppose LDM is able to set up the toBeIgnored flag somehow.
-    // maybe IPC should be used here.
-    return toBeIgnored;
+    // if there is a message queue, then put this message into the queque.
+    // Steve should be able to receive and parse the message on LDM side.
 }
 
 void VCMTPReceiver::PerFileNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
@@ -639,44 +632,29 @@ void VCMTPReceiver::PerFileNotifier::notify_of_missed_file(
  * Handle a BOF message for a new file
  */
 void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
-    /*
-    // call PerFileNotifier::notify_of_bof or BatchedNotifier::notify_of_bof
-    // first. Then continue processing or drop, which depends on the return
-    // value of notify_of_bof().
-    PerFileNotifier pfNotifier();
-    BatchedNotifier bNotifier();
-
-    //just providing some thoughts here, code is not correct
-    if( pfNotifier.notify_of_bof(msg) ) {
-        continue;
-    }
-    else {
-        // drop the file, maybe dispose().
-    }
-    */
-
+    // TODO: Make use of the notifier given to the constructor
 	switch (sender_msg.msg_type) {
-	case MEMORY_TRANSFER_START: {
-		char* buf = (char*) malloc(sender_msg.data_len);
-		ReceiveMemoryData(sender_msg, buf);
-		free(buf);
-		break;
-	}
-	case FILE_TRANSFER_START:
-		PrepareForFileTransfer(sender_msg);
-		break;
-	case TCP_MEMORY_TRANSFER_START: {
-		char* buf = (char*) malloc(sender_msg.data_len);
-		TcpReceiveMemoryData(sender_msg, buf);
-		free(buf);
-		break;
-	}
-	case TCP_FILE_TRANSFER_START:
-		TcpReceiveFile(sender_msg);
-		break;
-	default:
-		break;
-	}
+        case MEMORY_TRANSFER_START: {
+            char* buf = (char*) malloc(sender_msg.data_len);
+            ReceiveMemoryData(sender_msg, buf);
+            free(buf);
+            break;
+        }
+        case FILE_TRANSFER_START:
+            PrepareForFileTransfer(sender_msg);
+            break;
+        case TCP_MEMORY_TRANSFER_START: {
+            char* buf = (char*) malloc(sender_msg.data_len);
+            TcpReceiveMemoryData(sender_msg, buf);
+            free(buf);
+            break;
+        }
+        case TCP_FILE_TRANSFER_START:
+            TcpReceiveFile(sender_msg);
+            break;
+        default:
+            break;
+        }
 }
 
 
@@ -1510,35 +1488,52 @@ void VCMTPReceiver::HandleAsyncWriteCompletion(sigval_t sigval) {
 // ============ Functions related to TCP data transfer =============
 void VCMTPReceiver::TcpReceiveMemoryData(const VcmtpSenderMessage & msg, char* mem_data) {
 	char str[256];
+
+    // save TCP data transfer log in string str[256]. msg.data_len means the
+    // data block size of this message.
 	sprintf(str, "Started memory-to-memory transfer using TCP. Size: %d", msg.data_len);
+
+    // status_proxy is an inner-class object of StatusProxy class. StatusProxy
+    // is probably a pseudo user application playing the role of LDM.
+    // SendMessageLocal sends an informational type message to local process.
+    // Message content is stored in str[256];
 	status_proxy->SendMessageLocal(INFORMATIONAL, str);
 
+    // Not sure what is this function doing. Maybe a high performance timer.
 	AccessCPUCounter(&cpu_counter.hi, &cpu_counter.lo);
 
+    // retrans_tcp_client is an object of TcpClient class, It gets data
+    // coming from socket connection and saves into *mem_data buffer.
 	retrans_tcp_client->Receive(mem_data, msg.data_len);
 
 	// Record memory data multicast time
 	double trans_time = GetElapsedSeconds(cpu_counter);
 	double send_rate = msg.data_len / 1024.0 / 1024.0 * 8.0 * 1514.0 / 1460.0 / trans_time;
 
+    // save transfer time and throughput into log
 	sprintf(str, "***** TCP Receive Info *****\nTotal transfer time: %.2f\nThroughput: %.2f\n", trans_time, send_rate);
 	status_proxy->SendMessageLocal(EXP_RESULT_REPORT, str);
 }
 
 
 void VCMTPReceiver::TcpReceiveFile(const VcmtpSenderMessage & transfer_msg) {
-	// NOTE: the length of the memory mapped buffer should be a multiple of the page size
+	// NOTE: the length of the memory mapped buffer should be aligned to page size
 	static const size_t RECV_BUFFER_SIZE = VCMTP_DATA_LEN * 4096;
 
 	char str[256];
+    // save data transfer log in string str[256]. transfer_msg.data_len means the
+    // data block size of this message.
 	sprintf(str, "Started disk-to-disk file transfer using TCP. Size: %u",
 			transfer_msg.data_len);
 	status_proxy->SendMessageLocal(INFORMATIONAL, str);
 
+    // start high performance counter
 	AccessCPUCounter(&cpu_counter.hi, &cpu_counter.lo);
 
 	// Create the disk file
 	char* buffer = (char*)malloc(RECV_BUFFER_SIZE);
+    // open (create if not exist) a text file to store data.
+    // transfer_msg.text -> .txt maybe?
 	int fd = open(transfer_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (fd < 0) {
 		SysError("VCMTPReceiver::ReceiveFile()::creat() error");
