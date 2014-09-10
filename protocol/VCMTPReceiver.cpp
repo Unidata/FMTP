@@ -610,24 +610,6 @@ void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
     // TODO
 }
 
-/*****************************************************************************
- * These three notifiers under PerFileNotifier should be implemented to return
- * corresponding status to user application process (e.g. LDM).
- */
-bool VCMTPReceiver::PerFileNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
-    // if there is a message queue, then put this message into the queque.
-    // Steve should be able to receive and parse the message on LDM side.
-}
-
-void VCMTPReceiver::PerFileNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
-    // TODO
-}
-
-void VCMTPReceiver::PerFileNotifier::notify_of_missed_file(
-        VcmtpSenderMessage& msg) {
-    // TODO
-}
-
 /**
  * Handle a BOF message for a new file
  */
