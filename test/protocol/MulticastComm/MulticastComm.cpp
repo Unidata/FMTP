@@ -48,56 +48,57 @@ MulticastComm::~MulticastComm() {
  *                                the socket.
  */
 int MulticastComm::JoinGroup(const SA* sa, int sa_len, const char *if_name) {
-    switch (sa->sa_family) {
-    case AF_INET:
-        struct ifreq if_req;
-        dst_addr = *sa;
-        dst_addr_len = sa_len;
+    switch (sa->sa_family)
+    {
+        case AF_INET:
+            struct ifreq if_req;
+            dst_addr = *sa;
+            dst_addr_len = sa_len;
 
-        memcpy(&mreq.imr_multiaddr, &((struct sockaddr_in *) sa)->sin_addr,
-                sizeof(struct in_addr));
-
-        if (if_name != NULL) {
-            strncpy(if_req.ifr_name, if_name, IFNAMSIZ);
-            /*
-             * NB: SIOCGIFADDR is non-standard.
-             */
-            if (ioctl(sock_fd, SIOCGIFADDR, &if_req) < 0) {
-                throw std::runtime_error(
-                        std::string("Couldn't obtain PA address: ") +
-                        strerror(errno));
-            }
-
-            memcpy(&mreq.imr_interface,
-                    &((struct sockaddr_in *) &if_req.ifr_addr)->sin_addr,
+            memcpy(&mreq.imr_multiaddr, &((struct sockaddr_in *) sa)->sin_addr,
                     sizeof(struct in_addr));
 
-            if (setsockopt(sock_fd, SOL_SOCKET, SO_BINDTODEVICE, if_name,
-                    strlen(if_name))) {
-                throw std::runtime_error(std::string("Couldn't bind socket to "
-                        "interface \"") + if_name + "\": " + strerror(errno));
+            if (if_name != NULL) {
+                strncpy(if_req.ifr_name, if_name, IFNAMSIZ);
+                /*
+                 * NB: SIOCGIFADDR is non-standard.
+                 */
+                if (ioctl(sock_fd, SIOCGIFADDR, &if_req) < 0) {
+                    throw std::runtime_error(
+                            std::string("Couldn't obtain PA address: ") +
+                            strerror(errno));
+                }
+
+                memcpy(&mreq.imr_interface,
+                        &((struct sockaddr_in *) &if_req.ifr_addr)->sin_addr,
+                        sizeof(struct in_addr));
+
+                if (setsockopt(sock_fd, SOL_SOCKET, SO_BINDTODEVICE, if_name,
+                        strlen(if_name))) {
+                    throw std::runtime_error(std::string("Couldn't bind socket to "
+                            "interface \"") + if_name + "\": " + strerror(errno));
+                }
             }
-        }
-        else {
-            mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-        }
+            else {
+                mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+            }
 
-        if (bind(sock_fd, &dst_addr, dst_addr_len)) {
-            throw std::runtime_error(std::string("Couldn't bind socket "
-                    "to IP address: ") + strerror(errno));
-        }
+            if (bind(sock_fd, &dst_addr, dst_addr_len)) {
+                throw std::runtime_error(std::string("Couldn't bind socket "
+                        "to IP address: ") + strerror(errno));
+            }
 
-        if (setsockopt(sock_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
-                sizeof(mreq))) {
-            throw std::runtime_error(std::string("Couldn't add multicast "
-                    "group to socket: ") + strerror(errno));
-        }
+            if (setsockopt(sock_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+                    sizeof(mreq))) {
+                throw std::runtime_error(std::string("Couldn't add multicast "
+                        "group to socket: ") + strerror(errno));
+            }
 
-        return 0;
+            return 0;
 
-    default:
-        throw std::invalid_argument(
-                std::string("Can only join AF_INET multicast groups"));
+        default:
+            throw std::invalid_argument(
+                    std::string("Can only join AF_INET multicast groups"));
     }
 }
 
