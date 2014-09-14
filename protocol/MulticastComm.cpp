@@ -18,6 +18,16 @@
 #include <string>
 #include <string.h>
 
+
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: MulticastComm()
+ *
+ * Description: Constructing a UDP socket.
+ *
+ * Input:  none
+ * Output: none
+ ****************************************************************************/
 MulticastComm::MulticastComm() {
     // PF_INET for IPv4, SOCK_DGRAM for connectionless udp socket.
 	if ( (sock_fd = socket(PF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -26,27 +36,32 @@ MulticastComm::MulticastComm() {
 }
 
 
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: ~MulticastComm()
+ *
+ * Description: Destructing a UDP socket.
+ *
+ * Input:  none
+ * Output: none
+ ****************************************************************************/
 MulticastComm::~MulticastComm() {
 	close(sock_fd);
 }
 
 
-/**
- * Joins an Internet multicast group, setting up the receiving socket.
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: JoinGroup()
  *
- * @param  sa                     The socket address.
- * @param  sa_len                 The size of \c sa in bytes.
- * @param  if_name                The name of the interface to use or NULL.
- * @return 0                      Success.
- * @throws std::invalid_argument  if the address family of \c sa isn't AF_INET.
- * @throws std::runtime_error     if the IP address of the PA interface couldn't
- *                                be obtained. (The PA address seems to be
- *                                specific to Linux and might cause problems.)
- * @throws std::runtime_error     if the socket couldn't be bound to \c if_name.
- * @throws std::runtime_error     if the socket couldn't be bound to \c sa.
- * @throws std::runtime_error     if multicast group \c sa couldn't be added to
- *                                the socket.
- */
+ * Description: Joins an Internet multicast group, setting up the receiving
+ * socket. Bind the socket to specified local interface and multicast group.
+ *
+ * Input:  *sa          sockaddr struct, contains address and port number.
+ *         sa_len       length of sockaddr struct.
+ *         *if_name     interface name (e.g. eth0)
+ * Output: return       return value 0 means successful.
+ ****************************************************************************/
 int MulticastComm::JoinGroup(const SA* sa, int sa_len, const char *if_name) {
     // only supports AF_INET (IPv4) for now
     switch (sa->sa_family) {
@@ -110,7 +125,20 @@ int MulticastComm::JoinGroup(const SA* sa, int sa_len, const char *if_name) {
     }
 }
 
-// same as another JoinGroup(), but use if_index instead of if_name
+
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: JoinGroup()
+ *
+ * Description: Joins an Internet multicast group, setting up the receiving
+ * socket. Bind the socket to specified local interface and multicast group.
+ * Same as another JoinGroup(), but use if_index instead of if_name.
+ *
+ * Input:  *sa          sockaddr struct, contains address and port number.
+ *         sa_len       length of sockaddr struct.
+ *         if_index     index of the interface
+ * Output: return       return value 0 means successful.
+ ****************************************************************************/
 int MulticastComm::JoinGroup(const SA* sa, int sa_len, u_int if_index) {
 	switch (sa->sa_family) {
 			case AF_INET:
@@ -147,13 +175,29 @@ int MulticastComm::JoinGroup(const SA* sa, int sa_len, u_int if_index) {
 }
 
 
-// drop ip of local interface out of multicast group
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: LeaveGroup()
+ *
+ * Description: Drop IP address of the interface out of the multicast group.
+ *
+ * Input:  none
+ * Output: return       success number or -1
+ ****************************************************************************/
 int MulticastComm::LeaveGroup() {
 	return setsockopt(sock_fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq));
 }
 
 
-// enable or disable loopback
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: SetLoopBack()
+ *
+ * Description: Enable or disable loopback in multicasting.
+ *
+ * Input:  onoff        accept bool value on (true) / off (false)
+ * Output: return       success number or -1
+ ****************************************************************************/
 int MulticastComm::SetLoopBack(int onoff) {
 	switch (dst_addr.sa_family) {
         case AF_INET:
@@ -167,18 +211,53 @@ int MulticastComm::SetLoopBack(int onoff) {
 }
 
 
-// send data to multicast group
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: SendData()
+ *
+ * Description: Send data inside a buffer to the multicast group.
+ *
+ * Input:  *buff        pointer to the data buffer
+ *         len          data buffer size
+ *         flags        sendto() socket flags
+ *         *dst_addr    MulticastComm has its own dst_addr, use NULL here
+ * Output: return       success number or -1
+ ****************************************************************************/
 ssize_t MulticastComm::SendData(const void* buff, size_t len, int flags, void* dst_addr) {
 	return sendto(sock_fd, buff, len, flags, &this->dst_addr, sizeof(sockaddr_in));
 }
 
-// send a whole vcmtp packet to multicast group
+
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: SendPacket()
+ *
+ * Description: Send whole vcmtp packet inside buffer to the multicast group.
+ *
+ * Input:  *buffer      pointer to the VCMTP packet data buffer
+ *         flags        sendto() socket flags
+ *         *dst_addr    MulticastComm has its own dst_addr, use NULL here
+ * Output: return       success number or -1
+ ****************************************************************************/
 ssize_t MulticastComm::SendPacket(PacketBuffer* buffer, int flags, void* dst_addr) {
 	return sendto(sock_fd, buffer->vcmtp_header, buffer->data_len + VCMTP_HLEN,
 					flags, &this->dst_addr, sizeof(sockaddr_in));
 }
 
 
+/*****************************************************************************
+ * Class Name: MulticastComm
+ * Function Name: RecvData()
+ *
+ * Description: Receive data from multicast group.
+ *
+ * Input:  *buff        pointer to the receiving buffer
+ *         len          buffer size
+ *         flags        recvfrom() socket flags
+ *         *from        IP multicast group address
+ *         from_len     IP multicast group address size
+ * Output: return       success number or -1
+ ****************************************************************************/
 ssize_t MulticastComm::RecvData(void* buff, size_t len, int flags, SA* from, socklen_t* from_len) {
 	return recvfrom(sock_fd, buff, len, flags, from, from_len);
 }
