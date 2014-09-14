@@ -77,7 +77,8 @@ public:
 	VCMTPSender(int buf_size);
 	VCMTPSender(
             const string&        tcpAddr,
-            const unsigned short tcpPort);
+            const unsigned short tcpPort,
+            const u_int32_t      fileId = 0);
 	virtual ~VCMTPSender();
 
 	void 	SetSchedRR(bool is_rr);

@@ -54,14 +54,17 @@ VCMTPSender::VCMTPSender(
  * @param[in] tcpAddr    Dotted-decimal IPv4 address of the TCP server. The
  *                       caller may delete.
  * @param[in] tcpPort    Port number of the TCP server.
+ * @param[in] fileId     Initial file-identifier. The first multicast file will
+ *                       have this as its file-identifier.
  */
 VCMTPSender::VCMTPSender(
     const string&        tcpAddr,
-    const unsigned short tcpPort)
+    const unsigned short tcpPort,
+    const u_int32_t      fileId)
 :
     VCMTPComm(),
     retrans_tcp_server(new TcpServer(BUFFER_TCP_SEND_PORT, this)),
-    cur_session_id(0),
+    cur_session_id(fileId),
     /*
      * Set the initial maximum size of the retransmission buffer to 32 * 8 MB =
      * 256 MB
