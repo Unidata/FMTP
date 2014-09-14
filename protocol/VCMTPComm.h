@@ -1,5 +1,5 @@
 /*
- * VCMTPManager.h
+ * VCMTPComm.h
  *
  *  Created on: Jun 29, 2011
  *      Author: jie

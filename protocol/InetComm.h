@@ -1,8 +1,14 @@
 /*
- * InetComm.h
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Jul 21, 2011
- *      Author: jie
+ * @filename: InetComm.cpp
+ *
+ * @history:
+ *      Created on : Jul 21, 2011
+ *      Author     : jie
+ *      Modified   : Sep 13, 2014
+ *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
 #ifndef INETCOMM_H_
@@ -22,7 +28,7 @@ public:
 	int		GetSocket();
 
 protected:
-	int sock_fd;
+	int sock_fd; // socket file descriptor
 
 private:
 

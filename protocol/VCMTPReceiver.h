@@ -16,6 +16,7 @@
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
 
+// statistic information of VCMTPReceiver
 struct VcmtpReceiverStats {
 	uint	current_msg_id;
 	uint 	total_recv_packets;
@@ -41,6 +42,7 @@ struct VcmtpReceiverStats {
 };
 
 
+// receiver side status (not statistic info)
 struct MessageReceiveStatus {
 	uint 		msg_id;
 	string		msg_name;
@@ -122,7 +124,7 @@ public:
 private:
 	TcpClient*	        retrans_tcp_client;
 	// used in the select() system call
-	int		            max_sock_fd;
+	int		            max_sock_fd;        // the maximum file descriptors allowed
 	int 		        multicast_sock;
 	int		            retrans_tcp_sock;
 	fd_set		        read_sock_set;

@@ -613,30 +613,43 @@ void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
 /**
  * Handle a BOF message for a new file
  */
-void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
+void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg)
+{
     // TODO: Make use of the notifier given to the constructor
-	switch (sender_msg.msg_type) {
+	switch (sender_msg.msg_type)
+    {
+        // receiving memory data from multicasts
         case MEMORY_TRANSFER_START: {
             char* buf = (char*) malloc(sender_msg.data_len);
+            // store data from sender into *buf
             ReceiveMemoryData(sender_msg, buf);
             free(buf);
             break;
         }
+
+        // receiving disk file from multicasts. won't be used by LDM.
         case FILE_TRANSFER_START:
             PrepareForFileTransfer(sender_msg);
             break;
+
+        // receiving memory data from unicast connection. (for retransmission)
         case TCP_MEMORY_TRANSFER_START: {
             char* buf = (char*) malloc(sender_msg.data_len);
+            // store re-trans data from sender into *buf
             TcpReceiveMemoryData(sender_msg, buf);
             free(buf);
             break;
         }
+
+        // receiving disk file from unicast connection. (for retransmission)
         case TCP_FILE_TRANSFER_START:
+            // store retans file into disk. won't be used by LDM.
             TcpReceiveFile(sender_msg);
             break;
+
         default:
             break;
-        }
+    }
 }
 
 
@@ -646,6 +659,7 @@ void VCMTPReceiver::PrepareForFileTransfer(VcmtpSenderMessage& sender_msg) {
 	ResetSessionStatistics();
 
 	MessageReceiveStatus status;
+    // initialize status
 	status.msg_id = sender_msg.session_id;
 	status.msg_name = sender_msg.text;
 	status.msg_length = sender_msg.data_len;
@@ -657,6 +671,7 @@ void VCMTPReceiver::PrepareForFileTransfer(VcmtpSenderMessage& sender_msg) {
 	status.retx_bytes = 0;
 	status.recv_failed = false;
 	status.retx_file_descriptor = -1;
+    // open (create) a disk file to store multicasted data
 	status.file_descriptor = open(sender_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (status.file_descriptor < 0)
 		SysError("VCMTPReceiver::PrepareForFileTransfer open file error");
@@ -671,8 +686,12 @@ void VCMTPReceiver::PrepareForFileTransfer(VcmtpSenderMessage& sender_msg) {
 	status.send_time_adjust = GetElapsedSeconds(global_timer) - (sender_msg.time_stamp + time_diff);
 
 
+    // read_ahead_header is an object of VcmtpHeader struct
 	if (read_ahead_header->session_id == sender_msg.session_id)
 	{
+        // read_ahead_data now points at the beginning of vcmtp data offload
+        // part in read_ahead_buffer. Here the read_ahead_buffer is read out
+        // and saved into disk file.
 		if (write(status.file_descriptor, read_ahead_data, read_ahead_header->data_len) < 0)
 			SysError("VCMTPReceiver::ReceiveFileBufferedIO() write multicast data error");
 
@@ -681,6 +700,7 @@ void VCMTPReceiver::PrepareForFileTransfer(VcmtpSenderMessage& sender_msg) {
 		status.multicast_bytes += read_ahead_header->data_len;
 		read_ahead_header->session_id = -1;
 	}
+    // update status info to map<uint, VcmtpStatusStats>
 	recv_status_map[status.msg_id] = status;
 
 	recv_stats.current_msg_id = sender_msg.session_id;
@@ -810,46 +830,48 @@ void VCMTPReceiver::RunRetransmissionThread() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-//************************************* Old unused functions ********************************
-
 // Receive memory data from the sender
 void VCMTPReceiver::ReceiveMemoryData(const VcmtpSenderMessage & transfer_msg, char* mem_data) {
 	retrans_info.open("retrans_info.txt", ofstream::out | ofstream::trunc);
 	ResetSessionStatistics();
 
+    // collecting stats data and logging
 	char str[256];
 	sprintf(str, "Started new memory data transfer. Size: %d", transfer_msg.data_len);
 	status_proxy->SendMessageLocal(INFORMATIONAL, str);
 
+    // timer
 	AccessCPUCounter(&cpu_counter.hi, &cpu_counter.lo);
 
 	uint32_t session_id = transfer_msg.session_id;
+    // nack_list is a double linked list of VcmtpNackMessage
 	list<VcmtpNackMessage> nack_list;
 
 	char packet_buffer[VCMTP_PACKET_LEN];
+    // force converting a whole packet buffer pointer into header pointer
 	VcmtpHeader* header = (VcmtpHeader*)packet_buffer;
+    // manually set data offset pointer by skipping packet header size
 	char* packet_data = packet_buffer + VCMTP_HLEN;
 
 	int recv_bytes;
 	uint32_t offset = 0;
+    // fd_set stores a set of sockets to be read
 	fd_set read_set;
-	while (true) {
+	while (true)
+    {
 		read_set = read_sock_set;
+        // non-block sync I/O socket selection. The first parameter is the
+        // max socket number + 1. If select() returns a value larger than 0,
+        // it means at least one of these sockets is ready.
 		if (select(max_sock_fd + 1, &read_set, NULL, NULL, NULL) == -1) {
 			SysError("VCMTPReceiver::ReceiveMemoryData()::select() error");
 		}
 
-		if (FD_ISSET(multicast_sock, &read_set)) {
+        // judge if multicast_sock is in read socket set
+		if (FD_ISSET(multicast_sock, &read_set))
+        {
+            // ptr_multicast_comm is an object of VcmtpComm class. It receives
+            // data from sock_fd and store into packet_buffer.
 			recv_bytes = ptr_multicast_comm->RecvData(packet_buffer,
 					VCMTP_PACKET_LEN, 0, NULL, NULL);
 			if (recv_bytes < 0) {
@@ -863,7 +885,8 @@ void VCMTPReceiver::ReceiveMemoryData(const VcmtpSenderMessage & transfer_msg, c
 			// Add the received packet to the buffer
 			// When greater than packet_loss_rate, add the packet to the receive buffer
 			// Otherwise, just drop the packet (emulates errored packet)
-			if (rand() % 1000 >= packet_loss_rate) {
+			if (rand() % 1000 >= packet_loss_rate)
+            {
 				if (header->seq_number > offset) {
 					//cout << "Loss packets detected. Supposed Seq. #: " << offset << "    Received Seq. #: "
 					//					<< header->seq_number << "    Lost bytes: " << (header->seq_number - offset) << endl;
@@ -880,10 +903,9 @@ void VCMTPReceiver::ReceiveMemoryData(const VcmtpSenderMessage & transfer_msg, c
 				recv_stats.session_recv_packets++;
 				recv_stats.session_recv_bytes += header->data_len;
 			}
-
 			continue;
-
-		} else if (FD_ISSET(retrans_tcp_sock, &read_set)) {
+		}
+        else if (FD_ISSET(retrans_tcp_sock, &read_set)) {
 			struct VcmtpSenderMessage t_msg;
 			if (recv(retrans_tcp_sock, &t_msg, sizeof(t_msg), 0) < 0) {
 				SysError("VCMTPReceiver::ReceiveMemoryData()::recv() error");
@@ -1512,26 +1534,30 @@ void VCMTPReceiver::TcpReceiveFile(const VcmtpSenderMessage & transfer_msg) {
     // start high performance counter
 	AccessCPUCounter(&cpu_counter.hi, &cpu_counter.lo);
 
-	// Create the disk file
+	// Create a recv buffer
 	char* buffer = (char*)malloc(RECV_BUFFER_SIZE);
     // open (create if not exist) a text file to store data.
-    // transfer_msg.text -> .txt maybe?
 	int fd = open(transfer_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (fd < 0) {
-		SysError("VCMTPReceiver::ReceiveFile()::creat() error");
+		SysError("VCMTPReceiver::TcpReceiveFile() creating file failed.");
 	}
 
+    // remained_size means size needs to be received
 	size_t remained_size = transfer_msg.data_len;
 	while (remained_size > 0) {
-		size_t map_size = remained_size < RECV_BUFFER_SIZE ? remained_size
-				: RECV_BUFFER_SIZE;
+        // If remaining data size is less than RECV_BUFFER, receive data
+        // directly with data size. Otherwise use RECV_BUFFER_SIZE and repeat.
+		size_t map_size = \
+               remained_size < RECV_BUFFER_SIZE ? remained_size : RECV_BUFFER_SIZE;
+        // receive retrans file and save it into buffer
 		retrans_tcp_client->Receive(buffer, map_size);
+        // save buffer data into disk file
 		write(fd, buffer, map_size);
-
 		remained_size -= map_size;
 	}
 	close(fd);
 	free(buffer);
+    // delete transfer_msg.text from filesystem
 	unlink(transfer_msg.text);
 
 	// Record memory data multicast time
@@ -1543,7 +1569,6 @@ void VCMTPReceiver::TcpReceiveFile(const VcmtpSenderMessage & transfer_msg) {
 
 	sprintf(str, "%u,%.2f,%.2f\n", transfer_msg.data_len, trans_time, send_rate);
 	status_proxy->SendMessageLocal(EXP_RESULT_REPORT, str);
-
 }
 
 
