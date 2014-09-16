@@ -16,6 +16,8 @@
 
 #include "vcmtp.h"
 
+void SysError(string s);
+
 class InetComm {
 public:
 	InetComm();

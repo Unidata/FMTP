@@ -37,8 +37,6 @@ public:
 private:
 	SA dst_addr;
 	int dst_addr_len;
-    // ip_mreq is a Linux struct, containing in_addr type interface ip and
-    // multicast ip.
 	ip_mreq mreq;
 };
 
