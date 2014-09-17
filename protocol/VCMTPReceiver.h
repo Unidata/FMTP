@@ -83,9 +83,9 @@ class VCMTPReceiver : public VCMTPComm {
 public:
 	VCMTPReceiver(int buf_size);
 	VCMTPReceiver(
-	        std::string&         tcpAddr,
-	        const unsigned short tcpPort,
-	        const                ReceivingApplicationNotifier& notifier);
+	        std::string&                  tcpAddr,
+	        const unsigned short          tcpPort,
+	        ReceivingApplicationNotifier* notifier);
 	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -179,7 +179,7 @@ private:
 	/**
 	 * Notifies the receiving application about file events.
 	 */
-	const ReceivingApplicationNotifier      notifier;
+	ReceivingApplicationNotifier* const notifier;
 
 	/**
 	 * This class implements the default method for notifying the receiving

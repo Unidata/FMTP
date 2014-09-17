@@ -60,7 +60,7 @@ VCMTPReceiver::VCMTPReceiver(
     const int                       buf_size)
 :
     cpu_info(),
-    notifier(BatchedNotifier(*this))
+    notifier(new BatchedNotifier(*this))
 {
     init();
 }
@@ -73,13 +73,12 @@ VCMTPReceiver::VCMTPReceiver(
  *                      data-blocks. May be hostname or formatted IP address.
  * @param[in] tcpPort   Port number of the TCP server.
  * @param[in] notifier  Notifier of the receiving application of file
- *                      events. Defensively copied; the client may delete upon
- *                      return.
+ *                      events. Will be deleted by the destructor.
  */
 VCMTPReceiver::VCMTPReceiver(
     std::string&                          tcpAddr,
     const unsigned short                  tcpPort,
-    const ReceivingApplicationNotifier&   notifier)
+    ReceivingApplicationNotifier* const   notifier)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
@@ -91,6 +90,7 @@ VCMTPReceiver::VCMTPReceiver(
 
 VCMTPReceiver::~VCMTPReceiver() {
 	delete retrans_tcp_client;
+	delete notifier;
 	pthread_mutex_destroy(&retrans_list_mutex);
 }
 
