@@ -28,6 +28,7 @@ public:
 protected:
 	NetInterfaceManager* if_manager;
 	string if_name, if_ip;
+    // what is RawSocketComm? why a different version from MulticastComm?
 	RawSocketComm* ptr_raw_sock_comm;
 	MulticastComm* ptr_multicast_comm;
 

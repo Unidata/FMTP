@@ -107,16 +107,6 @@ public:
 	void	ExecuteCommand(char* command);
 	void 	SetStatusProxy(StatusProxy* proxy);
 	const   struct VcmtpReceiverStats GetBufferStats();
-
-    /************************************************************************
-     * These three notifiers should be later removed since there are new
-     * implementations in subclass BatchedNotifier and PerFileNotifier. Those
-     * are the ones actually working.
-     ***********************************************************************/
-	//bool    notify_of_bof(VcmtpSenderMessage& msg);
-	//void    notify_of_eof(VcmtpSenderMessage& msg);
-	//void    notify_of_missed_file(VcmtpSenderMessage& msg);
-
 	void	RunReceivingThread();
 	void	stop();
 

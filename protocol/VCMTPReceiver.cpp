@@ -884,7 +884,7 @@ void VCMTPReceiver::ReceiveMemoryData(const VcmtpSenderMessage & transfer_msg, c
 	list<VcmtpNackMessage> nack_list;
 
 	char packet_buffer[VCMTP_PACKET_LEN];
-    // force converting a whole packet buffer pointer into header pointer
+    // manually setting the header pointer to the beginning of packet.
 	VcmtpHeader* header = (VcmtpHeader*)packet_buffer;
     // manually set data offset pointer by skipping packet header size
 	char* packet_data = packet_buffer + VCMTP_HLEN;
