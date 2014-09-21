@@ -2,7 +2,7 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
- * @filename: InetComm.cpp
+ * @filename: InetComm.h
  *
  * @history:
  *      Created on : Jul 21, 2011

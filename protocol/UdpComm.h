@@ -1,8 +1,14 @@
 /*
- * UdpComm.h
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Jul 4, 2011
- *      Author: jie
+ * @filename: UdpComm.h
+ *
+ * @history:
+ *      Created on : Jul 21, 2011
+ *      Author     : jie
+ *      Modified   : Sep 21, 2014
+ *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
 #ifndef UDPCOMM_H_
