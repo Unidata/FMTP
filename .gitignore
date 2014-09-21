@@ -17,4 +17,3 @@ Makefile.in
 *.swp
 *.tar.gz
 tags
-Makefile
