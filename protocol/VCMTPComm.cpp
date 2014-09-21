@@ -1,8 +1,14 @@
 /*
- * VCMTPManager.cpp
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Jun 29, 2011
- *      Author: jie
+ * @filename: VCMTPComm.cpp
+ *
+ * @history:
+ *      Created  : Sep 15, 2011
+ *      Author   : jie
+ *      Modified : Seo 19, 2014
+ *      Author   : Shawn <sc7cq@virginia.edu>
  */
 
 #include "VCMTPComm.h"
@@ -15,6 +21,7 @@ VCMTPComm::VCMTPComm()
 :   port_num(0),
     vcmtp_group_id(0)
 {
+    // create a new MulticastComm object.
 	ptr_multicast_comm = new MulticastComm();
 
 	send_vcmtp_header = (PTR_VCMTP_HEADER)send_packet_buf;

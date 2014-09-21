@@ -1,8 +1,14 @@
 /*
- * VCMTPComm.h
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Jun 29, 2011
- *      Author: jie
+ * @filename: VCMTPComm.h
+ *
+ * @history:
+ *      Created  : Sep 15, 2011
+ *      Author   : jie
+ *      Modified : Seo 19, 2014
+ *      Author   : Shawn <sc7cq@virginia.edu>
  */
 
 #ifndef VCMTPCOMM_H_
@@ -28,7 +34,7 @@ public:
 protected:
 	NetInterfaceManager* if_manager;
 	string if_name, if_ip;
-    // what is RawSocketComm? why a different version from MulticastComm?
+    // what is RawSocketComm? why different from MulticastComm?
 	RawSocketComm* ptr_raw_sock_comm;
 	MulticastComm* ptr_multicast_comm;
 
