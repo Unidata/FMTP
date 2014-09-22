@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
     struct sockaddr_in serv_addr;
 	bzero(&serv_addr, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr("128.143.137.117");
+	serv_addr.sin_addr.s_addr = inet_addr("128.143.231.105");
     serv_addr.sin_port = htons(5000);
 
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
