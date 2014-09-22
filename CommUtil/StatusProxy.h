@@ -23,10 +23,10 @@ public:
 	StatusProxy(string addr, int port);
 	virtual ~StatusProxy();
 
-	int ConnectServer();
-	void StartService();
+	int ConnectServer(); // connect to the server ip given to the constructor.
+	int StartService();
 	void StopService();
-	string GetNodeId();
+	string GetNodeId(); // get nodename of local machine.
 	int SendMessageToManager(int msg_type, string msg);
 	int ReadMessageFromManager(int& msg_type, string& msg);
 	virtual int SendMessageLocal(int msg_type, string msg);
@@ -40,8 +40,8 @@ protected:
 	string node_id;
 	int sockfd;
 	struct sockaddr_in servaddr;
-	bool isConnected;
 
+	bool isConnected;
 	bool proxy_started;
 	bool keep_alive;
 	bool keep_quiet;

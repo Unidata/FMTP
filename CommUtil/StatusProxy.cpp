@@ -8,48 +8,57 @@
 #include "StatusProxy.h"
 
 StatusProxy::StatusProxy(string addr, int port) {
-	in_addr_t server_addr = inet_addr(addr.c_str());
-	if (server_addr == -1) {
+    // convert string format address into numeric format.
+	in_addr_t tempServerAddr = inet_addr(addr.c_str());
+    // if addr is not ip but hostname, resolve the hostname to ip.
+	if (tempServerAddr == -1) {
 		struct hostent* ptrhost = gethostbyname(addr.c_str());
 		if (ptrhost != NULL) {
-			server_addr = ((in_addr*)ptrhost->h_addr_list[0])->s_addr;
+			tempServerAddr = ((in_addr*)ptrhost->h_addr_list[0])->s_addr;
 		}
 	}
 
+    // clear servaddr
 	bzero(&servaddr, sizeof(servaddr));
+    // set servaddr struct with given ip and port.
 	servaddr.sin_family 	 = AF_INET;
-	servaddr.sin_addr.s_addr = server_addr;
+	servaddr.sin_addr.s_addr = tempServerAddr;
 	servaddr.sin_port 		 = htons(port);
 
-	sockfd = -1;
-	isConnected = false;
+    // initialize flags
+	sockfd        = -1;
+	isConnected   = false;
 	proxy_started = false;
-	keep_alive = false;
-	keep_quiet = false;
+	keep_alive    = false;
+	keep_quiet    = false;
 	is_restarting = false;
 	execution_pid = 0;
 
-	struct utsname host_name;
-	uname(&host_name);
-	node_id = host_name.nodename;
+	struct utsname localMachineInfo;
+    // use uname() to get system info.
+	uname(&localMachineInfo);
+    // extract the nodename
+	node_id = localMachineInfo.nodename;
 }
 
-StatusProxy::~StatusProxy() {
 
+StatusProxy::~StatusProxy() {
 }
 
 
 int StatusProxy::ConnectServer() {
+    // create a TCP socket.
 	if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		cout << "socket() error" << endl;
 		return -1;
 	}
 
 	int res;
+    // connect to servaddr by socket.
 	while ((res = connect(sockfd, (SA *) &servaddr, sizeof(servaddr))) < 0) {
 		cout << "connect() error" << endl;
+        // sleep 10 sec to re-connect to the server, try until successing.
 		sleep(10);
-		//return -1;
 	}
 
 	isConnected = true;
@@ -168,19 +177,20 @@ int StatusProxy::ReadMessageLocal(int& msg_type, string& msg) {
 
 
 void StatusProxy::InitializeExecutionProcess() {
-
 }
 
 void StatusProxy::StartExecutionProcess() {
+    // if proxy is started, close all r/w pipe first.
 	if (proxy_started) {
 		close(read_pipe_fd);
 		close(write_pipe_fd);
 	}
 
-	if (pipe(read_pipe_fds) < 0) {
+    // creating a read pipe for IPC.
+	if (pipe(read_pipe_fds) < 0)
 		SysError("StatusProxy::StartService()::create read pipe error");
-	}
 
+    // creating a write pipe for IPC.
 	if (pipe(write_pipe_fds) < 0)
 		SysError("StatusProxy::StartService()::create write pipe error");
 
@@ -217,19 +227,18 @@ void StatusProxy::StartExecutionProcess() {
 
 
 void StatusProxy::StopService() {
-	keep_alive = false;
+	keep_alive    = false;
 	proxy_started = false;
-	is_connected = false;
+	is_connected  = false;
 	close(sockfd);
 }
 
 
-void StatusProxy::StartService() {
+int StatusProxy::StartService() {
 	if (!isConnected)
-		return;
+		return -1;
 	else
 		StartExecutionProcess();
-
 }
 
 
@@ -333,9 +342,6 @@ void StatusProxy::RunManagerReceiveThread() {
 
 
 void StatusProxy::ReconnectServer() {
-	//if (errno == EINTR)
-	//	return;
-
 	close(sockfd);
 	is_connected = false;
 	ConnectServer();
