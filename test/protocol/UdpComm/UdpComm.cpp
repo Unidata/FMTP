@@ -109,8 +109,13 @@ ssize_t UdpComm::SendTo(const void* buff, size_t len, int flags, SA* to_addr,
  *         from_len      address size
  * Output: none
  ****************************************************************************/
-ssize_t UdpComm::RecvFrom(void* buff, size_t len, int flags, SA* from_to,
+ssize_t UdpComm::RecvFrom(void* buff, size_t len, int flags, SA* from_addr,
                           socklen_t* from_len)
 {
-	return recvfrom(sock_fd, buff, len, flags, from_to, from_len);
+	return recvfrom(sock_fd, buff, len, flags, from_addr, from_len);
+}
+
+void SysError(string s) {
+	perror(s.c_str());
+	exit(-1);
 }

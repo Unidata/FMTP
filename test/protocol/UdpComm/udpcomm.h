@@ -16,6 +16,8 @@
 
 #include "vcmtp.h"
 
+void SysError(string s);
+
 class UdpComm {
 public:
 	UdpComm(ushort port);
