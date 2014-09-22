@@ -24,6 +24,7 @@ int main(int argc, char* argv[])
             SysError("RecvFrom() failed.\n");
         }
         std::cout << recvbuf << std::endl;
+        demoUDP.SendTo(sendbuf, sizeof(sendbuf), 0, (struct sockaddr *) &cli_addr, cli_size);
         sleep(1);
     }
     return 0;

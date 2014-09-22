@@ -19,9 +19,12 @@ int main(int argc, char* argv[])
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         printf("create socket failed.\n");
     }
+    socklen_t serv_size = sizeof(serv_addr);
     while(1)
     {
-        sendto(sock, sendbuf, sizeof(sendbuf), 0, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+        sendto(sock, sendbuf, sizeof(sendbuf), 0, (struct sockaddr *) &serv_addr, serv_size);
+        recvfrom(sock, recvbuf, sizeof(recvbuf), 0, (struct sockaddr *) &serv_addr, &serv_size);
+        std::cout << recvbuf << std::endl;
         sleep(1);
     }
     return 0;
