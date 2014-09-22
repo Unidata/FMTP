@@ -7,6 +7,19 @@
 
 #include "StatusProxy.h"
 
+
+
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: StatusProxy()
+ *
+ * Description: Constructor. Initialize flags, get NodeID and fill in the
+ * servaddr struct.
+ *
+ * Input:  addr         server address
+ *         port         port number
+ * Output: none
+ ****************************************************************************/
 StatusProxy::StatusProxy(string addr, int port) {
     // convert string format address into numeric format.
 	in_addr_t tempServerAddr = inet_addr(addr.c_str());
@@ -46,6 +59,16 @@ StatusProxy::~StatusProxy() {
 }
 
 
+
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: ConnectServer()
+ *
+ * Description: Create a TCP socket and connect to the given server.
+ *
+ * Input:  none
+ * Output: none
+ ****************************************************************************/
 int StatusProxy::ConnectServer() {
     // create a TCP socket.
 	if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
@@ -234,6 +257,15 @@ void StatusProxy::StopService() {
 }
 
 
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: StartService()
+ *
+ * Description: Call StartExecutionProcess() when connected to server.
+ *
+ * Input:  none
+ * Output: none
+ ****************************************************************************/
 int StatusProxy::StartService() {
 	if (!isConnected)
 		return -1;

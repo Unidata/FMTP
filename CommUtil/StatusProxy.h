@@ -1,8 +1,14 @@
 /*
- * StatusProxy.h
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Jun 25, 2011
- *      Author: jie
+ * @filename: StatusProxy.h
+ *
+ * @history:
+ *      Created  : Sep 15, 2011
+ *      Author   : jie
+ *      Modified : Sep 22, 2014
+ *      Author   : Shawn <sc7cq@virginia.edu>
  */
 
 #ifndef STATUSPROXY_H_
