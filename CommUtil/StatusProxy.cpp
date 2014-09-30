@@ -249,6 +249,15 @@ void StatusProxy::StartExecutionProcess() {
 }
 
 
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: StopService()
+ *
+ * Description: Reset flags and close socket.
+ *
+ * Input:  none
+ * Output: none
+ ****************************************************************************/
 void StatusProxy::StopService() {
 	keep_alive    = false;
 	proxy_started = false;
@@ -305,6 +314,16 @@ int StatusProxy::SendNodeInfo() {
 	return 1;
 }
 
+
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: GetNodeId()
+ *
+ * Description: Simply return node_id.
+ *
+ * Input:  none
+ * Output: none
+ ****************************************************************************/
 string StatusProxy::GetNodeId() {
 	return node_id;
 }
