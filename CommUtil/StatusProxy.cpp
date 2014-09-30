@@ -89,7 +89,16 @@ int StatusProxy::ConnectServer() {
 }
 
 
-// Send a message to the remote manager
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: SendMessageToManager()
+ *
+ * Description: Send a message to the remote manager
+ *
+ * Input:  msg_type     type of this message
+ *         msg          content of this message
+ * Output: none
+ ****************************************************************************/
 int StatusProxy::SendMessageToManager(int msg_type, string msg) {
 	int res;
 	int type = msg_type;
@@ -97,19 +106,21 @@ int StatusProxy::SendMessageToManager(int msg_type, string msg) {
 	if (length == 0)
 		return 1;
 
+    // send msg_type to server
 	if ( (res = write(sockfd, &type, sizeof(type))) < 0) {
 		cout << "Error sending message to remote manager. " << endl;
 		ReconnectServer();
 		return -1;
 	}
 
-
+    // send msg length to server
 	if ( (res = write(sockfd, &length, sizeof(length))) < 0) {
 		cout << "Error sending message to remote manager. " << endl;
 		ReconnectServer();
 		return -1;
 	}
 
+    // send msg entity to server
 	if ( (res = write(sockfd, msg.c_str(), length)) < 0) {
 		cout << "Error sending message to remote manager. " << endl;
 		ReconnectServer();
@@ -120,28 +131,42 @@ int StatusProxy::SendMessageToManager(int msg_type, string msg) {
 }
 
 
-// Read a message from the remote manager
+/*****************************************************************************
+ * Class Name: StatusProxy
+ * Function Name: ReadMessageFromManager()
+ *
+ * Description: Read a message from the remote manager.
+ *
+ * Input:  &msg_type     type of this message
+ *         &msg          content of this message
+ * Output: none
+ ****************************************************************************/
 int StatusProxy::ReadMessageFromManager(int& msg_type, string& msg) {
 	int res;
+    // read msg_type from server
 	if ((res = read(sockfd, &msg_type, sizeof(msg_type))) <= 0) {
-		cout << "read() error." << endl;
+		cout << "read() from server error." << endl;
 		ReconnectServer();
 		return -1;
 	}
 
 	int msg_length;
+    // read msg length from server
 	if ((res = read(sockfd, &msg_length, sizeof(msg_length))) <= 0) {
-		cout << "read() error." << endl;
+		cout << "read() from server error." << endl;
 		ReconnectServer();
 		return -1;
 	}
 
 	char buffer[BUFFER_SIZE];
+    // read msg from server
 	if ((res = read(sockfd, buffer, msg_length)) < 0) {
-		cout << "read() error." << endl;
+		cout << "read() from server error." << endl;
 		ReconnectServer();
 		return -1;
-	} else {
+	}
+    else {
+        // write '\0' to end of buffer
 		buffer[res] = '\0';
 		msg = buffer;
 		return 1;
