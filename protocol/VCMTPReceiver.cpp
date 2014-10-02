@@ -421,6 +421,7 @@ void VCMTPReceiver::RunReceivingThread() {
 		read_set = read_sock_set;
 		if (select(max_sock_fd + 1, &read_set, NULL, NULL, NULL) == -1) {
 			SysError("TcpServer::SelectReceive::select() error");
+			break;
 		}
 
 		// check received data on the multicast socket
@@ -433,11 +434,13 @@ void VCMTPReceiver::RunReceivingThread() {
 			HandleUnicastPacket();
 		}
 	}
+
+	pthread_exit(0);
 }
 
 /**
  * Stops the receiver. Blocks until all threads have terminated. Undefined
- * behavior will result if called from a signal handler that was invoked by the
+ * behavior results if called from a signal handler that was invoked by the
  * delivery of a signal during execution of an async-signal-unsafe function.
  */
 void VCMTPReceiver::stop() {
@@ -461,7 +464,7 @@ void VCMTPReceiver::HandleMulticastPacket() {
 		SysError("VCMTPReceiver::RunReceivingThread() multicast recv error");
 
 	// Check whether the header flag is BOF or Data or EOF. And call
-    // corresponding handler.
+        // corresponding handler.
 	if (header->flags & VCMTP_BOF) {
 		HandleBofMessage(*ptr_sender_msg);
 	} else if (header->flags & VCMTP_EOF) {

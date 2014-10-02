@@ -42,7 +42,7 @@ void CreateNewLogFile(const char* file_name) {
 
 void SysError(string s) {
 	perror(s.c_str());
-	exit(-1);
+	// exit(-1);
 }
 
 

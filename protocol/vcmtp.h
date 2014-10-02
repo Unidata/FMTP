@@ -63,17 +63,17 @@ typedef struct ifreq	IFREQ;
 typedef struct VcmtpHeader {
 	u_int16_t	src_port;
 	u_int16_t	dest_port;
-	u_int32_t 	session_id;
-	u_int32_t	seq_number;
+	u_int32_t 	session_id; // this is actually the file-ID!
+	u_int32_t	seq_number; // block number within a file
 	u_int32_t	data_len;
 	u_int32_t	flags;
 } VCMTP_HEADER, *PTR_VCMTP_HEADER;
 
 
 // VCMTP Header Flags
-const u_int32_t VCMTP_DATA = 0x00000000;			// data packet
-const u_int32_t VCMTP_BOF = 0x00000001;				// begin of file
-const u_int32_t VCMTP_EOF = 0x00000002;				// end of file
+const u_int32_t VCMTP_DATA = 0x00000000;		// data packet
+const u_int32_t VCMTP_BOF = 0x00000001;			// begin of file
+const u_int32_t VCMTP_EOF = 0x00000002;			// end of file
 const u_int32_t VCMTP_SENDER_MSG_EXP = 0x00000004;	// sender messages used for experiment
 const u_int32_t VCMTP_RETRANS_REQ = 0x00000008;		// retransmission request
 const u_int32_t VCMTP_RETRANS_DATA = 0x00000010; 	// retransmission data

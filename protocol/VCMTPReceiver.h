@@ -89,7 +89,7 @@ public:
 	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
-	int		ConnectSenderOnTCP();
+	int	ConnectSenderOnTCP();
 	void 	Start();
 	void 	StartReceivingThread();
 	void	SetSchedRR(bool is_rr);
