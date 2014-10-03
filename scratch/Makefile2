@@ -1,0 +1,11 @@
+CC = g++
+INCLUDE = ../protocol/
+LIB =
+ELFFILE = vcmtpRecv
+
+$(ELFFILE): main.cpp vcmtpReceiver.cpp vcmtpReceiver.h
+	$(CC) -o $(ELFFILE) main.cpp vcmtpReceiver.cpp -I$(INCLUDE)
+
+.PHONY : clean
+clean:
+	rm $(ELFFILE)
