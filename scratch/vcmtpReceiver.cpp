@@ -9,14 +9,17 @@
  *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
-#include <vcmtpReceiver.h>
+#include <iostream>
+#include "vcmtpReceiver.h"
+
+using namespace std;
 
 VCMTPReceiver::VCMTPReceiver(
-    std::string&                          tcpAddr,
-    const unsigned short                  tcpPort)
+    string&                 tcpAddr,
+    const unsigned short    tcpPort)
 :
     tcpAddr(tcpAddr),
-    tcpPort(tcpPort),
+    tcpPort(tcpPort)
 {
     init();
 }
@@ -30,11 +33,11 @@ void VCMTPReceiver::init()
 {
     retrans_tcp_client = 0;
     max_sock_fd = 0;
-    multicast_sock = ptr_multicast_comm->GetSocket();
+    //multicast_sock = ptr_multicast_comm->GetSocket();
     retrans_tcp_sock = 0;
     packet_loss_rate = 0;
     session_id = 0;
-    status_proxy = 0;
+    //status_proxy = 0;
     time_diff_measured = false;
     time_diff = 0;
     read_ahead_header = (VcmtpHeader*)read_ahead_buffer;
@@ -64,24 +67,24 @@ void* VCMTPReceiver::StartReceivingThread(void* ptr) {
 }
 
 void VCMTPReceiver::RunReceivingThread() {
-    std::cout << "RunReceivingThread()" << std::endl;
+    std::cout << "RunReceivingThread() running" << std::endl;
     /*
     fd_set  read_set;
     while (true) {
         read_set = read_sock_set;
         if (select(max_sock_fd + 1, &read_set, NULL, NULL, NULL) == -1) {
-            SysError("TcpServer::SelectReceive::select() error");
+            //SysError("TcpServer::SelectReceive::select() error");
             break;
         }
 
         // check received data on the multicast socket
         if (FD_ISSET(multicast_sock, &read_set)) {
-            HandleMulticastPacket();
+            //HandleMulticastPacket();
         }
 
         // check received data on the TCP connection
         if (FD_ISSET(retrans_tcp_sock, &read_set)) {
-            HandleUnicastPacket();
+            //HandleUnicastPacket();
         }
     }
     pthread_exit(0);
@@ -131,12 +134,6 @@ void VCMTPReceiver::HandleMulticastPacket() {
             SysError("VCMTPReceiver::RunReceivingThread()::write() error on multicast data");
 
         recv_status.current_offset = header->seq_number + header->data_len;
-
-        // Update statistics
-        recv_status.multicast_packets++;
-        recv_status.multicast_bytes += header->data_len;
-        recv_stats.total_recv_packets++;
-        recv_stats.total_recv_bytes += header->data_len;
         }
     }
 }

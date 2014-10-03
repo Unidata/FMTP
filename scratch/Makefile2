@@ -1,10 +1,10 @@
 CC = g++
-INCLUDE = ../protocol/
-LIB =
+INCLUDE = ./lib/
+LIB = pthread
 ELFFILE = vcmtpRecv
 
-$(ELFFILE): main.cpp vcmtpReceiver.cpp vcmtpReceiver.h
-	$(CC) -o $(ELFFILE) main.cpp vcmtpReceiver.cpp -I$(INCLUDE)
+$(ELFFILE): main.cpp vcmtpReceiver.cpp
+	$(CC) -o $(ELFFILE) main.cpp vcmtpReceiver.cpp -I$(INCLUDE) -pthread
 
 .PHONY : clean
 clean:

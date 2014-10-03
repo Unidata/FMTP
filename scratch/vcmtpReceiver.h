@@ -12,11 +12,41 @@
 #ifndef VCMTPRECEIVER_H_
 #define VCMTPRECEIVER_H_
 
+#include "vcmtp.h"
+#include "MulticastComm.h"
+#include "RawSocketComm.h"
+#include "InetComm.h"
+#include "VCMTPComm.h"
+#include "TcpClient.h"
+#include "CommUtil/StatusProxy.h"
+#include <pthread.h>
+
+// receiver side status (not statistic info)
+struct MessageReceiveStatus {
+    uint                 msg_id;
+    string               msg_name;
+    union {
+        void*            mem_buffer;
+        int              file_descriptor;
+    };
+    int                  retx_file_descriptor;
+    bool                 is_multicast_done;
+    long long            msg_length;
+    uint                 current_offset;
+    long long            multicast_packets;
+    long long            multicast_bytes;
+    long long            retx_packets;
+    long long            retx_bytes;
+    bool                 recv_failed;
+    CpuCycleCounter      start_time_counter;
+    double               send_time_adjust;
+    double               multicast_time;
+};
+
 //class VCMTPReceiver : public VCMTPComm {
 class VCMTPReceiver {
 public:
-    VCMTPReceiver(std::string&          tcpAddr,
-                  const unsigned short  tcpPort);
+    VCMTPReceiver(string& tcpAddr, const unsigned short tcpPort);
     ~VCMTPReceiver();
 
 //    int     JoinGroup(string addr, u_short port);
@@ -25,7 +55,12 @@ public:
     void    Start();
     void    StartReceivingThread();
     void    RunReceivingThread();
+    static void*  StartReceivingThread(void* ptr);
 //    void    stop();
+
+protected:
+    RawSocketComm*   ptr_raw_sock_comm;
+    MulticastComm*   ptr_multicast_comm;
 
 private:
     std::string      tcpAddr;    /* Address of TCP server for missed data     */
@@ -58,11 +93,10 @@ private:
     map<uint, MessageReceiveStatus>     recv_status_map;
     // File descriptor map for the main RECEIVING thread. Format: <msg_id, file_descriptor>
     map<uint, int>                      recv_file_map;
-    ReceivingApplicationNotifier*       const notifier;
     list<VcmtpRetransRequest>           retrans_list;
 
 
-    static void*  StartReceivingThread(void* ptr);
+//    static void*  StartReceivingThread(void* ptr);
 //    void          HandleMulticastPacket();
 //    void          HandleUnicastPacket();
 //    void          HandleBofMessage(VcmtpSenderMessage& sender_msg);
@@ -70,5 +104,7 @@ private:
 //    void          PrepareForFileTransfer(VcmtpSenderMessage& sender_msg);
 //    void          HandleSenderMessage(VcmtpSenderMessage& sender_msg);
 //    void          AddRetxRequest(uint msg_id, uint current_offset, uint received_seq);
+
+};
 
 #endif /* VCMTPRECEIVER_H_ */
