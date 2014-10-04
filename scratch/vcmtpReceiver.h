@@ -49,13 +49,15 @@ public:
     VCMTPReceiver(string& tcpAddr, const unsigned short tcpPort);
     ~VCMTPReceiver();
 
-//    int     JoinGroup(string addr, u_short port);
-//    int     ConnectSenderOnTCP();
     void    init();
     void    Start();
     void    StartReceivingThread();
     void    RunReceivingThread();
-    static void*  StartReceivingThread(void* ptr);
+    int     udpBindIP2Sock(string senderAddr, ushort port);
+    void    HandleMulticastPacket();
+    void    HandleBofMessage(char* VcmtpPacket);
+    int     ConnectSenderOnTCP();
+//    int     JoinGroup(string addr, ushort port);
 //    void    stop();
 
 protected:
@@ -88,6 +90,7 @@ private:
     char             read_ahead_buffer[VCMTP_PACKET_LEN];
     fd_set           read_sock_set;
     ofstream         retrans_info;
+    struct sockaddr_in  sender;
 
     // Receive status map for all active files
     map<uint, MessageReceiveStatus>     recv_status_map;
@@ -96,14 +99,9 @@ private:
     list<VcmtpRetransRequest>           retrans_list;
 
 
-//    static void*  StartReceivingThread(void* ptr);
-//    void          HandleMulticastPacket();
-//    void          HandleUnicastPacket();
-//    void          HandleBofMessage(VcmtpSenderMessage& sender_msg);
+    static void*  StartReceivingThread(void* ptr);
 //    void          HandleEofMessage(uint msg_id);
-//    void          PrepareForFileTransfer(VcmtpSenderMessage& sender_msg);
 //    void          HandleSenderMessage(VcmtpSenderMessage& sender_msg);
-//    void          AddRetxRequest(uint msg_id, uint current_offset, uint received_seq);
 
 };
 
