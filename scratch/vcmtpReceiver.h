@@ -49,13 +49,14 @@ public:
     VCMTPReceiver(string& tcpAddr, const unsigned short tcpPort);
     ~VCMTPReceiver();
 
-//    int     JoinGroup(string addr, u_short port);
-//    int     ConnectSenderOnTCP();
     void    init();
     void    Start();
     void    StartReceivingThread();
     void    RunReceivingThread();
     static void*  StartReceivingThread(void* ptr);
+    int     udpBindIPSock(string senderAddr, ushort port);
+//    int     JoinGroup(string addr, ushort port);
+//    int     ConnectSenderOnTCP();
 //    void    stop();
 
 protected:

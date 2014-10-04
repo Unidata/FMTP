@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     const unsigned short tcpPort = 5000;
     VCMTPReceiver vcmtpRecv(tcpAddr, tcpPort);
     vcmtpRecv.Start();
-    sleep(1);
-    pthread_join()
-    return 0;
+    //sleep(1);
+    //return 0;
+    while(1);
 }

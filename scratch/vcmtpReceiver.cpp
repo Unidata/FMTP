@@ -10,6 +10,9 @@
  */
 
 #include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "vcmtpReceiver.h"
 
 using namespace std;
@@ -68,30 +71,39 @@ void* VCMTPReceiver::StartReceivingThread(void* ptr) {
 
 void VCMTPReceiver::RunReceivingThread() {
     std::cout << "RunReceivingThread() running" << std::endl;
-    /*
     fd_set  read_set;
-    while (true) {
+    while(true) {
         read_set = read_sock_set;
         if (select(max_sock_fd + 1, &read_set, NULL, NULL, NULL) == -1) {
             //SysError("TcpServer::SelectReceive::select() error");
             break;
         }
 
-        // check received data on the multicast socket
+        // tests to see if multicast_sock is part of the set
         if (FD_ISSET(multicast_sock, &read_set)) {
-            //HandleMulticastPacket();
+            HandleMulticastPacket();
         }
 
-        // check received data on the TCP connection
+        // tests to see if retrans_tcp_sock is part of the set
         if (FD_ISSET(retrans_tcp_sock, &read_set)) {
             //HandleUnicastPacket();
         }
     }
     pthread_exit(0);
-    */
 }
 
-/*
+int VCMTPReceiver::udpBindIPSock(string senderAddr, ushort port)
+{
+    struct sockaddr_in sender;
+    bzero(&sender, sizeof(sender));
+    sender.sin_family = AF_INET;
+    sender.sin_addr.s_addr = inet_addr(senderAddr.c_str());
+    sender.sin_port = htons(port);
+    if( (sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        std::cout << "udpBindIPSock() creating socket failed." << std::endl;
+    socklen_t sendAddrSize = sizeof(sender);
+}
+
 void VCMTPReceiver::HandleMulticastPacket() {
     static char packet_buffer[VCMTP_PACKET_LEN];
     static VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
@@ -138,6 +150,7 @@ void VCMTPReceiver::HandleMulticastPacket() {
     }
 }
 
+/*
 // Handle the receive of a single TCP packet
 void VCMTPReceiver::HandleUnicastPacket() {
     static char packet_buffer[VCMTP_PACKET_LEN];
