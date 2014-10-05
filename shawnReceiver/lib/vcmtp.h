@@ -150,9 +150,9 @@ const static ushort VCMTP_PROTO_TYPE = 0x0001;
 // Force maximum VCMTP packet length to be 1460 bytes so that it won't cause fragmentation
 // when using TCP for packet retransmission
 const static int VCMTP_ETH_FRAME_LEN = 1460 + ETH_HLEN;
-const static int VCMTP_PACKET_LEN = 1460; //ETH_FRAME_LEN - ETH_HLEN;
+//const static int VCMTP_PACKET_LEN = 1460; //ETH_FRAME_LEN - ETH_HLEN;
 const static int VCMTP_HLEN = sizeof(VCMTP_HEADER);
-const static int VCMTP_DATA_LEN = VCMTP_PACKET_LEN - sizeof(VCMTP_HEADER); //ETH_FRAME_LEN - ETH_HLEN - sizeof(VCMTP_HEADER);
+//const static int VCMTP_DATA_LEN = VCMTP_PACKET_LEN - sizeof(VCMTP_HEADER); //ETH_FRAME_LEN - ETH_HLEN - sizeof(VCMTP_HEADER);
 
 // parameters for VCMTP over UDP
 static const int UDP_VCMTP_PACKET_LEN = 1460;
@@ -164,9 +164,9 @@ static const int INIT_RTT	= 50;		// in milliseconds
 
 
 // parameters for data transfer
-static const double SEND_RATE_RATIO = (VCMTP_PACKET_LEN + 8 + ETH_HLEN) * 1.0 / VCMTP_DATA_LEN;
+//static const double SEND_RATE_RATIO = (VCMTP_PACKET_LEN + 8 + ETH_HLEN) * 1.0 / VCMTP_DATA_LEN;
 static const int MAX_NUM_RECEIVERS = 200;
-static const int MAX_MAPPED_MEM_SIZE = 4096 * VCMTP_DATA_LEN;
+//static const int MAX_MAPPED_MEM_SIZE = 4096 * VCMTP_DATA_LEN;
 
 // message types for VCMTP data transfer
 static const int STRING_TRANSFER_START = 1;

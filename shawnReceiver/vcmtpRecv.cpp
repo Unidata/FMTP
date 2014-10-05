@@ -9,12 +9,9 @@
  *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
-//#include <iostream>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <arpa/inet.h>
 //#include <stdint.h>
 #include "vcmtpRecv.h"
+#include <stdio.h>
 
 using namespace std;
 
@@ -99,6 +96,7 @@ void vcmtpRecv::RunReceivingThread()
 void vcmtpRecv::HandleMulticastPacket()
 {
     static char packet_buffer[VCMTP_PACKET_LEN];
+    bzero(packet_buffer, sizeof(packet_buffer));
     VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
 
     if (recvfrom(multicast_sock, packet_buffer, VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
@@ -115,7 +113,26 @@ void vcmtpRecv::HandleBofMessage(char* VcmtpPacket)
     uint8_t  transType;
     char     fileName[256];
     char*    VcmtpPacketHeader = VcmtpPacket;
-    char*    VcmtpPacketData = VcmtpPacket + VCMTP_HLEN;
+    char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
+
+    unsigned char b1,b2,b3,b4,b5,b6,b7,b8;
+    memcpy(&b1, VcmtpPacketHeader,   1);
+    memcpy(&b2, VcmtpPacketHeader+1, 1);
+    memcpy(&b3, VcmtpPacketHeader+2, 1);
+    memcpy(&b4, VcmtpPacketHeader+3, 1);
+    memcpy(&b5, VcmtpPacketHeader+4, 1);
+    memcpy(&b6, VcmtpPacketHeader+5, 1);
+    memcpy(&b7, VcmtpPacketHeader+6, 1);
+    memcpy(&b8, VcmtpPacketHeader+7, 1);
+    printf("%u ", b1);
+    printf("%u ", b2);
+    printf("%u ", b3);
+    printf("%u ", b4);
+    printf("%u ", b5);
+    printf("%u ", b6);
+    printf("%u ", b7);
+    printf("%u ", b8);
+    printf("\n");
 
     memcpy(&fileID,     VcmtpPacketHeader,    8);
     memcpy(&seqNum,     (VcmtpPacketHeader+8),  8);
