@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <endian.h>
 #include <string.h>
 #include <netdb.h>
 #include <stdio.h>

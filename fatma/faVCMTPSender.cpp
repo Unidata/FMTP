@@ -50,8 +50,8 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 	char msg_packet[1460];
 	VcmtpHeader* header = (VcmtpHeader*) msg_packet;
 	header->file_id = fileId;//send the file_id to the fileId passed to the sendBOFMessage
-	header->seq_number = 0;// the sequence number for the bof message is always zero
-	header->vcmtp_payload_size = 1428;
+	header->seq_number = htobe64(0);// the sequence number for the bof message is always zero
+	header->vcmtp_payload_size = htobe64(1428);
 	header->flags = VCMTP_BOF;
 
 	cout<<"file id="<<	header->file_id << " size of the field = "<<sizeof(header->file_id)<<endl;
@@ -61,11 +61,13 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 
 	//create the content of the BOF message
 	VcmtpSenderMessage* msg = (VcmtpSenderMessage*) (msg_packet + VCMTP_HLEN);
-	msg->transfer_type = 1;
-	msg->file_size = dataLength;
+    msg->transfer_type = 0x0000000000000000;
+	msg->transfer_type = '1';
+	msg->file_size = htobe64(dataLength);
+    bzero(msg->file_name, sizeof(msg->file_name));
 	strcpy(msg->file_name, fileName);
 
-	cout<<"transfer type="<<	msg->transfer_type<< " size of the field = "<<sizeof(msg->transfer_type)<<endl;
+	cout<<"transfer type="<< msg->transfer_type << " size of the field = "<<sizeof(msg->transfer_type)<<endl;
 	cout<<"file size ="<<msg->file_size << " size of the field = "<<sizeof(msg->file_size)<<endl;
 	cout<<"file name="<<msg->file_name<< " size of the field = "<<sizeof(msg->file_name)<<endl;
 
