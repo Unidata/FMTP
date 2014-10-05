@@ -9,12 +9,12 @@
  *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+//#include <iostream>
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+//#include <arpa/inet.h>
+//#include <stdint.h>
 #include "vcmtpRecv.h"
-#include <stdint.h>
 
 using namespace std;
 

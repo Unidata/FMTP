@@ -62,26 +62,24 @@ typedef struct sockaddr SA;
 typedef struct ifreq	IFREQ;
 
 typedef struct VcmtpHeader {
-	//u_int16_t	src_port;
-	//u_int16_t	dest_port;
-	u_int64_t 	session_id; // this is actually the file-ID!
-	u_int64_t	seq_number; // block number within a file
-	u_int64_t	data_len;
-	u_int64_t	flags;
+	uint64_t 	session_id; // this is actually the file-ID!
+	uint64_t	seq_number; // block number within a file
+	uint64_t	data_len;
+	uint64_t	flags;
 } VCMTP_HEADER, *PTR_VCMTP_HEADER;
 
 
 // VCMTP Header Flags
-const u_int64_t VCMTP_DATA = 0x00000000;		// data packet
-const u_int64_t VCMTP_BOF = 0x00000001;			// begin of file
-const u_int64_t VCMTP_EOF = 0x00000002;			// end of file
-const u_int64_t VCMTP_SENDER_MSG_EXP = 0x00000004;	// sender messages used for experiment
-const u_int64_t VCMTP_RETRANS_REQ = 0x00000008;		// retransmission request
-const u_int64_t VCMTP_RETRANS_DATA = 0x00000010; 	// retransmission data
-const u_int64_t VCMTP_RETRANS_END = 0x00000020;
-const u_int64_t VCMTP_RETRANS_TIMEOUT = 0x00000040; // retransmission timeout message
-const u_int64_t VCMTP_BOF_REQ = 0x00000080;     	// BOF request
-const u_int64_t VCMTP_HISTORY_STATISTICS = 0x00000100;
+const uint64_t VCMTP_DATA = 0x00000000;		// data packet
+const uint64_t VCMTP_BOF = 0x00000001;			// begin of file
+const uint64_t VCMTP_EOF = 0x00000002;			// end of file
+const uint64_t VCMTP_SENDER_MSG_EXP = 0x00000004;	// sender messages used for experiment
+const uint64_t VCMTP_RETRANS_REQ = 0x00000008;		// retransmission request
+const uint64_t VCMTP_RETRANS_DATA = 0x00000010; 	// retransmission data
+const uint64_t VCMTP_RETRANS_END = 0x00000020;
+const uint64_t VCMTP_RETRANS_TIMEOUT = 0x00000040; // retransmission timeout message
+const uint64_t VCMTP_BOF_REQ = 0x00000080;     	// BOF request
+const uint64_t VCMTP_HISTORY_STATISTICS = 0x00000100;
 
 
 /************ The BOF/EOF message data types ****************/

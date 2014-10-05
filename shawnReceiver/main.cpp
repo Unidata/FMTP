@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include "vcmtpRecv.h"
-#include <unistd.h>
+//#include <unistd.h>
 
 int main(int argc, char* argv[])
 {

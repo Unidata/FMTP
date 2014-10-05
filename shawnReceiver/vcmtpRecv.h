@@ -13,14 +13,21 @@
 #define VCMTPRECV_H_
 
 #include "vcmtp.h"
-#include "MulticastComm.h"
-#include "RawSocketComm.h"
-#include "InetComm.h"
-#include "VCMTPComm.h"
-#include "TcpClient.h"
-#include "CommUtil/StatusProxy.h"
+#include <iostream>
 #include <pthread.h>
+#include <stdint.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
+/*
+typedef struct VcmtpHeader {
+    uint64_t   fileid;
+    uint64_t   seqNum;
+    uint64_t   payloadLen;
+    uint64_t   flags;
+};
+*/
 
 class vcmtpRecv {
 public:
