@@ -24,10 +24,10 @@
 
 class vcmtpRecv {
 public:
-    vcmtpRecv(string tcpAddr, const unsigned short tcpPort);
+    vcmtpRecv(string tcpAddr, const unsigned short tcpPort,\
+              string localAddr, const unsigned short localPort);
     ~vcmtpRecv();
 
-    void    init();
     void    Start();
     void    StartReceivingThread();
     void    RunReceivingThread();
@@ -38,6 +38,8 @@ public:
 private:
     string           tcpAddr;           /* Address of TCP server for missed data     */
     unsigned short   tcpPort;           /* Port number of TCP server for missed data */
+    string           localAddr;
+    unsigned short   localPort;
     int              max_sock_fd;
     int              multicast_sock;
     int              retrans_tcp_sock;

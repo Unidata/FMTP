@@ -10,8 +10,7 @@ int main(int argc, char* argv[])
     string localAddr               = "0.0.0.0";
     const unsigned short localPort = 5173;
 
-    vcmtpRecv vcmtpRecv(tcpAddr, tcpPort);
-    vcmtpRecv.udpBindIP2Sock(localAddr, localPort);
+    vcmtpRecv vcmtpRecv(tcpAddr, tcpPort, localAddr, localPort);
     vcmtpRecv.Start();
     while(1);
 }

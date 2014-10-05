@@ -20,19 +20,14 @@ using namespace std;
 
 vcmtpRecv::vcmtpRecv(
     string                  tcpAddr,
-    const unsigned short    tcpPort)
+    const unsigned short    tcpPort,
+    string                  localAddr,
+    const unsigned short    localPort)
 :
     tcpAddr(tcpAddr),
-    tcpPort(tcpPort)
-{
-    init();
-}
-
-vcmtpRecv::~vcmtpRecv()
-{
-}
-
-void vcmtpRecv::init()
+    tcpPort(tcpPort),
+    localAddr(localAddr),
+    localPort(localPort)
 {
     max_sock_fd = 0;
     multicast_sock = 0;
@@ -41,9 +36,28 @@ void vcmtpRecv::init()
     retrans_thread = 0;
 }
 
+vcmtpRecv::~vcmtpRecv()
+{
+}
+
 void vcmtpRecv::Start()
 {
+    udpBindIP2Sock(localAddr, localPort);
     StartReceivingThread();
+}
+
+int vcmtpRecv::udpBindIP2Sock(string localAddr, const unsigned short localPort)
+{
+    bzero(&sender, sizeof(sender));
+    sender.sin_family = AF_INET;
+    sender.sin_addr.s_addr = inet_addr(localAddr.c_str());
+    sender.sin_port = htons(localPort);
+    if( (multicast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        std::cout << "udpBindIP2Sock() creating socket failed." << std::endl;
+    if( bind(multicast_sock, (sockaddr*)&sender, sizeof(sender)) < 0 )
+        std::cout << "udpBindIP2Sock() binding socket failed." << std::endl;
+    FD_SET(multicast_sock, &read_sock_set);
+    return 0;
 }
 
 void vcmtpRecv::StartReceivingThread()
@@ -80,20 +94,6 @@ void vcmtpRecv::RunReceivingThread()
         }
     }
     pthread_exit(0);
-}
-
-int vcmtpRecv::udpBindIP2Sock(string localAddr, const unsigned short localPort)
-{
-    bzero(&sender, sizeof(sender));
-    sender.sin_family = AF_INET;
-    sender.sin_addr.s_addr = inet_addr(localAddr.c_str());
-    sender.sin_port = htons(localPort);
-    if( (multicast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        std::cout << "udpBindIP2Sock() creating socket failed." << std::endl;
-    if( bind(multicast_sock, (sockaddr*)&sender, sizeof(sender)) < 0 )
-        std::cout << "udpBindIP2Sock() binding socket failed." << std::endl;
-    FD_SET(multicast_sock, &read_sock_set);
-    return 0;
 }
 
 void vcmtpRecv::HandleMulticastPacket()
