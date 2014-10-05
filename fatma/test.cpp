@@ -12,7 +12,7 @@
 int main()
 {
 
-	const u_int64_t id=1;
+	const uint64_t id=1;
 	const uint64_t fileSize=0x64;
 	faVCMTPSender* sender;
 	sender= new faVCMTPSender(id);

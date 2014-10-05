@@ -15,7 +15,7 @@
  * Input:  u_int64_t id: 8 bytes file identifier
  * Output: none
  ****************************************************************************/
-faVCMTPSender::faVCMTPSender(u_int64_t id)
+faVCMTPSender::faVCMTPSender(uint64_t id)
 {
 	updSocket = 0;
 	fileId=id;
@@ -61,7 +61,7 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 
 	//create the content of the BOF message
 	VcmtpSenderMessage* msg = (VcmtpSenderMessage*) (msg_packet + VCMTP_HLEN);
-	msg->transfer_type =MEMORY_TO_MEMORY;
+	msg->transfer_type = 1;
 	msg->file_size = dataLength;
 	strcpy(msg->file_name, fileName);
 

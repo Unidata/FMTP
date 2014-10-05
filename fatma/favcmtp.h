@@ -50,15 +50,15 @@ using namespace std;
 
 
 typedef struct VcmtpHeader {// all the types were changes to 64 to match the dissertation
-	u_int64_t 	file_id; //file identifier
-	u_int64_t	seq_number; // block number
-	u_int64_t	vcmtp_payload_size; //length of the VCMTP payload
-	u_int64_t	flags; //indicates the type of VCMTP packet: (i) data block; (ii) retransmitted data block; (iii) BOF message; (iv) EOF message; (v) BOF-Request message; (vi) Retx-Request message; (vii) End-Of-Retx-Reqs message; and (viii) Retx-Reject message.
+	uint64_t 	file_id; //file identifier
+	uint64_t	seq_number; // block number
+	uint64_t	vcmtp_payload_size; //length of the VCMTP payload
+	uint64_t	flags; //indicates the type of VCMTP packet: (i) data block; (ii) retransmitted data block; (iii) BOF message; (iv) EOF message; (v) BOF-Request message; (vi) Retx-Request message; (vii) End-Of-Retx-Reqs message; and (viii) Retx-Reject message.
 } VCMTP_HEADER, *PTR_VCMTP_HEADER;
 
 
 // VCMTP Header Flags
-const u_int64_t VCMTP_BOF = 0x00000001;	// begin of file // this is changed to 8 bytes
+const uint64_t VCMTP_BOF = 0x00000001;	// begin of file // this is changed to 8 bytes
 
 // transfer types
 const uint8_t  MEMORY_TO_MEMORY = '1';

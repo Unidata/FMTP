@@ -30,7 +30,7 @@
 
 class faVCMTPSender {
 public:
-	faVCMTPSender(u_int64_t id);
+	faVCMTPSender(uint64_t id);
 	virtual ~faVCMTPSender();
 	void SendBOFMessage(uint64_t dataLength, const char* fileName);
 	void CreateUPDSocket(const char* recvName,unsigned short int recvPort);
@@ -38,7 +38,7 @@ public:
 
 private:
 	UdpComm* updSocket;
-	u_int64_t      fileId;
+	uint64_t      fileId;
 };
 
 #endif /* faVCMTPSender_H_ */
