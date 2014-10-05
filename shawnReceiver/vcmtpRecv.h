@@ -19,6 +19,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
+#include <endian.h>
+
+#define VCMTP_PACKET_LEN 1460
+#define VCMTP_HEADER_LEN 32
 
 /*
 typedef struct VcmtpHeader {
