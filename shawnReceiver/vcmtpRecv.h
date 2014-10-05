@@ -22,7 +22,6 @@
 #include <pthread.h>
 
 
-//class vcmtpRecv : public VCMTPComm {
 class vcmtpRecv {
 public:
     vcmtpRecv(string tcpAddr, const unsigned short tcpPort);
@@ -37,8 +36,8 @@ public:
     void    HandleBofMessage(char* VcmtpPacket);
 
 private:
-    string           tcpAddr;    /* Address of TCP server for missed data     */
-    unsigned short   tcpPort;    /* Port number of TCP server for missed data */
+    string           tcpAddr;           /* Address of TCP server for missed data     */
+    unsigned short   tcpPort;           /* Port number of TCP server for missed data */
     int              max_sock_fd;
     int              multicast_sock;
     int              retrans_tcp_sock;
@@ -50,4 +49,4 @@ private:
     static void*  StartReceivingThread(void* ptr);
 };
 
-#endif /* VCMTPRECEIVER_H_ */
+#endif /* VCMTPRECV_H_ */
