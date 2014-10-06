@@ -587,7 +587,7 @@ void VCMTPReceiver::HandleUnicastPacket() {
 }
 
 bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
-    return false;       // TODO
+    // TODO
 }
 
 void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
@@ -596,6 +596,11 @@ void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
 
 void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
         VcmtpSenderMessage& msg) {
+    // TODO
+}
+
+void VCMTPReceiver::BatchedNotifier::notify_of_exception(
+        const std::exception& e) {
     // TODO
 }
 

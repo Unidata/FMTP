@@ -434,8 +434,6 @@ void VCMTPReceiver::RunReceivingThread() {
 			HandleUnicastPacket();
 		}
 	}
-
-	pthread_exit(0);
 }
 
 /**
@@ -602,16 +600,21 @@ void VCMTPReceiver::HandleUnicastPacket() {
  * These three notify_of_* methods should be implemented to return corresponding
  * status to user application process (e.g. LDM). And it's the batched mode.
  */
-bool VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
-    return false;       // TODO
+void VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpFileEntry& fileEntry) {
+    // TODO
 }
 
-void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
+void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpFileEntry& fileEntry) {
     // TODO
 }
 
 void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
-        VcmtpSenderMessage& msg) {
+        uint32_t fileId) {
+    // TODO
+}
+
+void VCMTPReceiver::BatchedNotifier::notify_of_exception(
+        const std::exception& e) {
     // TODO
 }
 
@@ -850,6 +853,7 @@ void VCMTPReceiver::RunRetransmissionThread() {
 
 	char* data = (buf + VCMTP_HLEN);
 	VcmtpRetransRequest* request = (VcmtpRetransRequest*)data;
+        // TODO: Use a condition variable rather than a poll
 	while (keep_retrans_alive) {
 		pthread_mutex_lock(&retrans_list_mutex);
 			while (!retrans_list.empty()) {

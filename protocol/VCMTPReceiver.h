@@ -16,6 +16,8 @@
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
 
+#include <exception>
+
 // statistic information of VCMTPReceiver
 struct VcmtpReceiverStats {
 	uint	current_msg_id;
@@ -179,9 +181,12 @@ private:
 	class BatchedNotifier : public ReceivingApplicationNotifier {
 	public:
 	    BatchedNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
-            bool notify_of_bof(VcmtpSenderMessage& msg);
-            void notify_of_eof(VcmtpSenderMessage& msg);
-            void notify_of_missed_file(VcmtpSenderMessage& msg);
+#if 1
+            void notify_of_bof(VcmtpFileEntry& file_entry);
+            void notify_of_eof(VcmtpFileEntry& file_entry);
+            void notify_of_missed_file(uint32_t fileId);
+            void notify_of_exception(const std::exception& e);
+#endif
 	private:
             VCMTPReceiver&      receiver;
 	};

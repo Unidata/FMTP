@@ -17,6 +17,7 @@
 #include "vcmtp.h"
 #include "VcmtpFileEntry.h"
 
+#include <exception>
 #include <memory>
 
 /**
@@ -37,18 +38,23 @@ public:
      * TODO: Have this method return a BofResponse that the VCMTPReceiver will
      * subsequently use to dispose of data packets.
      */
-    virtual void notify_of_bof(VcmtpFileEntry& file_entry) const {};
+    virtual void notify_of_bof(VcmtpFileEntry& file_entry) = 0;
 
     /**
      * Notifies the receiving application about the complete reception of a
      * file.
      */
-    virtual void notify_of_eof(VcmtpFileEntry& file_entry) {};
+    virtual void notify_of_eof(VcmtpFileEntry& file_entry) = 0;
 
     /**
      * Notifies the receiving application about a missed file.
      */
-    virtual void notify_of_missed_file(VcmtpFileEntry& file_entry) {};
+    virtual void notify_of_missed_file(uint32_t fileId) = 0;
+
+    /**
+     * Notifies the receiving application about an exception.
+     */
+    virtual void notify_of_exception(const std::exception& e) = 0;
 };
 
 #endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */
