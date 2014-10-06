@@ -1,0 +1,10 @@
+CC = g++
+INCLUDE =
+ELFFILE = vcmtpSend
+
+$(ELFFILE): test.cpp faVCMTPSender.cpp faUdpComm.cpp
+	$(CC) -o $(ELFFILE) test.cpp faVCMTPSender.cpp faUdpComm.cpp
+
+.PHONY : clean
+clean:
+	rm $(ELFFILE)

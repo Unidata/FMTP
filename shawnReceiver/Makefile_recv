@@ -1,0 +1,11 @@
+CC = g++
+INCLUDE = ./lib/
+LIB = pthread
+ELFFILE = vcmtpRecv
+
+$(ELFFILE): main.cpp vcmtpRecv.cpp
+	$(CC) -o $(ELFFILE) main.cpp vcmtpRecv.cpp -I$(INCLUDE) -pthread
+
+.PHONY : clean
+clean:
+	rm $(ELFFILE)
