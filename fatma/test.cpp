@@ -22,6 +22,7 @@ int main()
 
 	while(1){
 	sender->SendBOFMessage(fileSize,"FHA");
+	//sender->sendmcastUserData();
 	sleep(2);
 	}
 }
