@@ -2,7 +2,7 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
- * @filename: vcmtpReceiver.h
+ * @filename: vcmtpRecv.h
  *
  * @history:
  *      Created on : Oct 2, 2014
@@ -12,38 +12,27 @@
 #ifndef VCMTPRECV_H_
 #define VCMTPRECV_H_
 
-#include "vcmtp.h"
-#include <iostream>
-#include <pthread.h>
+#include "vcmtpBase.h"
 #include <stdint.h>
-#include <sys/socket.h>
+#include <string>
+#include <sys/select.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <endian.h>
+#include <pthread.h>
 
-#define VCMTP_PACKET_LEN 1460
-#define VCMTP_HEADER_LEN 32
+using namespace std;
 
-/*
-typedef struct VcmtpHeader {
-    uint64_t   fileid;
-    uint64_t   seqNum;
-    uint64_t   payloadLen;
-    uint64_t   flags;
-};
-*/
-
-class vcmtpRecv {
+class vcmtpRecv : public vcmtpBase {
 public:
-    vcmtpRecv(string tcpAddr, const unsigned short tcpPort,\
-              string localAddr, const unsigned short localPort);
+    vcmtpRecv(string tcpAddr,
+              const unsigned short tcpPort,
+              string localAddr,
+              const unsigned short localPort);
     ~vcmtpRecv();
 
     void    Start();
     void    StartReceivingThread();
     void    RunReceivingThread();
-    int     udpBindIP2Sock(string senderAddr, ushort port);
+    int     udpBindIP2Sock(string senderAddr, const unsigned short port);
     void    HandleMulticastPacket();
     void    HandleBofMessage(char* VcmtpPacket);
 
@@ -53,10 +42,10 @@ private:
     string           localAddr;
     unsigned short   localPort;
     int              max_sock_fd;
-    int              multicast_sock;
-    int              retrans_tcp_sock;
+    int              mcast_sock;
+    int              retx_tcp_sock;
     pthread_t        recv_thread;
-    pthread_t        retrans_thread;
+    pthread_t        retx_thread;
     fd_set           read_sock_set;
     struct sockaddr_in  sender;
 
