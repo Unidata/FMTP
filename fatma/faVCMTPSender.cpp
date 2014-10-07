@@ -82,7 +82,7 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
     uint64_t seqNum = htobe64(0);
     uint64_t payLen = htobe64(1428);
     uint64_t flags = htobe64(VCMTP_BOF);
-    uint8_t  transType = htobe64(1);
+    uint8_t  transType = 1;
     uint64_t fileSize = htobe64(100);
     memcpy(vcmtp_header,    &fileid, 8);
     memcpy(vcmtp_header+8,  &seqNum, 8);
