@@ -43,6 +43,7 @@ faVCMTPSender::~faVCMTPSender() {
  ****************************************************************************/
 void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 {
+    /*
 	cout<<"faVCMTPSender::SendBOFMessage: "<<endl;
 	cout<<"file size= "<<dataLength<<" file name = "<<fileName<<endl;
 	// Send the BOF message to all receivers before starting the file transfer
@@ -70,20 +71,34 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 	cout<<"transfer type="<< msg->transfer_type << " size of the field = "<<sizeof(msg->transfer_type)<<endl;
 	cout<<"file size ="<<msg->file_size << " size of the field = "<<sizeof(msg->file_size)<<endl;
 	cout<<"file name="<<msg->file_name<< " size of the field = "<<sizeof(msg->file_name)<<endl;
-
-    /*
-    unsigned char vcmtp_packet[1460];
-    unsigned char vcmtp_header* = vcmtp_packet;
-    unsigned char vcmtp_data* = vcmtp_packet + VCMTP_HLEN;
     */
+
+    unsigned char vcmtp_packet[1460];
+    unsigned char *vcmtp_header = vcmtp_packet;
+    unsigned char *vcmtp_data = vcmtp_packet + VCMTP_HLEN;
+
+    bzero(vcmtp_packet, sizeof(vcmtp_packet));
+    uint64_t fileid = htobe64(1);
+    uint64_t seqNum = htobe64(0);
+    uint64_t payLen = htobe64(1428);
+    uint64_t flags = htobe64(VCMTP_BOF);
+    uint8_t  transType = htobe64(1);
+    uint64_t fileSize = htobe64(100);
+    memcpy(vcmtp_header,    &fileid, 8);
+    memcpy(vcmtp_header+8,  &seqNum, 8);
+    memcpy(vcmtp_header+16, &payLen, 8);
+    memcpy(vcmtp_header+24, &flags,  8);
+    memcpy(vcmtp_data,      &transType,  1);
+    memcpy(vcmtp_data+1,    &fileSize,   8);
+    memcpy(vcmtp_data+9,    fileName,    256);
 
 
 	//send the bof message
-	if (updSocket->SendTo(&msg_packet,VCMTP_HLEN + sizeof(VcmtpSenderMessage), 0) < 0)
-			//SysError("faVCMTPSender::SendFile()::SendData() error");
+	//if (updSocket->SendTo(&msg_packet, VCMTP_HLEN + sizeof(VcmtpSenderMessage), 0) < 0)
+	if (updSocket->SendTo(vcmtp_packet, 1460, 0) < 0)
 		cout<<"faVCMTPSender::SendMemoryData()::SendTo error\n";
-		else
-			cout<<"faVCMTPSender::SendMemoryData()::SendTo success\n";
+    else
+        cout<<"faVCMTPSender::SendMemoryData()::SendTo success\n";
 }
 
 void faVCMTPSender::sendmcastUserData()

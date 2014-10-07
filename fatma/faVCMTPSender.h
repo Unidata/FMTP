@@ -37,6 +37,7 @@ public:
 	void SendBOFMessage(uint64_t dataLength, const char* fileName);
 	void CreateUPDSocket(const char* recvName,unsigned short int recvPort);
 	void error(const char *msg);
+    void sendmcastUserData();
 
 private:
 	UdpComm* updSocket;

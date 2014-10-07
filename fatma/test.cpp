@@ -18,7 +18,8 @@ int main()
 	sender= new faVCMTPSender(id);
 	cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
 	//pass the address and port number of the receiver
-	sender->CreateUPDSocket("128.143.137.117",5173);
+	sender->CreateUPDSocket("128.143.137.117",5173); // rivanna.cs.virginia.edu
+	//sender->CreateUPDSocket("128.143.231.105",5173); // fdt-uva.dynes.virginia.edu
 
 	while(1){
 	sender->SendBOFMessage(fileSize,"FHA");
