@@ -43,6 +43,7 @@ faVCMTPSender::~faVCMTPSender() {
  ****************************************************************************/
 void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 {
+    /*
 	cout<<"faVCMTPSender::SendBOFMessage: "<<endl;
 	cout<<"file size= "<<dataLength<<" file name = "<<fileName<<endl;
 	// Send the BOF message to all receivers before starting the file transfer
@@ -50,8 +51,8 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 	char msg_packet[1460];
 	VcmtpHeader* header = (VcmtpHeader*) msg_packet;
 	header->file_id = fileId;//send the file_id to the fileId passed to the sendBOFMessage
-	header->seq_number = htobe64(0);// the sequence number for the bof message is always zero
-	header->vcmtp_payload_size = htobe64(1428);
+	header->seq_number = 0;// the sequence number for the bof message is always zero
+	header->vcmtp_payload_size = 1428;
 	header->flags = VCMTP_BOF;
 
 	cout<<"file id="<<	header->file_id << " size of the field = "<<sizeof(header->file_id)<<endl;
@@ -63,22 +64,72 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 	VcmtpSenderMessage* msg = (VcmtpSenderMessage*) (msg_packet + VCMTP_HLEN);
     msg->transfer_type = 0x0000000000000000;
 	msg->transfer_type = '1';
-	msg->file_size = htobe64(dataLength);
+	msg->file_size = dataLength;
     bzero(msg->file_name, sizeof(msg->file_name));
 	strcpy(msg->file_name, fileName);
 
 	cout<<"transfer type="<< msg->transfer_type << " size of the field = "<<sizeof(msg->transfer_type)<<endl;
 	cout<<"file size ="<<msg->file_size << " size of the field = "<<sizeof(msg->file_size)<<endl;
 	cout<<"file name="<<msg->file_name<< " size of the field = "<<sizeof(msg->file_name)<<endl;
+    */
+
+    unsigned char vcmtp_packet[1460];
+    unsigned char *vcmtp_header = vcmtp_packet;
+    unsigned char *vcmtp_data = vcmtp_packet + VCMTP_HLEN;
+
+    bzero(vcmtp_packet, sizeof(vcmtp_packet));
+    uint64_t fileid = htobe64(1);
+    uint64_t seqNum = htobe64(0);
+    uint64_t payLen = htobe64(1428);
+    uint64_t flags = htobe64(VCMTP_BOF);
+    uint8_t  transType = 1;
+    uint64_t fileSize = htobe64(100);
+    memcpy(vcmtp_header,    &fileid, 8);
+    memcpy(vcmtp_header+8,  &seqNum, 8);
+    memcpy(vcmtp_header+16, &payLen, 8);
+    memcpy(vcmtp_header+24, &flags,  8);
+    memcpy(vcmtp_data,      &transType,  1);
+    memcpy(vcmtp_data+1,    &fileSize,   8);
+    memcpy(vcmtp_data+9,    fileName,    256);
 
 
 	//send the bof message
-	if (updSocket->SendTo(&msg_packet,VCMTP_HLEN + sizeof(VcmtpSenderMessage), 0) < 0)
-			//SysError("faVCMTPSender::SendFile()::SendData() error");
+	//if (updSocket->SendTo(&msg_packet, VCMTP_HLEN + sizeof(VcmtpSenderMessage), 0) < 0)
+	if (updSocket->SendTo(vcmtp_packet, sizeof(vcmtp_packet), 0) < 0)
 		cout<<"faVCMTPSender::SendMemoryData()::SendTo error\n";
-		else
-			cout<<"faVCMTPSender::SendMemoryData()::SendTo success\n";
+    else
+        cout<<"faVCMTPSender::SendMemoryData()::SendTo success\n";
 }
+
+void faVCMTPSender::sendmcastUserData()
+{
+    // implement mcast mem2mem / file2file transfer function here.
+    /*
+	int fd = open(file_name, O_RDONLY);
+	if (fd < 0) {
+		SysError("VCMTPSender()::SendFile(): File open error!");
+	}
+	char* buffer;
+	off_t offset = 0;
+	while (remained_size > 0) {
+		uint map_size = remained_size < MAX_MAPPED_MEM_SIZE ? remained_size
+				: MAX_MAPPED_MEM_SIZE;
+		buffer = (char*) mmap(0, map_size, PROT_READ, MAP_FILE | MAP_SHARED, fd,
+				offset);
+		if (buffer == MAP_FAILED) {
+			SysError("VCMTPSender::SendFile()::mmap() error");
+		}
+
+		DoMemoryTransfer(buffer, map_size, offset);
+
+		munmap(buffer, map_size);
+
+		offset += map_size;
+		remained_size -= map_size;
+	}
+    */
+}
+
 /*****************************************************************************
  * Class Name: faVCMTPSender
  * Function Name: CreateUPDSocket()
