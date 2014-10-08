@@ -21,6 +21,8 @@
 const uint64_t VCMTP_DATA               = 0x00000000;
 const uint64_t VCMTP_BOF                = 0x00000001;
 const uint64_t VCMTP_EOF                = 0x00000002;
+const uint64_t VCMTP_BOMD               = 0x00000004;
+const uint64_t VCMTP_EOMD               = 0x00000008;
 
 
 typedef struct VcmtpPacketHeader {

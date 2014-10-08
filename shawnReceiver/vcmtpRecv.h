@@ -33,8 +33,11 @@ public:
     void    StartReceivingThread();
     void    RunReceivingThread();
     int     udpBindIP2Sock(string senderAddr, const unsigned short port);
-    void    HandleMulticastPacket();
-    void    HandleBofMessage(char* VcmtpPacket);
+    void    McastPacketHandler();
+    void    BOFHandler(char* VcmtpPacket);
+    void    BOMDHandler(char* VcmtpPacket);
+    void    EOFHandler(char* VcmtpPacket);
+    void    recvFile(char* VcmtpPacket);
 
 private:
     string           tcpAddr;           /* Address of TCP server for missed data     */
@@ -48,6 +51,8 @@ private:
     pthread_t        retx_thread;
     fd_set           read_sock_set;
     struct sockaddr_in  sender;
+    int              fileDescriptor;   /* file descriptor where to store a received file */
+    VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
 
     static void*  StartReceivingThread(void* ptr);
 };
