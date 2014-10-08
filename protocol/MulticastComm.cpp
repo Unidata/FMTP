@@ -236,9 +236,9 @@ ssize_t MulticastComm::SendData(
 {
     struct iovec iov[2];
 
-    iov[0].iov_base = header;
+    iov[0].iov_base = (void*)header;    // safe cast because reading data
     iov[0].iov_len  = headerLen;
-    iov[1].iov_base = data;
+    iov[1].iov_base = (void*)data;      // safe cast because reading data
     iov[1].iov_len  = dataLen;
 
     return writev(sock_fd, iov, 2);
