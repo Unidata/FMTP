@@ -95,7 +95,7 @@ void faVCMTPSender::SendBOFMessage(uint64_t dataLength, const char* fileName)
 
 	//send the bof message
 	//if (updSocket->SendTo(&msg_packet, VCMTP_HLEN + sizeof(VcmtpSenderMessage), 0) < 0)
-	if (updSocket->SendTo(vcmtp_packet, 1460, 0) < 0)
+	if (updSocket->SendTo(vcmtp_packet, sizeof(vcmtp_packet), 0) < 0)
 		cout<<"faVCMTPSender::SendMemoryData()::SendTo error\n";
     else
         cout<<"faVCMTPSender::SendMemoryData()::SendTo success\n";
