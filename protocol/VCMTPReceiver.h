@@ -181,12 +181,11 @@ private:
 	class BatchedNotifier : public ReceivingApplicationNotifier {
 	public:
 	    BatchedNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
-#if 1
-            void notify_of_bof(VcmtpFileEntry& file_entry);
-            void notify_of_eof(VcmtpFileEntry& file_entry);
-            void notify_of_missed_file(uint32_t fileId);
-            void notify_of_exception(const std::exception& e);
-#endif
+            void notify_of_bof(VcmtpMessageInfo& info);
+            void notify_of_bomd(VcmtpMessageInfo& info);
+            void notify_of_eof(VcmtpMessageInfo& info);
+            void notify_of_eomd(VcmtpMessageInfo& info);
+            void notify_of_missed_product(uint32_t prodId);
 	private:
             VCMTPReceiver&      receiver;
 	};

@@ -600,21 +600,24 @@ void VCMTPReceiver::HandleUnicastPacket() {
  * These three notify_of_* methods should be implemented to return corresponding
  * status to user application process (e.g. LDM). And it's the batched mode.
  */
-void VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpFileEntry& fileEntry) {
+void VCMTPReceiver::BatchedNotifier::notify_of_bof(VcmtpMessageInfo& info) {
     // TODO
 }
 
-void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpFileEntry& fileEntry) {
+void VCMTPReceiver::BatchedNotifier::notify_of_bomd(VcmtpMessageInfo& info) {
     // TODO
 }
 
-void VCMTPReceiver::BatchedNotifier::notify_of_missed_file(
-        uint32_t fileId) {
+void VCMTPReceiver::BatchedNotifier::notify_of_eof(VcmtpMessageInfo& info) {
     // TODO
 }
 
-void VCMTPReceiver::BatchedNotifier::notify_of_exception(
-        const std::exception& e) {
+void VCMTPReceiver::BatchedNotifier::notify_of_eomd(VcmtpMessageInfo& info) {
+    // TODO
+}
+
+void VCMTPReceiver::BatchedNotifier::notify_of_missed_product(
+        uint32_t prodId) {
     // TODO
 }
 
