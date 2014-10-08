@@ -11,6 +11,7 @@ lib_la_SOURCES		= \
     BofResponse.cpp BofResponse.h \
     ConfigInfo.cpp ConfigInfo.h \
     EventQueue.cpp EventQueue.h \
+    Executor.cpp Executor.h \
     ExperimentManager2.cpp ExperimentManager2.h \
     ExperimentManager.cpp ExperimentManager.h \
     InetComm.cpp InetComm.h \
@@ -21,6 +22,7 @@ lib_la_SOURCES		= \
     ReceiverStatusProxy.cpp ReceiverStatusProxy.h \
     ReceivingApplicationNotifier.h \
     SenderStatusProxy.cpp SenderStatusProxy.h \
+    Task.h \
     TcpClient.cpp TcpClient.h \
     TcpServer.cpp TcpServer.h \
     Tester.cpp Tester.h \

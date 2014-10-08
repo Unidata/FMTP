@@ -88,6 +88,7 @@ AC_CONFIG_FILES([
     Makefile
     CommUtil/Makefile
     protocol/Makefile
+    test/protocol/Executor/Makefile
 ])
 
 AC_OUTPUT
