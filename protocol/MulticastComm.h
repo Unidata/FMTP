@@ -31,6 +31,11 @@ public:
 	int SetLoopBack(int onoff);
 	int LeaveGroup();
 	ssize_t SendData(const void* buff, size_t len, int flags, void* dst_addr);
+        ssize_t SendData(
+                const void*  header,
+                const size_t headerLen,
+                const void*  data,
+                const size_t dataLen);
 	ssize_t SendPacket(PacketBuffer* buffer, int flags, void* dst_addr);
 	ssize_t RecvData(void* buff, size_t len, int flags, SA* from, socklen_t* from_len);
 

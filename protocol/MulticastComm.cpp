@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <string>
 #include <string.h>
+#include <sys/socket.h>
 
 
 /*****************************************************************************
@@ -225,6 +226,22 @@ int MulticastComm::SetLoopBack(int onoff) {
  ****************************************************************************/
 ssize_t MulticastComm::SendData(const void* buff, size_t len, int flags, void* dst_addr) {
 	return sendto(sock_fd, buff, len, flags, &this->dst_addr, sizeof(sockaddr_in));
+}
+
+ssize_t MulticastComm::SendData(
+        const void*  header,
+        const size_t headerLen,
+        const void*  data,
+        const size_t dataLen)
+{
+    struct iovec iov[2];
+
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headerLen;
+    iov[1].iov_base = data;
+    iov[1].iov_len  = dataLen;
+
+    return writev(sock_fd, iov, 2);
 }
 
 

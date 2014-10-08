@@ -447,28 +447,28 @@ void VCMTPSender::DoMemoryDataRetransmission(void* data) {
 }
 
 // Multicast data in a memory buffer, given the specific start sequence number
-void VCMTPSender::DoMemoryTransfer(void* data, size_t length, u_int32_t start_seq_num) {
-	char 	buffer[VCMTP_PACKET_LEN];
-	char* 	packet_data = buffer + sizeof(VcmtpHeader);
+void VCMTPSender::DoMemoryTransfer(void* data, size_t dataLen, u_int32_t start_seq_num) {
+	char 	     buffer[VCMTP_HLEN ];
 	VcmtpHeader* header = (VcmtpHeader*) buffer;
+
+	// TODO: replace this with packing of `buffer` IN NETWORK FORM
 	header->session_id = cur_session_id;
-	header->src_port = 0;
-	header->dest_port = 0;
 	header->seq_number = start_seq_num;
 	header->flags = VCMTP_DATA;
 
-	size_t remained_size = length;
+	size_t remained_size = dataLen;
 	size_t offset = 0;
 	while (remained_size > 0) {
 		uint data_size = remained_size < VCMTP_DATA_LEN ? remained_size
 				: VCMTP_DATA_LEN;
+		// TODO: replace this with packing of `buffer` IN NETWORK FORM
 		header->seq_number = offset + start_seq_num;
 		header->data_len = data_size;
-		memcpy(packet_data, (char*)data + offset, data_size);
 
 		//Get tokens from the rate controller
 		rate_shaper.RetrieveTokens(22 + VCMTP_HLEN + data_size);
-		if (ptr_multicast_comm->SendData(buffer, VCMTP_HLEN + data_size, 0, NULL) < 0) {
+		if (ptr_multicast_comm->SendData(buffer, VCMTP_HLEN, data,
+		        dataLen) < 0) {
 			SysError("VCMTPSender::DoMemoryTransfer()::SendPacket() error");
 		}
 
@@ -1302,6 +1302,13 @@ void VCMTPSender::RunRetransmissionThread(const char* file_name, map<int, list<N
 }
 
 
+int VCMTPSender::StartTask(
+        pthread_t* const threadId,
+        void*          (*startRoutine)(void* arg),
+        void* const      arg)
+{
+    /* NB: Default attributes => only one possible error. */
+    int status = pthread_create(threadId, NULL, startRoutine, arg);
 
-
-
+    return status;
+}
