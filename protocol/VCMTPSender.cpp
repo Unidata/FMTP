@@ -1300,15 +1300,3 @@ void VCMTPSender::RunRetransmissionThread(const char* file_name, map<int, list<N
 		}
 	}
 }
-
-
-int VCMTPSender::StartTask(
-        pthread_t* const threadId,
-        void*          (*startRoutine)(void* arg),
-        void* const      arg)
-{
-    /* NB: Default attributes => only one possible error. */
-    int status = pthread_create(threadId, NULL, startRoutine, arg);
-
-    return status;
-}
