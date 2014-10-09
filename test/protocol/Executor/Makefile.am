@@ -13,7 +13,7 @@ ExecutorTest_SOURCES 	= \
         $(top_srcdir)/protocol/Executor.h \
         $(top_srcdir)/protocol/Task.cpp \
         $(top_srcdir)/protocol/Task.h
-LDFLAGS		= -lcppunit
+LDFLAGS		= -lgtest
 
 check_PROGRAMS	= ExecutorTest
 TESTS		= $(check_PROGRAMS)

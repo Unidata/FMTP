@@ -16,34 +16,47 @@
 #include <string>
 #include <string.h>
 
+using namespace std;
+
 Executor::~Executor() {
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&cond);
-    active.std::set<Job*,bool(*)(Job*,Job*)>::~set();
-    completed.std::list<Job>::~list();
+    active.set<Job*,bool(*)(Job*,Job*)>::~set();
+    completed.list<Job*>::~list();
 }
 
 void Executor::submit(
-        Task&           task,
-        void* const     arg,
-        pthread_attr_t* const attr)
+        Task&           task)
 {
-    Job* job = new Job(*this, task, arg);
+    Job* job = new Job(*this, task);
 
-    if (int status = pthread_create(&job->thread, task.getAttributes(),
-            Job::start, job))
-        throw std::runtime_error(std::string("Couldn't create new thread: ") +
-                strerror(status));
+    try {
+        job->executor.addToActive(job);
 
-    addToActive(*job);
+        try {
+            if (int status = pthread_create(&job->thread, task.getAttributes(),
+                    Job::start, job))
+                throw runtime_error(string("Couldn't create new thread: ") +
+                        strerror(status));
+        }
+        catch (exception& e) {
+            job->executor.removeFromActive(job);
+            throw;
+        }
+    }
+    catch (exception& e) {
+        delete job;
+        throw;
+    }
 }
 
 void* Executor::Job::start(
         void* arg)
 {
     Job* job = (Job*)arg;
-    void* result = job->task.getStartRoutine()(job->arg);
+    void* result = job->task.start();
     job->task.setResult(result);
+    job->executor.moveToCompleted(job);
     return result;
 }
 
@@ -51,22 +64,31 @@ Executor::Lock::Lock(pthread_mutex_t& mutex)
     : mutex(mutex)
 {
     if (int status = pthread_mutex_lock(&mutex))
-        throw std::runtime_error(std::string("Couldn't lock mutex: ") +
-                strerror(status));
+        throw runtime_error(string("Couldn't lock mutex: ") + strerror(status));
 }
 
 Executor::Lock::~Lock()
 {
     if (int status = pthread_mutex_unlock(&mutex))
-        throw std::runtime_error(std::string("Couldn't unlock mutex: ") +
+        throw runtime_error(string("Couldn't unlock mutex: ") +
                 strerror(status));
 }
 
 void Executor::addToActive(
-        Job& job)
+        Job* job)
+{
+    Lock                                              lock(mutex);
+    pair<set<Job*,bool(*)(Job*,Job*)>::iterator,bool> pair = active.insert(job);
+
+    if (!pair.second)
+        throw runtime_error(string("Task already in active set"));
+}
+
+void Executor::removeFromActive(
+        Job* job)
 {
     Lock lock(mutex);
-    active.insert(&job);
+    (void)active.erase(job);    // don't care if it's not there
 }
 
 Task& Executor::wait()
@@ -74,17 +96,22 @@ Task& Executor::wait()
     Lock lock(mutex);
     while (completed.size() == 0)
         (void)pthread_cond_wait(&cond, &mutex);
-    Job& job = completed.front();
+    Job* job = completed.front();
     completed.pop_front();
-    return job.task;
+    void* ptr;
+    (void)pthread_join(job->thread, &ptr);
+    Task& task = job->task;
+    delete job;
+    return task;
 }
 
 void Executor::moveToCompleted(
-        Job& job)
+        Job* job)
 {
     Lock lock(mutex);
-    active.erase(&job);
+    (void)active.erase(job);    // don't care if it's not there
     completed.push_back(job);
+    (void)pthread_cond_signal(&cond);
 }
 
 void Executor::stopAll()

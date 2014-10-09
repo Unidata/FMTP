@@ -1,123 +1,148 @@
-/*
- * This part of includes is fixed and provides standard CppUnit test
- * controllers and runners. Please remain unchanged.
+/**
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
+ *
+ *   @file: ExecutorTest.cpp
+ * @author: Steven R. Emmerson
+ *
+ * This file tests the Executor class.
  */
-#include <cppunit/ui/text/TestRunner.h>
-#include <cppunit/extensions/HelperMacros.h>
-#include <cppunit/extensions/TestFactoryRegistry.h>
-#include <cppunit/BriefTestProgressListener.h>
-#include <cppunit/CompilerOutputter.h>
-#include <cppunit/TextOutputter.h>
-#include <cppunit/extensions/TestFactoryRegistry.h>
-#include <cppunit/TestResult.h>
-#include <cppunit/TestRunner.h>
-#include <cppunit/TestResultCollector.h>
 
-/*
- * Unit under test.
- */
 #include "Executor.h"
+#include <gtest/gtest.h>
+#include <pthread.h>
+#include <string>
+#include <signal.h>
+#include <stdexcept>
 
-#include <unistd.h>
+namespace {
 
-using namespace std;
+// The fixture for testing class Executor.
+class ExecutorTest : public ::testing::Test {
+  protected:
+      ExecutorTest()
+          : one(1),
+            two(2),
+            terminatingTask1(&one),
+            terminatingTask2(&two),
+            indefiniteTask1(&one) {
+      }
 
-static void* myStartRoutine(void* arg)
-{
-    sleep(1);
-}
+      class TerminatingTask : public Task {
+      public:
+          TerminatingTask(void* arg) : arg(arg) {};
 
-/*
- * Always use the name of a class under test + Test as the test class's name.
- * And this class is partly fixed while we only need to modify the method
- * containing designed test cases. For each class to be tested, a simple copy
- * and paste from this template with modification upon test cases is enough.
- */
-class ExecutorTest : public CppUnit::TestFixture {
-    public:
-        /*
-         * This method will contain all the designed test cases against the
-         * target class. Use CPPUNIT_ASSERT() to make a judgment if the runtime
-         * result is exactly the same as it's expected to be. It's also
-         * reasonable to create another test method for different member
-         * functions, e.g. aTest(), bTest(). But do remember to add your new
-         * method in to the CppUnit test suite below. And also update
-         * printTestInfo() accordingly.
-         */
-        void runExecutorTest()
-        {
-            class MyTask : public Task {
-            public:
-                MyTask() : Task(myStartRoutine) {};
-            }        task;
-            Executor executor;
+          void* start()
+          {
+              sleep(1);
+              return arg;
+          }
 
-            executor.submit(task);
+      private:
+          void* arg;
+      };
 
-            Task& doneTask = executor.wait();
-            CPPUNIT_ASSERT(&doneTask == &task);
-        }
+      class IndefiniteTask : public Task {
+      public:
+          IndefiniteTask(void* arg)
+              : arg(arg),
+                done(0)
+          {
+                pthread_mutex_init(&mutex, 0);
+                pthread_cond_init(&cond, 0);
+          };
 
-    private:
-        CPPUNIT_TEST_SUITE(ExecutorTest);
-        /*
-         * If there is  more than one test method in this test class. Please
-         * start a new line and pass the name of new test method to
-         * CPPUNIT_TEST(), e.g. CPPUNIT_TEST(a), CPPUNIT_TEST(b).
-         */
-        CPPUNIT_TEST(runExecutorTest);
+          void* start()
+          {
+              (void)pthread_mutex_lock(&mutex);
+              while(!done)
+                  (void)pthread_cond_wait(&cond, &mutex);
+              (void)pthread_mutex_unlock(&mutex);
+              return arg;
+          }
+
+          void cancel() {
+              (void)pthread_mutex_lock(&mutex);
+              done = 1;
+              (void)pthread_cond_signal(&cond);
+              (void)pthread_mutex_unlock(&mutex);
+          }
+
+      private:
+          void*                 arg;
+          volatile sig_atomic_t done;
+          pthread_mutex_t       mutex;
+          pthread_cond_t        cond;
+      };
+
+      int             one;
+      int             two;
+      Executor        executor;
+      TerminatingTask terminatingTask1;
+      TerminatingTask terminatingTask2;
+      IndefiniteTask  indefiniteTask1;
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ExecutorTest);
+// Tests that the Executor correctly executes a single, self-terminating task.
+TEST_F(ExecutorTest, OneSelfTerminatingTask) {
+    executor.submit(terminatingTask1);
 
-/*
- * @function name: printTestInfo
- * @description:
- * This is a function printing some test info to the stdout. A suggested way
- * is to write some output messages about what method has been tested by test
- * cases.
- * @input: None
- * @output: None
- * @return: None
- */
-void printTestInfo()
-{
-    // cout << endl << "Testing list:" << endl;
+    Task& doneTask = executor.wait();
+
+    EXPECT_TRUE(&terminatingTask1 == &doneTask);
+    EXPECT_TRUE(&one == doneTask.getResult());
 }
 
+// Tests that the Executor correctly executes two, self-terminating tasks.
+TEST_F(ExecutorTest, TwoSelfTerminatingTasks) {
 
-/*
- * Do not change function main(). This is a fixed universal body of testing
- * procedure. It can be adapted to all test cases running by CppUnit. So just
- * re-write test cases for each class and remain the interfaces unchanged.
- */
-int main(int argc, char* argv[])
-{
-    // Create the event manager and test controller
-    CppUnit::TestResult controller;
+    executor.submit(terminatingTask1);
+    executor.submit(terminatingTask2);
 
-    // Add a listener that collects test result
-    CppUnit::TestResultCollector result;
-    controller.addListener(&result);
+    Task& doneTaskA = executor.wait();
+    Task& doneTaskB = executor.wait();
 
-    // Add a listener that print dots when test running.
-    CppUnit::BriefTestProgressListener progress;
-    controller.addListener(&progress);
+    EXPECT_TRUE(&one == doneTaskA.getResult() || &one == doneTaskB.getResult());
+    EXPECT_TRUE(&two == doneTaskA.getResult() || &two == doneTaskB.getResult());
+    EXPECT_TRUE(doneTaskA.getResult() != doneTaskB.getResult());
+}
 
-    CppUnit::TextUi::TestRunner runner;
-    CppUnit::TestFactoryRegistry &registry =
-            CppUnit::TestFactoryRegistry::getRegistry();
-    runner.addTest(registry.makeTest());
-    cout << endl << "Running Tests " << endl;
-    runner.run(controller);
+// Tests that the Executor correctly stops an indefinite task.
+TEST_F(ExecutorTest, IndefiniteTask) {
 
-    // Print test in a compiler compatible format.
-    cout << endl << "Test Results" << endl;
-    CppUnit::CompilerOutputter outputter(&result, CppUnit::stdCOut());
-    outputter.write();
+    executor.submit(indefiniteTask1);
 
-    // print info of passed test cases here
-    printTestInfo();
+    sleep(1);
+    indefiniteTask1.stop();
+    Task& doneTask = executor.wait();
 
-    return result.wasSuccessful() ? 0 : 1;
+    EXPECT_TRUE(&indefiniteTask1 == &doneTask);
+    EXPECT_EQ(true, doneTask.wasStopped());
+}
+
+// Tests that the Executor won't accept the same indefinite task twice.
+TEST_F(ExecutorTest, SameIndefiniteTask) {
+
+    executor.submit(indefiniteTask1);
+    try {
+        executor.submit(indefiniteTask1);
+        ASSERT_TRUE(false);
+    }
+    catch (std::exception& e) {
+    }
+
+    sleep(1);
+    indefiniteTask1.stop();
+    Task& doneTask = executor.wait();
+
+    EXPECT_TRUE(&indefiniteTask1 == &doneTask);
+    EXPECT_EQ(true, doneTask.wasStopped());
+}
+
+}  // namespace
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

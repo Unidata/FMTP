@@ -10,3 +10,11 @@
  */
 
 #include "Task.h"
+
+Task::~Task() {};       // called by derived types
+
+void Task::stop()
+{
+    stopped = true;
+    cancel();
+}

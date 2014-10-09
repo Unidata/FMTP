@@ -13,25 +13,29 @@
 #define TASK_H_
 
 #include <pthread.h>
+#include <signal.h>
 
 class Task {
 public:
-                    Task(void* (*startRoutine)(void* arg),
-                            pthread_attr_t* attr = 0) :
-                        startRoutine(startRoutine),
+                    Task(pthread_attr_t* attr = 0) :
                         attr(attr),
-                        result(0) {};
-    virtual        ~Task();
-    void*         (*getStartRoutine())(void*)      {return startRoutine;};
-    pthread_attr_t* getAttributes()                {return attr;};
-    virtual void    stop() {}                      // blocks
-    void            setResult(void* result)        {this->result = result;};
-    void*           getResult()                    {return result;};
+                        result(0),
+                        stopped(false) {};
+    virtual        ~Task() = 0;                 // makes `Task` an ABC
+    virtual void*   start() = 0;                // subclasses must implement
+    pthread_attr_t* getAttributes()             {return attr;};
+    void            stop();                     // blocks
+    bool            wasStopped()                {return stopped;}
+    void            setResult(void* result)     {this->result = result;};
+    void*           getResult()                 {return result;};
+
+protected:
+    virtual void    cancel() {}                 // blocks
 
 private:
-    void*         (*startRoutine)(void*);
-    pthread_attr_t* attr;
-    void*           result;
+    pthread_attr_t*       attr;
+    void*                 result;
+    volatile sig_atomic_t stopped;
 };
 
 #endif /* TASK_H_ */
