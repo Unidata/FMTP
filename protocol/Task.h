@@ -6,7 +6,8 @@
  *   @file: Task.h
  * @author: Steven R. Emmerson
  *
- * This file declares a task that will be executed on an independent thread.
+ * This file declares an abstract base class for a task that will be executed on
+ * an independent thread.
  */
 
 #ifndef TASK_H_
@@ -19,23 +20,19 @@ class Task {
 public:
                     Task(pthread_attr_t* attr = 0) :
                         attr(attr),
-                        result(0),
-                        stopped(false) {};
-    virtual        ~Task() = 0;                 // makes `Task` an ABC
-    virtual void*   start() = 0;                // subclasses must implement
-    pthread_attr_t* getAttributes()             {return attr;};
-    void            stop();                     // blocks
-    bool            wasStopped()                {return stopped;}
-    void            setResult(void* result)     {this->result = result;};
-    void*           getResult()                 {return result;};
-
-protected:
-    virtual void    cancel() {}                 // blocks
+                        result(0) {};
+    virtual        ~Task() = 0;         // makes abstract base class
+    virtual void*   start() = 0;        // subclasses must implement
+    pthread_attr_t* getAttributes()     {return attr;};
+    /**
+     * Stops this task from executing by whatever means necessary. This method
+     * should be called by `Wip::stop()` and not by the user.
+     */
+    virtual void    stop() {}           // doesn't block
 
 private:
     pthread_attr_t*       attr;
     void*                 result;
-    volatile sig_atomic_t stopped;
 };
 
 #endif /* TASK_H_ */

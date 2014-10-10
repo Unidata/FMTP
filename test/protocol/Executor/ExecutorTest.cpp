@@ -6,7 +6,7 @@
  *   @file: ExecutorTest.cpp
  * @author: Steven R. Emmerson
  *
- * This file tests the Executor class.
+ * This file tests the Executor, Wip, and Task classes.
  */
 
 #include "Executor.h"
@@ -53,6 +53,11 @@ class ExecutorTest : public ::testing::Test {
                 pthread_cond_init(&cond, 0);
           };
 
+          ~IndefiniteTask() {
+              pthread_mutex_destroy(&mutex);
+              pthread_cond_destroy(&cond);
+          };
+
           void* start()
           {
               (void)pthread_mutex_lock(&mutex);
@@ -62,7 +67,7 @@ class ExecutorTest : public ::testing::Test {
               return arg;
           }
 
-          void cancel() {
+          void stop() {
               (void)pthread_mutex_lock(&mutex);
               done = 1;
               (void)pthread_cond_signal(&cond);
@@ -86,58 +91,84 @@ class ExecutorTest : public ::testing::Test {
 
 // Tests that the Executor correctly executes a single, self-terminating task.
 TEST_F(ExecutorTest, OneSelfTerminatingTask) {
-    executor.submit(terminatingTask1);
+    Wip* wip = executor.submit(terminatingTask1);
+    Wip* doneWip = executor.wait();
 
-    Task& doneTask = executor.wait();
+    EXPECT_TRUE(wip == doneWip);
+    EXPECT_TRUE(&one == doneWip->getResult());
+    EXPECT_EQ(0, executor.numCompleted());
 
-    EXPECT_TRUE(&terminatingTask1 == &doneTask);
-    EXPECT_TRUE(&one == doneTask.getResult());
+    delete wip;
 }
 
 // Tests that the Executor correctly executes two, self-terminating tasks.
 TEST_F(ExecutorTest, TwoSelfTerminatingTasks) {
 
-    executor.submit(terminatingTask1);
-    executor.submit(terminatingTask2);
+    Wip* wip1 = executor.submit(terminatingTask1);
+    Wip* wip2 = executor.submit(terminatingTask2);
 
-    Task& doneTaskA = executor.wait();
-    Task& doneTaskB = executor.wait();
+    Wip* doneWipA = executor.wait();
+    Wip* doneWipB = executor.wait();
 
-    EXPECT_TRUE(&one == doneTaskA.getResult() || &one == doneTaskB.getResult());
-    EXPECT_TRUE(&two == doneTaskA.getResult() || &two == doneTaskB.getResult());
-    EXPECT_TRUE(doneTaskA.getResult() != doneTaskB.getResult());
+    EXPECT_TRUE(&one == doneWipA->getResult() ||
+            &one == doneWipB->getResult());
+    EXPECT_TRUE(&two == doneWipA->getResult() ||
+            &two == doneWipB->getResult());
+    EXPECT_TRUE(doneWipA->getResult() != doneWipB->getResult());
+    EXPECT_EQ(0, executor.numCompleted());
+
+    delete wip1;
+    delete wip2;
 }
 
 // Tests that the Executor correctly stops an indefinite task.
 TEST_F(ExecutorTest, IndefiniteTask) {
 
-    executor.submit(indefiniteTask1);
+    Wip* wip1 = executor.submit(indefiniteTask1);
 
-    sleep(1);
-    indefiniteTask1.stop();
-    Task& doneTask = executor.wait();
+    EXPECT_EQ(0, executor.numCompleted());
+    wip1->stop();
+    Wip* doneWip = executor.wait();
 
-    EXPECT_TRUE(&indefiniteTask1 == &doneTask);
-    EXPECT_EQ(true, doneTask.wasStopped());
+    EXPECT_TRUE(wip1 == doneWip);
+    EXPECT_EQ(true, doneWip->wasStopped());
+    EXPECT_EQ(0, executor.numCompleted());
+
+    delete wip1;
 }
 
-// Tests that the Executor won't accept the same indefinite task twice.
+// Tests that the Executor will accept the same indefinite task twice.
 TEST_F(ExecutorTest, SameIndefiniteTask) {
 
-    executor.submit(indefiniteTask1);
-    try {
-        executor.submit(indefiniteTask1);
-        ASSERT_TRUE(false);
-    }
-    catch (std::exception& e) {
-    }
+    Wip* wips[2];
+
+    wips[0] = executor.submit(indefiniteTask1);
+    wips[1] = executor.submit(indefiniteTask1);
 
     sleep(1);
-    indefiniteTask1.stop();
-    Task& doneTask = executor.wait();
+    EXPECT_EQ(0, executor.numCompleted());
 
-    EXPECT_TRUE(&indefiniteTask1 == &doneTask);
-    EXPECT_EQ(true, doneTask.wasStopped());
+    for (int i = 0; i < 2; i++) {
+        wips[i]->stop();
+        Wip* doneWip = executor.wait();
+        EXPECT_TRUE(wips[i] == doneWip);
+        EXPECT_TRUE(&one == doneWip->getResult());
+        EXPECT_EQ(0, executor.numCompleted());
+        delete wips[i];
+    }
+}
+
+// Tests that the Executor can stop and clear all tasks.
+TEST_F(ExecutorTest, StopAllAndClear) {
+
+    Wip* wips[2];
+
+    wips[0] = executor.submit(indefiniteTask1);
+    wips[1] = executor.submit(indefiniteTask1);
+
+    sleep(1);
+    executor.stopAllAndClear();
+    EXPECT_EQ(0, executor.numCompleted());
 }
 
 }  // namespace

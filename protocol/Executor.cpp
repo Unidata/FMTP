@@ -21,43 +21,53 @@ using namespace std;
 Executor::~Executor() {
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&cond);
-    active.set<Job*,bool(*)(Job*,Job*)>::~set();
-    completed.list<Job*>::~list();
+    active.WipSet::~set();
+    completed.WipList::~list();
 }
 
-void Executor::submit(
+Wip* Executor::submit(
         Task&           task)
 {
-    Job* job = new Job(*this, task);
+    Wip* wip = new Wip(*this, task);
 
     try {
-        job->executor.addToActive(job);
+        addToActive(wip);
 
         try {
-            if (int status = pthread_create(&job->thread, task.getAttributes(),
-                    Job::start, job))
+            pthread_t thread;
+            if (int status = pthread_create(&thread, task.getAttributes(),
+                    Wip::start, wip))
                 throw runtime_error(string("Couldn't create new thread: ") +
                         strerror(status));
+
+            wip->setThread(thread);
+
+            return wip;
         }
         catch (exception& e) {
-            job->executor.removeFromActive(job);
+            removeFromActive(wip);
             throw;
         }
     }
     catch (exception& e) {
-        delete job;
+        delete wip;
         throw;
     }
 }
 
-void* Executor::Job::start(
+void* Wip::start(
         void* arg)
 {
-    Job* job = (Job*)arg;
-    void* result = job->task.start();
-    job->task.setResult(result);
-    job->executor.moveToCompleted(job);
-    return result;
+    Wip* wip = (Wip*)arg;
+    wip->result = wip->task.start();
+    wip->executor.moveToCompleted(wip);
+    return wip->result;
+}
+
+void Wip::stop()
+{
+    stopped = true;
+    task.stop();
 }
 
 Executor::Lock::Lock(pthread_mutex_t& mutex)
@@ -75,46 +85,57 @@ Executor::Lock::~Lock()
 }
 
 void Executor::addToActive(
-        Job* job)
+        Wip* wip)
 {
     Lock                                              lock(mutex);
-    pair<set<Job*,bool(*)(Job*,Job*)>::iterator,bool> pair = active.insert(job);
+    pair<set<Wip*,bool(*)(Wip*,Wip*)>::iterator,bool> pair = active.insert(wip);
 
     if (!pair.second)
         throw runtime_error(string("Task already in active set"));
 }
 
 void Executor::removeFromActive(
-        Job* job)
+        Wip* wip)
 {
     Lock lock(mutex);
-    (void)active.erase(job);    // don't care if it's not there
+    (void)active.erase(wip);    // don't care if it's not there
 }
 
-Task& Executor::wait()
+Wip* Executor::wait()
 {
     Lock lock(mutex);
     while (completed.size() == 0)
         (void)pthread_cond_wait(&cond, &mutex);
-    Job* job = completed.front();
+    Wip* wip = completed.front();
     completed.pop_front();
-    void* ptr;
-    (void)pthread_join(job->thread, &ptr);
-    Task& task = job->task;
-    delete job;
-    return task;
+    (void)pthread_join(wip->getThread(), 0);
+    return wip;
 }
 
 void Executor::moveToCompleted(
-        Job* job)
+        Wip* wip)
 {
     Lock lock(mutex);
-    (void)active.erase(job);    // don't care if it's not there
-    completed.push_back(job);
+    completed.push_back(wip);
+    (void)active.erase(wip);    // don't care if it's not there
     (void)pthread_cond_signal(&cond);
 }
 
-void Executor::stopAll()
+size_t Executor::numCompleted()
 {
-    // TODO
+    Lock lock(mutex);
+    return completed.size();
+}
+
+void Executor::stopAllAndClear()
+{
+    for (std::set<Wip*>::iterator iter = active.begin(); iter != active.end();
+            ++iter) {
+        (*iter)->stop();        // requires non-blocking
+    }
+
+    while (active.size() > 0 || completed.size() > 0) {
+        Wip* wip = wait();
+        delete wip;
+    }
 }

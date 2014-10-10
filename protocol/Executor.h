@@ -19,40 +19,54 @@
 #include <list>
 #include <set>
 
+class Wip;
+
+typedef std::set<Wip*>   WipSet;
+typedef std::list<Wip*>  WipList;
+
 class Executor {
 public:
              Executor() :
-                active(Job::compare),
+                active(),
                 completed() {}
             ~Executor();
     /**
      * Submits a task for execution on an independent thread.
      *
      * @param[in] task                Task to execute on independent thread.
-     * @throws    std::runtime_error  If task was already submitted.
+     * @return                        A work-in-progress. Caller should delete
+     *                                when it's no longer needed.
      * @throws    std::runtime_error  If new thread couldn't be created.
      */
-    void     submit(Task& task);
-    Task&    wait();    // blocks
-    void     stopAll(); // blocks
+    Wip*     submit(Task& task);
+    /**
+     * Removes and returns the oldest, completed work-in-progress. Blocks until
+     * that WIP is available.
+     *
+     * @return  Oldest, completed WIP.
+     */
+    Wip*     wait();            // blocks
+    /**
+     * Returns the number of completed works-in-progress.
+     *
+     * @return  Number of completed works-in-progress.
+     */
+    size_t   numCompleted();
+    /**
+     * Stops and clears all works-in-progress.
+     */
+    void     stopAllAndClear(); // blocks
+    /**
+     * Adds a work-in-progress to the set of active works-in-progress.
+     *
+     * @param[in] wip                 Work-in-progress to add.
+     * @throws    std::runtime_error  If a system error occurs.
+     */
+    void     addToActive(Wip* wip);
+    void     removeFromActive(Wip* wip);
+    void     moveToCompleted(Wip* wip);
 
 private:
-    class Job {
-    public:
-                    Job(Executor& executor, Task& task) :
-                           executor(executor),
-                           task(task),
-                           thread(0) {};
-       static void* start(void* job);           // called by `pthread_create()`
-       void         stop() {task.stop();};      // doesn't block
-       static bool  compare(Job* job1, Job* job2)
-               {return &job1->task < &job2->task;}
-
-       Executor& executor;
-       Task&     task;
-       pthread_t thread;
-    };
-
     class Lock {
     public:
          Lock(pthread_mutex_t& mutex);
@@ -61,20 +75,46 @@ private:
         pthread_mutex_t& mutex;
     };
 
-    /**
-     * Adds a job to the set of active jobs.
-     *
-     * @param[in] job                 Job to add.
-     * @throws    std::runtime_error  If a system error occurs.
-     */
-    void     addToActive(Job* job);
-    void     removeFromActive(Job* job);
-    void     moveToCompleted(Job* job);
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t  cond = PTHREAD_COND_INITIALIZER;
+    WipSet          active;
+    WipList         completed;
+};
 
-    pthread_mutex_t                   mutex = PTHREAD_MUTEX_INITIALIZER;
-    pthread_cond_t                    cond = PTHREAD_COND_INITIALIZER;
-    std::set<Job*,bool(*)(Job*,Job*)> active;
-    std::list<Job*>                   completed;
+/**
+ * Class `Wip` is declared here because it depends on `Executor` and `Executor`
+ * depends on it.
+ */
+class Wip {
+public:
+                 Wip(Executor& executor, Task& task) :
+                        executor(executor),
+                        task(task),
+                        thread(0),
+                        result(0),
+                        stopped(false) {};
+    void         setThread(pthread_t thread)    {this->thread = thread;}
+    pthread_t    getThread() const              {return thread;}
+    static void* start(void* wip);              // called by `pthread_create()`
+    /**
+     * Stops a work-in-progress by whatever means necessary. Doesn't block. The
+     * user should call this method instead of `Task::stop()` to stop a task
+     * that an `Executor` is executing.
+     */
+    void         stop();
+    bool         operator<(Wip* that)           // element comparison in set
+            {return this->thread < that->thread;}
+    Task&        getTask() const                {return task;}
+    bool         wasStopped()                   {return stopped;}
+    void         setResult(void* result)        {this->result = result;};
+    void*        getResult()                    {return result;};
+
+private:
+    Executor&             executor;
+    Task&                 task;
+    pthread_t             thread;
+    void*                 result;
+    volatile sig_atomic_t stopped;
 };
 
 #endif /* EXECUTOR_H_ */

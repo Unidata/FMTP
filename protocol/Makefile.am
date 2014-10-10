@@ -22,7 +22,7 @@ lib_la_SOURCES		= \
     ReceiverStatusProxy.cpp ReceiverStatusProxy.h \
     ReceivingApplicationNotifier.h \
     SenderStatusProxy.cpp SenderStatusProxy.h \
-    Task.h \
+    Task.cpp Task.h \
     TcpClient.cpp TcpClient.h \
     TcpServer.cpp TcpServer.h \
     Tester.cpp Tester.h \
