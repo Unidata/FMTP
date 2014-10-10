@@ -20,7 +20,7 @@
 #ifndef UDPCOMM_H_
 #define UDPCOMM_H_
 
-#include "favcmtp.h"
+#include "vcmtpBase.h"
 
 #include <string>
 #include <sys/types.h>
@@ -40,6 +40,7 @@ public:
 
 	void SetSocketBufferSize(size_t size);
 	ssize_t SendTo(const void* buff, size_t len, int flags);
+	size_t SendData( void*  header,const size_t headerLen,  void*  data, const size_t dataLen);
 
 private:
 	int sock_fd;
