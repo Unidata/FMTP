@@ -98,7 +98,7 @@ TEST_F(ExecutorTest, OneSelfTerminatingTask) {
     EXPECT_TRUE(&one == doneWip->getResult());
     EXPECT_EQ(0, executor.numCompleted());
 
-    delete wip;
+    delete doneWip;
 }
 
 // Tests that the Executor correctly executes two, self-terminating tasks.
@@ -117,8 +117,8 @@ TEST_F(ExecutorTest, TwoSelfTerminatingTasks) {
     EXPECT_TRUE(doneWipA->getResult() != doneWipB->getResult());
     EXPECT_EQ(0, executor.numCompleted());
 
-    delete wip1;
-    delete wip2;
+    delete doneWipA;
+    delete doneWipB;
 }
 
 // Tests that the Executor correctly stops an indefinite task.
@@ -134,7 +134,7 @@ TEST_F(ExecutorTest, IndefiniteTask) {
     EXPECT_EQ(true, doneWip->wasStopped());
     EXPECT_EQ(0, executor.numCompleted());
 
-    delete wip1;
+    delete doneWip;
 }
 
 // Tests that the Executor will accept the same indefinite task twice.
@@ -154,7 +154,7 @@ TEST_F(ExecutorTest, SameIndefiniteTask) {
         EXPECT_TRUE(wips[i] == doneWip);
         EXPECT_TRUE(&one == doneWip->getResult());
         EXPECT_EQ(0, executor.numCompleted());
-        delete wips[i];
+        delete doneWip;
     }
 }
 
