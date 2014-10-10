@@ -25,6 +25,8 @@ typedef std::set<Wip*>   WipSet;
 typedef std::list<Wip*>  WipList;
 
 class Executor {
+friend class Wip;
+
 public:
              Executor() :
                 active(),
@@ -34,8 +36,7 @@ public:
      * Submits a task for execution on an independent thread.
      *
      * @param[in] task                Task to execute on independent thread.
-     * @return                        A work-in-progress. Caller should delete
-     *                                when it's no longer needed.
+     * @return                        A work-in-progress.
      * @throws    std::runtime_error  If new thread couldn't be created.
      */
     Wip*     submit(Task& task);
@@ -43,7 +44,8 @@ public:
      * Removes and returns the oldest, completed work-in-progress. Blocks until
      * that WIP is available.
      *
-     * @return  Oldest, completed WIP.
+     * @return  Oldest, completed WIP. Caller should delete when it's no longer
+     *          needed.
      */
     Wip*     wait();            // blocks
     /**
@@ -53,9 +55,12 @@ public:
      */
     size_t   numCompleted();
     /**
-     * Stops and clears all works-in-progress.
+     * Stops and deletes all works-in-progress. Upon return, `numCompleted()`
+     * will return 0;
      */
     void     stopAllAndClear(); // blocks
+
+private:
     /**
      * Adds a work-in-progress to the set of active works-in-progress.
      *
@@ -66,7 +71,6 @@ public:
     void     removeFromActive(Wip* wip);
     void     moveToCompleted(Wip* wip);
 
-private:
     class Lock {
     public:
          Lock(pthread_mutex_t& mutex);
