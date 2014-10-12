@@ -1,6 +1,6 @@
 /*
  *test.cpp
- 
+
  *
  *  Created on: Oct 4, 2014
  *      Author: fatmaal-ali
@@ -16,13 +16,15 @@ int main()
 {
 	const u_int64_t id=1;
 	string prodId="ldm checksum";
-	
+
 	faVCMTPSender* sender;
 	sender= new faVCMTPSender(id);
 	cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
 	//pass the address and port number of the receiver
-	sender->CreateUPDSocket("128.143.137.117",5173);
-	char *filename = "/home/fatma/FatmaVCMTP/FHA2";
+	//sender->CreateUPDSocket("128.143.137.117",5173);
+	sender->CreateUPDSocket("127.0.0.1",5173);
+	//char *filename = "/home/shawn/vcmtp/fatma/FHA2";
+	char *filename = "/home/shawn/vcmtp/fatma/memdata";
 	int fd;
 	//	if(int fd = open("FHA2", O_RDONLY)<0)
 	fd = open(filename,O_RDONLY);
@@ -32,18 +34,18 @@ int main()
 		data = (char*) mmap(0, 2856, PROT_READ, MAP_FILE | MAP_SHARED, fd,0);
 		if (data == MAP_FAILED)
 			cout<<"file map failed"<<endl;
-		
+
 		//	while(1){
 		sender->sendMemoryData( data,2856, prodId);
 		//	sleep(1);
 		//	}
-		
+
 		munmap(data, 2856);
 		close(fd);
 	}
 	else
 		cout<<"test::main()::open(): error"<<endl;
-	
+
 	return 0;
 }
 
