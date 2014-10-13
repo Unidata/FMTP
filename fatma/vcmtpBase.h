@@ -54,10 +54,6 @@ using namespace std;
 
 #include <stdint.h>
 
-const static int VCMTP_PACKET_LEN = 1460;
-//const static int VCMTP_HEADER_LEN = sizeof(VcmtpHeader);
-const static int VCMTP_HEADER_LEN = 32;
-const static int VCMTP_DATA_LEN = VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 
 
 const uint64_t VCMTP_BOF = 0x00000001;
@@ -65,7 +61,7 @@ const uint64_t VCMTP_BOMD = 0x00000002;
 const uint64_t VCMTP_EOF = 0x00000004;
 const uint64_t VCMTP_EOMD = 0x00000008;
 const uint64_t VCMTP_FILE_DATA = 0x00000010;
-const uint64_t VCMTP_DATA = 0x00000020;
+const uint64_t VCMTP_MEM_DATA = 0x00000020;
 
 
 typedef struct VcmtpPacketHeader {
@@ -75,6 +71,9 @@ typedef struct VcmtpPacketHeader {
     uint64_t   flags;
 } VcmtpHeader;
 
+const static int VCMTP_PACKET_LEN = 1460;
+const static int VCMTP_HEADER_LEN = sizeof(VcmtpHeader);
+const static int VCMTP_DATA_LEN = VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 
 class vcmtpBase {
 public:
