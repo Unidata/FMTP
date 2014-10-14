@@ -214,12 +214,14 @@ void vcmtpRecv::BOMDHandler(char* VcmtpPacket)
     vcmtpHeader.flags      = be64toh(vcmtpHeader.flags);
     BOMDmsg.prodsize       = be64toh(BOMDmsg.prodsize);
 
+    #ifdef DEBUG
     std::cout << "(VCMTP Header) indexID: " << vcmtpHeader.indexid << std::endl;
     std::cout << "(VCMTP Header) Seq Num: " << vcmtpHeader.seqnum << std::endl;
     std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
     std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
     std::cout << "(BOMD) prodSize: " << BOMDmsg.prodsize << std::endl;
     std::cout << "(BOMD) prodID: " << BOMDmsg.prodid << std::endl;
+    #endif
 }
 
 void vcmtpRecv::recvMemData(char* VcmtpPacket)
@@ -241,6 +243,7 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
     if(tmpVcmtpHeader.indexid == vcmtpHeader.indexid &&
        tmpVcmtpHeader.seqnum == 0)
     {
+    #ifdef DEBUG
         uint8_t testvar1;
         uint8_t testvar2;
         uint8_t testvar3;
@@ -254,6 +257,7 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
         printf("%x ", testvar3);
         printf("%x ", testvar4);
         printf("...\n");
+    #endif
 
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
@@ -263,6 +267,7 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
     else if(tmpVcmtpHeader.indexid == vcmtpHeader.indexid && vcmtpHeader.seqnum
             + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
     {
+    #ifdef DEBUG
         uint8_t testvar1;
         uint8_t testvar2;
         uint8_t testvar3;
@@ -276,6 +281,7 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
         printf("%x ", testvar3);
         printf("%x ", testvar4);
         printf("...\n");
+    #endif
 
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
