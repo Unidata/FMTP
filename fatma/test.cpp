@@ -24,7 +24,7 @@ int main()
 	//sender->CreateUPDSocket("128.143.137.117",5173);
 	sender->CreateUPDSocket("127.0.0.1",5173);
 	//char *filename = "/home/shawn/vcmtp/fatma/FHA2";
-	char *filename = "/home/shawn/vcmtp/fatma/memdata";
+	char *filename = "memdata";
 	int fd;
 	//	if(int fd = open("FHA2", O_RDONLY)<0)
 	fd = open(filename,O_RDONLY);
