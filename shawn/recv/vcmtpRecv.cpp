@@ -199,24 +199,29 @@ void vcmtpRecv::BOMDHandler(char* VcmtpPacket)
     char*    VcmtpPacketHeader = VcmtpPacket;
     char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
 
+    // every time a new BOMD arrives, save the header to check following data packets
     memcpy(&vcmtpHeader.indexid,    VcmtpPacketHeader,    8);
     memcpy(&vcmtpHeader.seqnum,     (VcmtpPacketHeader+8),  8);
     memcpy(&vcmtpHeader.payloadlen, (VcmtpPacketHeader+16), 8);
     memcpy(&vcmtpHeader.flags,      (VcmtpPacketHeader+24), 8);
+    // every time a new BOMD arrives, save the msg to check following data packets
     memcpy(&BOMDmsg.prodsize,   VcmtpPacketData, 8);
     memcpy(BOMDmsg.prodid,      (VcmtpPacketData+8), 256);
-    vcmtpHeader.indexid = be64toh(vcmtpHeader.indexid);
-    vcmtpHeader.seqnum = be64toh(vcmtpHeader.seqnum);
+
+    vcmtpHeader.indexid    = be64toh(vcmtpHeader.indexid);
+    vcmtpHeader.seqnum     = be64toh(vcmtpHeader.seqnum);
     vcmtpHeader.payloadlen = be64toh(vcmtpHeader.payloadlen);
-    vcmtpHeader.flags = be64toh(vcmtpHeader.flags);
-    /*
-    std::cout << "(VCMTP Header)fileID: " << vcmtpHeader.fileid << std::endl;
-    std::cout << "(VCMTP Header)Seq Num: " << vcmtpHeader.seqnum << std::endl;
-    std::cout << "(VCMTP Header)payloadLen: " << vcmtpHeader.payloadlen << std::endl;
-    std::cout << "(VCMTP Header)flags: " << vcmtpHeader.flags << std::endl;
-    std::cout << "(BOF) prodSize: " << prodSize << std::endl;
-    std::cout << "(BOF) prodID: " << prodID << std::endl;
-    */
+    vcmtpHeader.flags      = be64toh(vcmtpHeader.flags);
+    BOMDmsg.prodsize       = be64toh(BOMDmsg.prodsize);
+
+    #ifdef DEBUG
+    std::cout << "(VCMTP Header) indexID: " << vcmtpHeader.indexid << std::endl;
+    std::cout << "(VCMTP Header) Seq Num: " << vcmtpHeader.seqnum << std::endl;
+    std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
+    std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
+    std::cout << "(BOMD) prodSize: " << BOMDmsg.prodsize << std::endl;
+    std::cout << "(BOMD) prodID: " << BOMDmsg.prodid << std::endl;
+    #endif
 }
 
 void vcmtpRecv::recvMemData(char* VcmtpPacket)
@@ -233,13 +238,53 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
     tmpVcmtpHeader.seqnum = be64toh(tmpVcmtpHeader.seqnum);
     tmpVcmtpHeader.payloadlen = be64toh(tmpVcmtpHeader.payloadlen);
     tmpVcmtpHeader.flags = be64toh(tmpVcmtpHeader.flags);
+
+    // check for the first mem data packet
     if(tmpVcmtpHeader.indexid == vcmtpHeader.indexid &&
-       vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
+       tmpVcmtpHeader.seqnum == 0)
     {
-        std::cout << "Payload content: " << VcmtpPacketData << std::endl;
+    #ifdef DEBUG
+        uint8_t testvar1;
+        uint8_t testvar2;
+        uint8_t testvar3;
+        uint8_t testvar4;
+        memcpy(&testvar1, VcmtpPacketData, 1);
+        memcpy(&testvar2, VcmtpPacketData+1, 1);
+        memcpy(&testvar3, VcmtpPacketData+2, 1);
+        memcpy(&testvar4, VcmtpPacketData+3, 1);
+        printf("%x ", testvar1);
+        printf("%x ", testvar2);
+        printf("%x ", testvar3);
+        printf("%x ", testvar4);
+        printf("...\n");
+    #endif
+
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
         vcmtpHeader.flags      = tmpVcmtpHeader.flags;
+    }
+    // check for the packet sequence to detect missing packets
+    else if(tmpVcmtpHeader.indexid == vcmtpHeader.indexid && vcmtpHeader.seqnum
+            + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
+    {
+    #ifdef DEBUG
+        uint8_t testvar1;
+        uint8_t testvar2;
+        uint8_t testvar3;
+        uint8_t testvar4;
+        memcpy(&testvar1, VcmtpPacketData, 1);
+        memcpy(&testvar2, VcmtpPacketData+1, 1);
+        memcpy(&testvar3, VcmtpPacketData+2, 1);
+        memcpy(&testvar4, VcmtpPacketData+3, 1);
+        printf("%x ", testvar1);
+        printf("%x ", testvar2);
+        printf("%x ", testvar3);
+        printf("%x ", testvar4);
+        printf("...\n");
+    #endif
+
+        vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
+        vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
     }
 }
 
