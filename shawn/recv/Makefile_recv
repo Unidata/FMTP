@@ -1,10 +1,11 @@
 CC = g++
-INCLUDE =
+INCLUDE = ../
 LIB =
 ELFFILE = vcmtpRecv
+VCMTPBASE = ../
 
-$(ELFFILE): main.cpp vcmtpRecv.cpp vcmtpBase.cpp
-	$(CC) -I$(INCLUDE) -l$(LIB) -pthread -o $(ELFFILE) main.cpp vcmtpRecv.cpp vcmtpBase.cpp
+$(ELFFILE): main.cpp vcmtpRecv.cpp $(VCMTPBASE)vcmtpBase.cpp
+	$(CC) -I$(INCLUDE) -l$(LIB) -pthread -o $(ELFFILE) main.cpp vcmtpRecv.cpp $(VCMTPBASE)vcmtpBase.cpp
 
 .PHONY : clean
 clean:
