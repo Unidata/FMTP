@@ -17,14 +17,10 @@
  * Input:  u_int64_t id: 8 bytes file identifier
  * Output: none
  ****************************************************************************/
-faVCMTPSender::faVCMTPSender(uint64_t id)
+faVCMTPSender::faVCMTPSender(uint64_t id,const char* recvAddr,const ushort recvPort)
 {
-	updSocket = 0;
-	fileId=id;
-	bzero(fileName,sizeof(fileName));
-	bzero(prodId,sizeof(prodId));
-	seq_num=0;
-	fileSize=0;
+    updSocket = new UdpComm(recvAddr,recvPort);
+    prodId=id;
 }
 /*****************************************************************************
  * Class Name: faVCMTPSender
@@ -44,44 +40,15 @@ faVCMTPSender::~faVCMTPSender() {
  *
  * Description: create the BOF message and send it to a receiver through udp socket
  *
- * Input:  dataLength: size of the file, fileName: the file name
+ * Input: dataLength: size of the file, fileName: the file name
  * Output: none
  ****************************************************************************/
 void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
 {
-	strcpy(this->fileName, fileName);
+	//strcpy(this->fileName, fileName);
 	
 	//this->fileName=fileName;
-	this->fileSize=fileSize;
-	
-	cout<<"faVCMTPSender::SendBOFMessage: "<<endl;
-	cout<<"file size= "<<fileSize<<" file name = "<<fileName<<endl;
-	// Send the BOF message to all receivers before starting the file transfer
-	/*// create the content of the vcmtp header
-	 char msg_packet[1460];
-	 VcmtpHeader* header = (VcmtpHeader*) msg_packet;
-	 header->file_id = fileId;//send the file_id to the fileId passed to the sendBOFMessage
-	 header->seq_number = 0;// the sequence number for the bof message is always zero
-	 header->vcmtp_payload_size = 1428;
-	 header->flags = VCMTP_BOF;
-	 
-	 cout<<"file id="<<	header->file_id << " size of the field = "<<sizeof(header->file_id)<<endl;
-	 cout<<"seq_num=  "<<	header->seq_number<< " size of the field = "<<sizeof(header->seq_number)<<endl;
-	 cout<<"vcmtp payload size = "<<	header->vcmtp_payload_size << " size of the field = "<<sizeof(header->vcmtp_payload_size)<<endl;
-	 cout<<"flags="<< header->flags<< " size of the field = "<<sizeof(header->flags)<<endl;
-	 
-	 //create the content of the BOF message
-	 VcmtpSenderMessage* msg = (VcmtpSenderMessage*) (msg_packet + VCMTP_HLEN);
-	 msg->transfer_type = MEMORY_TO_MEMORY;
-	 msg->file_size = fileSize;
-	 bzero(msg->file_name, sizeof(msg->file_name));
-	 strcpy(msg->file_name, fileName);
-	 
-	 
-	 cout<<"transfer type="<< msg->transfer_type << " size of the field = "<<sizeof(msg->transfer_type)<<endl;
-	 cout<<"file size ="<<msg->file_size << " size of the field = "<<sizeof(msg->file_size)<<endl;
-	 cout<<"file name="<<msg->file_name<< " size of the field = "<<sizeof(msg->file_name)<<endl;
-	 */
+	//this->fileSize=fileSize;
     unsigned char vcmtp_packet[VCMTP_PACKET_LEN];
     unsigned char *vcmtp_header = vcmtp_packet;
     unsigned char *vcmtp_data = vcmtp_packet + VCMTP_HEADER_LEN;
@@ -89,7 +56,7 @@ void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
     bzero(vcmtp_packet, sizeof(vcmtp_packet));
 	
 	
-    uint64_t fileid = htobe64(fileId);
+    uint64_t fileid = htobe64(prodId);
     uint64_t seqNum = htobe64(0);//for the BOF sequence number is always zero
     uint64_t payLen = htobe64(1428);
     uint64_t flags = htobe64(VCMTP_BOF);
@@ -120,7 +87,7 @@ void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
  * Input:  dataLength: size of the file, fileName: the file name
  * Output: none
  ****************************************************************************/
-void faVCMTPSender::SendBOMDMessage(uint64_t fileSize, char* prodId, int sizeOfProdId)
+void faVCMTPSender::SendBOMDMessage(uint64_t prodSize, char* prodName, int sizeOfProdName)
 {
 	
     unsigned char vcmtp_packet[VCMTP_PACKET_LEN]; //create the vcmtp packet
@@ -130,31 +97,31 @@ void faVCMTPSender::SendBOMDMessage(uint64_t fileSize, char* prodId, int sizeOfP
     bzero(vcmtp_packet, sizeof(vcmtp_packet)); //clear up the vcmtp packet
 	
     //convert the variables from native binary  to network binary representation
-    uint64_t fileid = htobe64(fileId);
+    uint64_t prodid = htobe64(prodId);
     uint64_t seqNum = htobe64(0);//for the BOMD sequence number is always zero
     uint64_t payLen = htobe64(VCMTP_DATA_LEN);
     uint64_t flags = htobe64(VCMTP_BOMD);
 	
-    uint64_t filesize = htobe64(fileSize);
+    uint64_t prodsize = htobe64(prodSize);
 	
-	char prodid[256];
-	bzero(prodid,sizeof(prodid));
-	strncpy(prodid,prodId,sizeOfProdId);
-	strcpy(prodid,prodId);
-	cout<<"prodid= "<<prodid<<endl;
+    char prodname[256];
+    bzero(prodname,sizeof(prodname));
+    strncpy(prodname,prodName,sizeOfProdName);
+	//	strcpy(prodbame,prodName);
+    cout<<"prodName= "<<prodname<<endl;
     //create the content of the vcmtp header
-    memcpy(vcmtp_header,    &fileid, 8);
+    memcpy(vcmtp_header,    &prodid, 8);
     memcpy(vcmtp_header+8,  &seqNum, 8);
     memcpy(vcmtp_header+16, &payLen, 8);
     memcpy(vcmtp_header+24, &flags,  8);
     //create the content of the BOMD
-    memcpy(vcmtp_data,      &filesize,   8);
-    memcpy(vcmtp_data+8, prodid,256);
+    memcpy(vcmtp_data,      &prodsize,   8);
+    memcpy(vcmtp_data+8, prodname,256);
 	//send the bomd message
-	if (updSocket->SendTo(vcmtp_packet, VCMTP_PACKET_LEN, 0) < 0)
-		cout<<"faVCMTPSender::SendBOMDMessage()::SendTo error\n";
-	else
-		cout<<"faVCMTPSender::SendBOMDMessage()::SendTo success\n";
+    if (updSocket->SendTo(vcmtp_packet, VCMTP_PACKET_LEN, 0) < 0)
+        cout<<"faVCMTPSender::SendBOMDMessage()::SendTo error\n";
+    else
+        cout<<"faVCMTPSender::SendBOMDMessage()::SendTo success\n";
 	
 	
 }
@@ -167,16 +134,16 @@ void faVCMTPSender::SendBOMDMessage(uint64_t fileSize, char* prodId, int sizeOfP
  * Input:  data: a pointer to the data in the memory, dataLength: the length of the data, &prodId: mD5checksum
  * Output: none
  ****************************************************************************/
-void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prodId)
+void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prodName)
 {
-	SendBOMDMessage(dataLength,&prodId[0],prodId.length()); //send the BOMD before sending the data
+	SendBOMDMessage(dataLength,&prodName[0],prodName.length()); //send the BOMD before sending the data
 	unsigned char vcmtpHeader[VCMTP_HEADER_LEN]; //create a vcmtp header
 	//	VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader; //create a pointer to the vcmtp header
 	unsigned char* header= vcmtpHeader; 
 	uint64_t seqNum= 0;
 	
     //convert the variables from native binary representation to network binary representation
-	uint64_t fileid = htobe64(fileId);
+	uint64_t prodid = htobe64(prodId);
 	//	uint64_t payLen = htobe64(VCMTP_DATA_LEN);
 	uint64_t payLen;
 	uint64_t flags = htobe64(VCMTP_MEM_DATA);
@@ -195,7 +162,7 @@ void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prod
 		payLen = htobe64(data_size);
 		seqNum = htobe64(seqNum);
 	    //create the content of the vcmtp header
-		memcpy(header,    &fileid, 8);
+		memcpy(header,    &prodid, 8);
 		memcpy(header+8,  &seqNum, 8);
 		memcpy(header+16, &payLen, 8);
 		memcpy(header+24, &flags,  8);
@@ -210,21 +177,35 @@ void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prod
 		seqNum += data_size;
 	}
 	
-	fileId++;//increment the file id to use it for the next data transmission
+    sendEOMDMessage();
+    prodId++;//increment the file id to use it for the next data transmission
 	
 }
-/*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: CreateUPDSocket()
- *
- * Description: create a upd socket
- *
- * Input:  recvAddr: the address of the receiver, recvPort: the port of the receiver
- * Output: none
- ****************************************************************************/
-void faVCMTPSender::CreateUPDSocket(const char* recvAddr,const ushort recvPort)
+
+void faVCMTPSender::sendEOMDMessage()
 {
-	updSocket = new UdpComm(recvAddr,recvPort);
+    unsigned char vcmtp_packet[VCMTP_HEADER_LEN];
+    unsigned char *vcmtp_header = vcmtp_packet; 
+	
+    bzero(vcmtp_packet, sizeof(vcmtp_packet)); //clear up the vcmtp packet
+	
+    //convert the variables from native binary  to network binary representation
+    uint64_t prodid = htobe64(prodId);
+    uint64_t seqNum = htobe64(0);
+    uint64_t payLen = htobe64(0);
+    uint64_t flags = htobe64(VCMTP_EOMD);
+	
+    //create the content of the vcmtp header
+    memcpy(vcmtp_header,    &prodid, 8);
+    memcpy(vcmtp_header+8,  &seqNum, 8);
+    memcpy(vcmtp_header+16, &payLen, 8);
+    memcpy(vcmtp_header+24, &flags,  8);
+	//send the eomd message
+    if (updSocket->SendTo(vcmtp_packet,VCMTP_HEADER_LEN, 0) < 0)
+        cout<<"faVCMTPSender::SendEOMDMessage()::SendTo error\n";
+    else
+        cout<<"faVCMTPSender::SendEOMDMessage()::SendTo success\n";
+	
 	
 }
 

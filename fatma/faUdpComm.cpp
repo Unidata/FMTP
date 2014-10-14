@@ -1,5 +1,5 @@
 /*
- * UpdComm.cpp
+ *UdpCmm.cpp
  *
  *  Created on: Oct 3, 2014
  *      Author: fatmaal-ali
@@ -62,7 +62,7 @@ using namespace std;
  * Output: none
  ****************************************************************************/
 UdpComm::UdpComm(const char* recvAddr,ushort port)
- {
+{
     // create a UDP datagram socket.
 	if ( (sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		cout<<"UdpComm::socket() creating error";
@@ -75,6 +75,8 @@ UdpComm::UdpComm(const char* recvAddr,ushort port)
 	recv_addr.sin_addr.s_addr =inet_addr(recvAddr);
     //set the port number to the port number passed to the constructor
 	recv_addr.sin_port = htons(port);
+	
+    connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
 
 
@@ -104,20 +106,18 @@ UdpComm::~UdpComm() {
  ****************************************************************************/
 ssize_t UdpComm::SendTo(const void* buff, size_t len, int flags)
 {
-	//return sendto(sock_fd, buff, len, flags, to_addr, to_len);
 	return sendto(sock_fd, buff, len, flags, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
-
 }
 
 size_t UdpComm::SendData( void*  header, const size_t headerLen,  void*  data, const size_t dataLen)
 {
-	connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
-    struct iovec iov[2];//vector including the two memory locations
-
+	struct iovec iov[2];//vector including the two memory locations
+	
     iov[0].iov_base = header;
     iov[0].iov_len  = headerLen;
     iov[1].iov_base = data;
     iov[1].iov_len  = dataLen;
-
+	
     return writev(sock_fd, iov, 2);
 }
+

@@ -15,16 +15,16 @@
 int main()
 {
 	const u_int64_t id=1;
-	string prodId="ldm checksum";
+	//const uint64_t fileSize=1048576;
+	string prodName="FHA2";
 	
 	faVCMTPSender* sender;
-	sender= new faVCMTPSender(id);
+	sender= new faVCMTPSender(id,"128.143.137.117",5173);
 	cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
 	//pass the address and port number of the receiver
-	sender->CreateUPDSocket("128.143.137.117",5173);
+	//sender->CreateUPDSocket("128.143.137.117",5173);
 	char *filename = "/home/fatma/FatmaVCMTP/FHA2";
 	int fd;
-	//	if(int fd = open("FHA2", O_RDONLY)<0)
 	fd = open(filename,O_RDONLY);
 	if(fd>0)
 	{
@@ -34,7 +34,7 @@ int main()
 			cout<<"file map failed"<<endl;
 		
 		//	while(1){
-		sender->sendMemoryData( data,2856, prodId);
+		sender->sendMemoryData( data,2856, prodName);
 		//	sleep(1);
 		//	}
 		
