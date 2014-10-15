@@ -2,7 +2,7 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
- * @filename: vcmtpReceiver.cpp
+ * @filename: vcmtpRecv.cpp
  *
  * @history:
  *      Created on : Oct 2, 2014

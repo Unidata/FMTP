@@ -1,0 +1,13 @@
+CC = g++
+INCLUDE = ../
+LIB =
+ELFFILE = vcmtpSend
+VCMTPBASE = ../
+DEBUG_FLAG = DEBUG
+
+$(ELFFILE): main.cpp vcmtpSend.cpp faUdpComm.cpp
+	$(CC) -D$(DEBUG_FLAG) -o $(ELFFILE) main.cpp vcmtpSend.cpp faUdpComm.cpp
+
+.PHONY : clean
+clean:
+	rm $(ELFFILE)

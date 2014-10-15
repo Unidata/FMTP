@@ -1,10 +1,14 @@
 /*
- *test.cpp
- 
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Oct 4, 2014
- *      Author: fatmaal-ali
+ * @filename: main.cpp
+ *
+ * @history:
+ *      Created on : Oct 14, 2014
+ *      Author     : Shawn <sc7cq@virginia.edu>
  */
+
 #include"faVCMTPSender.h"
 #include<string>
 #include <stdio.h>
@@ -16,7 +20,7 @@ int main()
 {
 	const u_int64_t id=1;
 	string prodName="FHA2";
-	
+
 	faVCMTPSender* sender;
 	sender= new faVCMTPSender(id,"128.143.137.117",5173);
 	cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
@@ -31,18 +35,18 @@ int main()
 		data = (char*) mmap(0, 2856, PROT_READ, MAP_FILE | MAP_SHARED, fd,0);
 		if (data == MAP_FAILED)
 			cout<<"file map failed"<<endl;
-		
+
 		//	while(1){
 		sender->sendMemoryData( data,2856, prodName);
 		//	sleep(1);
 		//	}
-		
+
 		munmap(data, 2856);
 		close(fd);
 	}
 	else
 		cout<<"test::main()::open(): error"<<endl;
-	
+
 	return 0;
 }
 
