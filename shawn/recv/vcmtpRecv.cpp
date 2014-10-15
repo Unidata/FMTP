@@ -288,7 +288,7 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
     }
 }
 
-void vcmtpRecv::EOMDHandler(char* VcmtpPacket)
+void vcmtpRecv::EOMDHandler()
 {
-    std::cout << "Mem data received." << std::endl;
+    std::cout << "Mem data completely received." << std::endl;
 }
