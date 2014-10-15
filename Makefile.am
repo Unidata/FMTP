@@ -4,7 +4,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= CommUtil protocol fatma shawn/recv
+SUBDIRS 		= CommUtil protocol shawn
 ACLOCAL_AMFLAGS         = -I m4
 EXTRA_DIST		= m4
 lib_LTLIBRARIES		= libvcmtp.la

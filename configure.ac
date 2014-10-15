@@ -89,7 +89,9 @@ AC_CONFIG_FILES([
     CommUtil/Makefile
     protocol/Makefile
     fatma/Makefile
+    shawn/Makefile
     shawn/recv/Makefile
+    shawn/send/Makefile
     test/protocol/Executor/Makefile
 ])
 

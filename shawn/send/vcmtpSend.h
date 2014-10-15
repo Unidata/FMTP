@@ -13,7 +13,7 @@
 #define VCMTPSEND_H_
 
 
-#include "vcmtpBase.h"
+#include "../vcmtpBase.h"
 #include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
