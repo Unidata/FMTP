@@ -16,17 +16,16 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <iostream>
 
 int main()
 {
     const uint64_t id=1;
     string prodName="FHA2";
 
-    faVCMTPSender* sender;
-    sender= new faVCMTPSender(id, "127.0.0.1", 5173);
+    vcmtpSend sender(id, "127.0.0.1", 5173);
     cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
     //pass the address and port number of the receiver
-    //sender->CreateUPDSocket("128.143.137.117",5173);
     char *filename = "memdata";
     int fd;
     fd = open(filename,O_RDONLY);
@@ -37,13 +36,13 @@ int main()
         if (data == MAP_FAILED)
             cout<<"file map failed"<<endl;
 
-        sender->sendMemoryData(data, 2856, prodName);
+        sender.sendMemData(data, 2856, prodName);
 
         munmap(data, 2856);
         close(fd);
     }
     else
-    	cout<<"test::main()::open(): error"<<endl;
+        cout<<"test::main()::open(): error"<<endl;
 
     return 0;
 }
