@@ -124,7 +124,7 @@ void vcmtpRecv::McastPacketHandler()
         EOFHandler(packet_buffer);
     }
     else if ( be64toh(header->flags) & VCMTP_EOMD ) {
-        EOMDHandler(packet_buffer);
+        EOMDHandler();
     }
 }
 
