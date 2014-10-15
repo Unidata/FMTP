@@ -2,7 +2,7 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
- * @filename: vcmtpSend.h
+ * @filename: vcmtpSend.cpp
  *
  * @history:
  *      Created on : Oct 14, 2014
@@ -14,8 +14,8 @@
 #include <strings.h>
 #include <string.h>
 #include <iostream>
+#include <stdio.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/uio.h>
 
@@ -112,7 +112,7 @@ void vcmtpSend::SendBOMDMsg(uint64_t prodSize, char* prodName, int sizeOfProdNam
  * Input:  data: a pointer to the data in the memory, dataLength: the length of the data, &prodId: mD5checksum
  * Output: none
  ****************************************************************************/
-void vcmtpSend::sendMemData(void* data, uint64_t dataLength, string &prodName)
+void vcmtpSend::sendMemData(char* data, uint64_t dataLength, string &prodName)
 {
 	SendBOMDMsg(dataLength,&prodName[0],prodName.length()); //send the BOMD before sending the data
 	unsigned char vcmtpHeader[VCMTP_HEADER_LEN]; //create a vcmtp header
@@ -173,7 +173,7 @@ void vcmtpSend::sendEOMDMsg()
     memcpy(vcmtp_header+8,  &seqNum, 8);
     memcpy(vcmtp_header+16, &payLen, 8);
     memcpy(vcmtp_header+24, &flags,  8);
-	//send the eomd message
+    //send the eomd message
     if (SendTo(vcmtp_packet,VCMTP_HEADER_LEN, 0) < 0)
         std::cout << "vcmtpSend::SendEOMDMessage()::SendTo error\n" << std::endl;
     else

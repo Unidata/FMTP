@@ -20,32 +20,26 @@
 
 int main()
 {
-    const uint64_t id=1;
-    string prodName="FHA2";
+    const uint64_t id = 1;
+    string prodName = "memdata";
 
     vcmtpSend sender(id, "127.0.0.1", 5173);
-    cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
-    //pass the address and port number of the receiver
-    char *filename = "memdata";
+    cout << "(VCMTP Header) id:" << id << endl;
+
+    char* filename = "memdata";
     int fd;
-    fd = open(filename,O_RDONLY);
-    if(fd>0)
-    {
-        void* data;
-        data = (char*) mmap(0, 2856, PROT_READ, MAP_FILE | MAP_SHARED, fd,0);
-        if (data == MAP_FAILED)
-            cout<<"file map failed"<<endl;
+    fd = open(filename, O_RDONLY);
+    if(fd < 0)
+        cout << "test::main()::open(): error" << endl;
 
-        sender.sendMemData(data, 2856, prodName);
+    char* data;
+    data = (char*) mmap(0, 2856, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+    if(data == MAP_FAILED)
+        cout << "file map failed" << endl;
 
-        munmap(data, 2856);
-        close(fd);
-    }
-    else
-        cout<<"test::main()::open(): error"<<endl;
+    sender.sendMemData(data, 2856, prodName);
 
+    munmap(data, 2856);
+    close(fd);
     return 0;
 }
-
-
-
