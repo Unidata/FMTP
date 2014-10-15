@@ -30,22 +30,22 @@
 
 class faVCMTPSender {
 public:
-	faVCMTPSender(u_int64_t id,const char* recvAddr,const ushort recvPort);
+	faVCMTPSender(u_int64_t id);
 	virtual ~faVCMTPSender();
 	void SendBOFMessage(uint64_t dataLength, const char* fileName);
-	void SendBOMDMessage(uint64_t prodSize, char* prodName,int sizeOfProdName);
+	void SendBOMDMessage(uint64_t fileSize, char* prodId,int sizeOfProdId);
 	void CreateUPDSocket(const char* recvName,unsigned short int recvPort);
 	void sendFile(uint64_t dataLength, const char* fileName);
-	void sendMemoryData(void* data, uint64_t prodSize, string &prodName);
+	void sendMemoryData(void* data, uint64_t fileSize, string &prodId);
 	void DoMemoryTransfer(void* data, size_t length,u_int32_t start_seq_num);
-	void sendEOMDMessage();
+	
 private:
 	UdpComm* updSocket;
-	uint64_t prodId;
-	//	char  fileName[256];
-	//	uint64_t fileSize;
-	//	uint64_t seq_num;
-	//	char prodName[256];
+	uint64_t fileId;
+	char  fileName[256];
+	uint64_t fileSize;
+	uint64_t seq_num;
+	char prodId[256];
 };
 
 #endif /* faVCMTPSender_H_ */
