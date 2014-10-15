@@ -206,7 +206,7 @@ void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prod
 			cout<<"VCMTPSender::sendMemoryData()::SendData() success, count= "<<count<<endl;
 		
 		remained_size -= data_size;
-		data += data_size; //move the data pointer to the beginning of the next block
+		data = (char*)data + data_size; //move the data pointer to the beginning of the next block
 		seqNum += data_size;
 	}
 	
