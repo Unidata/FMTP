@@ -37,7 +37,7 @@ public:
     void    BOFHandler(char* VcmtpPacket);
     void    BOMDHandler(char* VcmtpPacket);
     void    EOFHandler(char* VcmtpPacket);
-    void    EOMDHandler(char* VcmtpPacket);
+    void    EOMDHandler();
     void    recvFile(char* VcmtpPacket);
     void    recvMemData(char* VcmtpPacket);
 

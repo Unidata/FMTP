@@ -1,0 +1,14 @@
+CC = g++
+INCLUDE = ../
+LIB =
+ELFFILE = vcmtpSend
+VCMTPBASE = ../
+#DEBUG_FLAG = DEBUG
+
+$(ELFFILE): main.cpp vcmtpSend.cpp $(VCMTPBASE)vcmtpBase.cpp
+	#$(CC) -D$(DEBUG_FLAG) -o $(ELFFILE) main.cpp vcmtpSend.cpp $(VCMTPBASE)vcmtpBase.cpp
+	$(CC) -I$(INCLUDE) -o $(ELFFILE) main.cpp vcmtpSend.cpp $(VCMTPBASE)vcmtpBase.cpp
+
+.PHONY : clean
+clean:
+	rm $(ELFFILE)
