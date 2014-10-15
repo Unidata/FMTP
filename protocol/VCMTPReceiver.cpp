@@ -413,7 +413,7 @@ void* VCMTPReceiver::StartReceivingThread(void* ptr) {
 
 
 /**
- * Executes the receiver. Returns when `stop()` is called.
+ * Executes the receiver.
  */
 void VCMTPReceiver::RunReceivingThread() {
 	fd_set 	read_set;

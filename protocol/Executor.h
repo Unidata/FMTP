@@ -96,7 +96,8 @@ public:
                         task(task),
                         thread(0),
                         result(0),
-                        stopped(false) {};
+                        stopped(false),
+                        except(0) {};
     void         setThread(pthread_t thread)    {this->thread = thread;}
     pthread_t    getThread() const              {return thread;}
     static void* start(void* wip);              // called by `pthread_create()`
@@ -119,6 +120,7 @@ private:
     pthread_t             thread;
     void*                 result;
     volatile sig_atomic_t stopped;
+    std::exception*       except;
 };
 
 #endif /* EXECUTOR_H_ */
