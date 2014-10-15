@@ -1,87 +1,48 @@
 /*
- *faVCMTPSender.cpp
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * @licence: Published under GPLv3
  *
- *  Created on: Oct 3, 2014
- *      Author: fatmaal-ali
+ * @filename: vcmtpSend.h
+ *
+ * @history:
+ *      Created on : Oct 14, 2014
+ *      Author     : Shawn <sc7cq@virginia.edu>
  */
-#include"faVCMTPSender.h"
+
+#include "vcmtpSend.h"
 #include <endian.h>
 
 
 /*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: faVCMTPSender()
+ * Class Name: vcmtpSend
+ * Function Name: vcmtpSend()
  *
  * Description: constructor, initialize the upd socket and the fileId
  *
  * Input:  u_int64_t id: 8 bytes file identifier
  * Output: none
  ****************************************************************************/
-faVCMTPSender::faVCMTPSender(uint64_t id,const char* recvAddr,const ushort recvPort)
+vcmtpSend::vcmtpSend(uint64_t id,const char* recvAddr,const ushort recvPort)
 {
     updSocket = new UdpComm(recvAddr,recvPort);
     prodId=id;
 }
 
 /*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: ~faVCMTPSender()
+ * Class Name: vcmtpSend
+ * Function Name: ~vcmtpSend()
  *
  * Description: destructor, do nithing for now
  *
  * Input:  none
  * Output: none
  ****************************************************************************/
-faVCMTPSender::~faVCMTPSender() {
-	// TODO Auto-generated destructor stub
-}
-
-/*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: SendBOFMessage()
- *
- * Description: create the BOF message and send it to a receiver through udp socket
- *
- * Input: dataLength: size of the file, fileName: the file name
- * Output: none
- ****************************************************************************/
-void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
+vcmtpSend::~vcmtpSend()
 {
-	cout<<"faVCMTPSender::SendBOFMessage: "<<endl;
-	cout<<"file size= "<<fileSize<<" file name = "<<fileName<<endl;
-	// Send the BOF message to all receivers before starting the file transfer
-    unsigned char vcmtp_packet[VCMTP_PACKET_LEN];
-    unsigned char *vcmtp_header = vcmtp_packet;
-    unsigned char *vcmtp_data = vcmtp_packet + VCMTP_HEADER_LEN;
-
-    bzero(vcmtp_packet, sizeof(vcmtp_packet));
-
-
-    uint64_t fileid = htobe64(prodId);
-    uint64_t seqNum = htobe64(0);//for the BOF sequence number is always zero
-    uint64_t payLen = htobe64(1428);
-    uint64_t flags = htobe64(VCMTP_BOF);
-
-    uint64_t filesize = htobe64(fileSize);
-
-    memcpy(vcmtp_header,    &fileid, 8);
-    memcpy(vcmtp_header+8,  &seqNum, 8);
-    memcpy(vcmtp_header+16, &payLen, 8);
-    memcpy(vcmtp_header+24, &flags,  8);
-    memcpy(vcmtp_data,    &filesize,   8);
-    memcpy(vcmtp_data+8,    fileName,    256);
-
-
-	//send the bof message
-	//if (updSocket->SendTo(&msg_packet,VCMTP_HLEN + sizeof(VcmtpSenderMessage), 0) < 0)
-	if (updSocket->SendTo(vcmtp_packet, 1460, 0) < 0)
-		cout<<"faVCMTPSender::SendBOFMessage()::SendTo error\n";
-	else
-		cout<<"faVCMTPSender::SendBOFMessage()::SendTo success\n";
 }
 
 /*****************************************************************************
- * Class Name: faVCMTPSender
+ * Class Name: vcmtpSend
  * Function Name: SendBOMDMessage()
  *
  * Description: create the BOMD message and send it to a receiver through udp socket
@@ -89,9 +50,8 @@ void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
  * Input:  dataLength: size of the file, fileName: the file name
  * Output: none
  ****************************************************************************/
-void faVCMTPSender::SendBOMDMessage(uint64_t prodSize, char* prodName, int sizeOfProdName)
+void vcmtpSend::SendBOMDMsg(uint64_t prodSize, char* prodName, int sizeOfProdName)
 {
-
     unsigned char vcmtp_packet[VCMTP_PACKET_LEN]; //create the vcmtp packet
     unsigned char *vcmtp_header = vcmtp_packet; //create a vcmtp header pointer that point at the beginning of the vcmtp packet
     unsigned char *vcmtp_data = vcmtp_packet + VCMTP_HEADER_LEN; //create vcmtp data pointer that points to the location just after the hea
@@ -109,7 +69,6 @@ void faVCMTPSender::SendBOMDMessage(uint64_t prodSize, char* prodName, int sizeO
     char prodname[256];
     bzero(prodname,sizeof(prodname));
     strncpy(prodname,prodName,sizeOfProdName);
-	//	strcpy(prodbame,prodName);
     cout<<"prodName= "<<prodname<<endl;
     //create the content of the vcmtp header
     memcpy(vcmtp_header,    &prodid, 8);
@@ -119,46 +78,41 @@ void faVCMTPSender::SendBOMDMessage(uint64_t prodSize, char* prodName, int sizeO
     //create the content of the BOMD
     memcpy(vcmtp_data,      &prodsize,   8);
     memcpy(vcmtp_data+8, prodname,256);
-	//send the bomd message
+    //send the bomd message
     if (updSocket->SendTo(vcmtp_packet, VCMTP_PACKET_LEN, 0) < 0)
-        cout<<"faVCMTPSender::SendBOMDMessage()::SendTo error\n";
+        cout<<"vcmtpSend::SendBOMDMessage()::SendTo error\n";
     else
-        cout<<"faVCMTPSender::SendBOMDMessage()::SendTo success\n";
+        cout<<"vcmtpSend::SendBOMDMessage()::SendTo success\n";
 }
 
 /*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: sendmcastUserData()
+ * Class Name: vcmtpSend
+ * Function Name: sendMemData()
  *
  * Description: Send data from memory to a receiver through upd socket
  *
  * Input:  data: a pointer to the data in the memory, dataLength: the length of the data, &prodId: mD5checksum
  * Output: none
  ****************************************************************************/
-void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prodName)
+void vcmtpSend::sendMemData(void* data, uint64_t dataLength, string &prodName)
 {
-	SendBOMDMessage(dataLength,&prodName[0],prodName.length()); //send the BOMD before sending the data
+	SendBOMDMsg(dataLength,&prodName[0],prodName.length()); //send the BOMD before sending the data
 	unsigned char vcmtpHeader[VCMTP_HEADER_LEN]; //create a vcmtp header
-	//	VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader; //create a pointer to the vcmtp header
 	unsigned char* header= vcmtpHeader;
 	uint64_t seqNum= 0;
 
     //convert the variables from native binary representation to network binary representation
 	uint64_t prodid = htobe64(prodId);
-	//	uint64_t payLen = htobe64(VCMTP_DATA_LEN);
 	uint64_t payLen;
 	uint64_t flags = htobe64(VCMTP_MEM_DATA);
-
-	int count = 0;// this is for testing
 
 	size_t remained_size = dataLength; //to keep track of how many bytes of the whole data remain
 	while (remained_size > 0) //check of there is more data to send
 	{
-		cout<<"faVCMTPSender::sendMemoryData: remained_size= "<<remained_size<<endl;
+		cout<<"vcmtpSend::sendMemoryData: remained_size= "<<remained_size<<endl;
 
-		count++;
 		uint data_size = remained_size < VCMTP_DATA_LEN ? remained_size: VCMTP_DATA_LEN;
-		cout<<"faVCMTPSender::sendMemoryData: data_size= "<<data_size<<endl;
+		cout<<"vcmtpSend::sendMemoryData: data_size= "<<data_size<<endl;
 
 		payLen = htobe64(data_size);
 		seqNum = htobe64(seqNum);
@@ -178,11 +132,12 @@ void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prod
 		seqNum += data_size;
 	}
 
-    sendEOMDMessage();
+    sendEOMDMsg();
     prodId++;//increment the file id to use it for the next data transmission
 }
 
-void faVCMTPSender::sendEOMDMessage()
+
+void vcmtpSend::sendEOMDMsg()
 {
     unsigned char vcmtp_packet[VCMTP_HEADER_LEN];
     unsigned char *vcmtp_header = vcmtp_packet;
@@ -202,67 +157,21 @@ void faVCMTPSender::sendEOMDMessage()
     memcpy(vcmtp_header+24, &flags,  8);
 	//send the eomd message
     if (updSocket->SendTo(vcmtp_packet,VCMTP_HEADER_LEN, 0) < 0)
-        cout<<"faVCMTPSender::SendEOMDMessage()::SendTo error\n";
+        cout<<"vcmtpSend::SendEOMDMessage()::SendTo error\n";
     else
-        cout<<"faVCMTPSender::SendEOMDMessage()::SendTo success\n";
+        cout<<"vcmtpSend::SendEOMDMessage()::SendTo success\n";
 }
 
 /*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: CreateUPDSocket()
+ * Class Name: vcmtpSend
+ * Function Name: CreateUDPSocket()
  *
  * Description: create a upd socket
  *
  * Input:  recvAddr: the address of the receiver, recvPort: the port of the receiver
  * Output: none
  ****************************************************************************/
-void faVCMTPSender::CreateUPDSocket(const char* recvAddr,const ushort recvPort)
+void vcmtpSend::CreateUDPSocket(const char* recvAddr,const ushort recvPort)
 {
 	updSocket = new UdpComm(recvAddr,recvPort);
-
 }
-
-/*****************************************************************************
- * Class Name: faVCMTPSender
- * Function Name: sendmcastUserData()
- *
- * Description: Send a file to a receiver through upd socket
- *
- * Input:  dataLength: size of the file, fileName: the file name
- * Output: none
- ****************************************************************************/
- void faVCMTPSender::sendFile(uint64_t dataLength, const char* fileName)
- {
- // implement mcast mem2mem / file2file transfer function here.
- SendBOFMessage(dataLength,fileName);
- uint64_t remained_size = fileSize;
-
- // open file for reading only
- int fd = open(fileName, O_RDONLY);
- cout<<"fd = "<<fd<<endl;
- if (fd < 0)
- cout<<"VCMTPSender()::sendmcastUserData(): File open error!";
- else
- cout<<"VCMTPSender()::sendmcastUserData(): File open succeed!";
-
-
- char* buffer;
- off_t offset = 0;
- while (remained_size > 0) {
- uint map_size = remained_size < VCMTP_PACKET_LEN ? remained_size
- : VCMTP_PACKET_LEN;
- buffer = (char*) mmap(0, map_size, PROT_READ, MAP_FILE | MAP_SHARED, fd,offset);
- if (buffer == MAP_FAILED) {
- cout<<"faVCMTPSender::sendmcastUserData()::mmap() error";
- }
-
- DoMemoryTransfer(buffer, map_size, offset);
- cout<<"Send the block out "<<offset<<endl;
-
- munmap(buffer, map_size);
-
- offset += map_size;
- remained_size -= map_size;
- }
-
- }

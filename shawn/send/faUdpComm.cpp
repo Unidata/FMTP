@@ -47,10 +47,9 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
-
 #include <sys/uio.h>
+#include <iostream>
 
-#include<iostream>
 using namespace std;
 /*****************************************************************************
  * Class Name: UdpComm
@@ -75,7 +74,7 @@ UdpComm::UdpComm(const char* recvAddr,ushort port)
 	recv_addr.sin_addr.s_addr =inet_addr(recvAddr);
     //set the port number to the port number passed to the constructor
 	recv_addr.sin_port = htons(port);
-	
+
     connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
 
@@ -111,15 +110,15 @@ ssize_t UdpComm::SendTo(const void* buff, size_t len, int flags)
 
 size_t UdpComm::SendData( void*  header, const size_t headerLen,  void*  data, const size_t dataLen)
 {
-	
+
 	//    connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
     struct iovec iov[2];//vector including the two memory locations
-	
+
     iov[0].iov_base = header;
     iov[0].iov_len  = headerLen;
     iov[1].iov_base = data;
     iov[1].iov_len  = dataLen;
-	
+
     return writev(sock_fd, iov, 2);
 }
 

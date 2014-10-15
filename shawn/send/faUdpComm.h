@@ -1,10 +1,4 @@
 /*
- * UpdComm.h
- *
- *  Created on: Oct 3, 2014
- *      Author: fatmaal-ali
- */
-/*
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
@@ -21,7 +15,6 @@
 #define UDPCOMM_H_
 
 #include "vcmtpBase.h"
-
 #include <string>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -35,17 +28,17 @@
 
 class UdpComm {
 public:
-	UdpComm(const char* recvAddr,ushort port);
-	~UdpComm();
+    UdpComm(const char* recvAddr,ushort port);
+    ~UdpComm();
 
-	void SetSocketBufferSize(size_t size);
-	ssize_t SendTo(const void* buff, size_t len, int flags);
-	size_t SendData( void*  header,const size_t headerLen,  void*  data, const size_t dataLen);
+    void SetSocketBufferSize(size_t size);
+    ssize_t SendTo(const void* buff, size_t len, int flags);
+    size_t SendData( void*  header,const size_t headerLen,  void*  data, const size_t dataLen);
 
 private:
-	int sock_fd;
-	struct sockaddr_in recv_addr;
+    int sock_fd;
+    struct sockaddr_in recv_addr;
 };
 
-#endif /* UDPSCOMM_H_ */
+#endif /* UDPCOMM_H_ */
 

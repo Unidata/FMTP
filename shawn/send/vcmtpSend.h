@@ -27,15 +27,15 @@
 
 class vcmtpSend : public vcmtpBase {
 public:
-	vcmtpSend(uint64_t id, const char* recvAddr, const unsigned short recvPort);
+	vcmtpSend(uint64_t id,
+              const char* recvAddr,
+              const unsigned short recvPort);
 	~vcmtpSend();
-	void SendBOFMessage(uint64_t dataLength, const char* fileName);
-	void SendBOMDMessage(uint64_t prodSize, char* prodName,int sizeOfProdName);
-	void CreateUDPSocket(const char* recvName,unsigned short int recvPort);
-	void sendFile(uint64_t dataLength, const char* fileName);
+	void SendBOMDMsg(uint64_t prodSize, char* prodName, int sizeOfProdName);
+	void CreateUDPSocket(const char* recvName, unsigned short int recvPort);
 	void sendMemData(void* data, uint64_t prodSize, string &prodName);
-	void DoMemTransfer(void* data, size_t length,uint32_t start_seq_num);
-	void sendEOMDMessage();
+	void DoMemTransfer(void* data, size_t length, uint32_t start_seq_num);
+	void sendEOMDMsg();
 private:
 	UdpComm* updSocket;
 	uint64_t prodId;
