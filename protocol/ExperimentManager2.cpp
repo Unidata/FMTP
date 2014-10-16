@@ -168,7 +168,7 @@ void ExperimentManager2::RunOneExperimentSet(vector<int>& file_sizes, vector<dou
 		double sent_time = 0.0;
 		double curr_time = 0.0;
 
-		int file_id = 0;
+		int prod_index = 0;
 		char str[500];
 		for (int i = 0; i < FILE_COUNT; i++) {
 			if (i % 100 == 0) {
@@ -191,10 +191,10 @@ void ExperimentManager2::RunOneExperimentSet(vector<int>& file_sizes, vector<dou
 			}
 
 			sprintf(file_name, "/tmp/temp/temp%d.dat", i + 1);
-			file_id = sender->SendFile(file_name, timeout_ratio);
+			prod_index = sender->SendFile(file_name, timeout_ratio);
 		}
 
-		while (!sender->IsTransferFinished(file_id)) {
+		while (!sender->IsTransferFinished(prod_index)) {
 			usleep(2000);
 		}
 
@@ -252,7 +252,7 @@ void ExperimentManager2::StartExperiment(SenderStatusProxy* sender_proxy, VCMTPS
 	double curr_time = 0.0;
 
 	char file_name[256];
-	int file_id = 0;
+	int prod_index = 0;
 	char str[500];
 	for (int i = 0; i < FILE_COUNT; i++) {
 		if (i % 100 == 0) {
@@ -278,10 +278,10 @@ void ExperimentManager2::StartExperiment(SenderStatusProxy* sender_proxy, VCMTPS
 		}
 
 		sprintf(file_name, "/tmp/temp/temp%d.dat", i + 1);
-		file_id = sender->SendFile(file_name);
+		prod_index = sender->SendFile(file_name);
 	}
 
-	while (!sender->IsTransferFinished(file_id)) {
+	while (!sender->IsTransferFinished(prod_index)) {
 		usleep(2000);
 	}
 

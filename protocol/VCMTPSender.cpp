@@ -54,8 +54,8 @@ VCMTPSender::VCMTPSender(
  * @param[in] tcpAddr    Dotted-decimal IPv4 address of the TCP server. The
  *                       caller may delete.
  * @param[in] tcpPort    Port number of the TCP server.
- * @param[in] fileId     Initial file-identifier. The first multicast file will
- *                       have this as its file-identifier.
+ * @param[in] fileId     Initial product-index. The first multicast file will
+ *                       have this as its product-index.
  */
 VCMTPSender::VCMTPSender(
     const string&        tcpAddr,

@@ -7,4 +7,4 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= vcmtpSend.cpp vcmtpSend.cpp
+lib_la_SOURCES		= vcmtpSend.cpp vcmtpSend.h

@@ -27,15 +27,15 @@ typedef struct VcmtpBOFMessage {
     char       filename[256];
 } BOFMsg;
 
-typedef struct VcmtpBOMDMessage {
-    uint64_t   prodsize;
-    char       prodid[256];
-} BOMDMsg;
-
 const int VCMTP_PACKET_LEN = 1460;
 const int VCMTP_HEADER_LEN = sizeof(VcmtpHeader);
 const int VCMTP_DATA_LEN   = VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 
+typedef struct VcmtpBOPMessage {
+    uint64_t   prodsize;
+    uint16_t   metaSize;
+    char       metadata[VCMTP_DATA_LEN-8-2];
+} BOPMsg;
 
 const uint64_t VCMTP_BOF       = 0x00000001;
 const uint64_t VCMTP_BOMD      = 0x00000002;

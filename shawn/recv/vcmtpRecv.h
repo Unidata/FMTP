@@ -56,7 +56,7 @@ private:
     int              fileDescriptor;   /* file descriptor where to store a received file */
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOFMsg           BOFmsg;
-    BOMDMsg          BOMDmsg;
+    BOPMsg          BOMDmsg;
 
     static void*  StartReceivingThread(void* ptr);
 };

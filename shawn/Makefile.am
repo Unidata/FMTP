@@ -6,5 +6,7 @@
 
 SUBDIRS 		= recv send
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h
+lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h \
+			  ReceivingApplicationNotifier.h
 lib_la_LIBADD		= recv/lib.la send/lib.la
+
