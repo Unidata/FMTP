@@ -25,13 +25,15 @@
 vcmtpRecvv3::vcmtpRecvv3(
     string                  tcpAddr,
     const unsigned short    tcpPort,
-    string                  localAddr,
-    const unsigned short    localPort)
+    string                  mcastAddr,
+    const unsigned short    mcastPort,
+    ReceivingApplicationNotifier& notifier);
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
-    localAddr(localAddr),
-    localPort(localPort)
+    mcastAddr(mcastAddr),
+    mcastPort(mcastPort),
+    notifier(notifier)
 {
     max_sock_fd = 0;
     mcast_sock = 0;
@@ -46,7 +48,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
 
 void vcmtpRecvv3::Start()
 {
-    udpBindIP2Sock(mcastAddr, mcastPort);
+    joinGroup(mcastAddr, mcastPort);
     StartReceivingThread();
 }
 
@@ -57,18 +59,17 @@ void vcmtpRecvv3::Stop()
     // make sure all resources are released
 }
 
-int vcmtpRecvv3::udpBindIP2Sock(string localAddr, const unsigned short localPort)
+void vcmtpRecvv3::joinGroup(string localAddr, const unsigned short localPort)
 {
-    bzero(&sender, sizeof(sender));
-    sender.sin_family = AF_INET;
-    sender.sin_addr.s_addr = inet_addr(localAddr.c_str());
-    sender.sin_port = htons(localPort);
+    bzero(&mcastgroup, sizeof(mcastgroup));
+    mcastgroup.sin_family = AF_INET;
+    mcastgroup.sin_addr.s_addr = inet_addr(localAddr.c_str());
+    mcastgroup.sin_port = htons(localPort);
     if( (mcast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        perror("udpBindIP2Sock() creating socket failed.");
-    if( bind(mcast_sock, (sockaddr*)&sender, sizeof(sender)) < 0 )
-        perror("udpBindIP2Sock() binding socket failed.");
+        perror("vcmtpRecvv3::joinGroup() creating socket failed.");
+    if( bind(mcast_sock, (sockaddr*)&mcastgroup, sizeof(mcastgroup)) < 0 )
+        perror("vcmtpRecvv3::joinGroup() binding socket failed.");
     FD_SET(mcast_sock, &read_sock_set);
-    return 0;
 }
 
 void vcmtpRecvv3::StartReceivingThread()
@@ -109,36 +110,21 @@ void vcmtpRecvv3::RunReceivingThread()
 
 void vcmtpRecvv3::McastPacketHandler()
 {
-    static char packet_buffer[VCMTP_PACKET_LEN];
+    static char packet_buffer[MAX_VCMTP_PACKET_LEN];
     bzero(packet_buffer, sizeof(packet_buffer));
     VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
 
-    if (recvfrom(mcast_sock, packet_buffer, VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
+    if (recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
         perror("vcmtpRecvv3::HandleMulticastPacket() recv error");
-    if ( be64toh(header->flags) & VCMTP_BOF ) {
-        BOFHandler(packet_buffer);
-    }
-    else if ( be64toh(header->flags) & VCMTP_BOMD ) {
-        BOMDHandler(packet_buffer);
-    }
-    else if ( be64toh(header->flags) & VCMTP_FILE_DATA ) {
-        recvFile(packet_buffer);
+    if ( be64toh(header->flags) & VCMTP_BOP ) {
+        BOPHandler(packet_buffer);
     }
     else if ( be64toh(header->flags) & VCMTP_MEM_DATA ) {
         recvMemData(packet_buffer);
     }
-    else if ( be64toh(header->flags) & VCMTP_EOF ) {
-        EOFHandler(packet_buffer);
+    else if ( be64toh(header->flags) & VCMTP_EOP ) {
+        EOPHandler(packet_buffer);
     }
-    else if ( be64toh(header->flags) & VCMTP_EOMD ) {
-        EOMDHandler();
-    }
-}
-
-void vcmtpRecvv3::EOFHandler(char* VcmtpPacket)
-{
-    // just for udp demo only, should be removed when having retx
-    close(fileDescriptor);
 }
 
 void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
@@ -238,7 +224,7 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     }
 }
 
-void vcmtpRecvv3::EOMDHandler()
+void vcmtpRecvv3::EOPHandler()
 {
     std::cout << "Mem data completely received." << std::endl;
 }

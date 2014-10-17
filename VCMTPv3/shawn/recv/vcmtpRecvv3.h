@@ -36,27 +36,24 @@ public:
 private:
     string           tcpAddr;           /* Address of TCP server for missed data     */
     unsigned short   tcpPort;           /* Port number of TCP server for missed data */
-    string           localAddr;
-    unsigned short   localPort;
+    string           mcastAddr;
+    unsigned short   mcastPort;
     int              max_sock_fd;
     int              mcast_sock;
     int              retx_tcp_sock;
     pthread_t        recv_thread;
     pthread_t        retx_thread;
     fd_set           read_sock_set;
-    struct sockaddr_in  sender;
-    int              fileDescriptor;   /* file descriptor where to store a received file */
+    struct sockaddr_in  mcastgroup;
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
-    BOFMsg           BOFmsg;
-    BOPMsg           BOMDmsg;
+    BOPMsg           BOPmsg;
     ReceivingApplicationNotifier& notifier;
-    void*            prodptr; // void pointer obtained from receiving application indicating where to save the incoming data
+    void*            prodptr;          // void pointer obtained from receiving application indicating where to save the incoming data
 
     static void*  StartReceivingThread(void* ptr);
     void    StartReceivingThread();
     void    RunReceivingThread();
-    // basically it's joinGroup(), and should be called by Start()
-    int     udpBindIP2Sock(string senderAddr, const unsigned short port);
+    void    joinGroup(string senderAddr, const unsigned short port);
     void    McastPacketHandler();
     void    BOPHandler(char* VcmtpPacket);
     void    EOPHandler();

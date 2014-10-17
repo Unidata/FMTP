@@ -1,8 +1,8 @@
 CC = g++
 INCLUDE = ../
 LIB =
-ELFFILE = vcmtpRecv
-VCMTPBASE = ../
+ELFFILE = vcmtpRecvv3
+VCMTPBASE = ../../
 DEBUG_FLAG = DEBUG
 
 $(ELFFILE): main.cpp vcmtpRecv.cpp $(VCMTPBASE)vcmtpBase.cpp

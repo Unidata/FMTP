@@ -1,15 +1,15 @@
 #include <iostream>
 #include <string>
-#include "vcmtpRecv.h"
+#include "vcmtpRecvv3.h"
 
 int main(int argc, char* argv[])
 {
     string tcpAddr                 = "127.0.0.1";
     const unsigned short tcpPort   = 5000;
-    string localAddr               = "0.0.0.0";
-    const unsigned short localPort = 5173;
+    string mcastAddr               = "0.0.0.0";
+    const unsigned short mcastPort = 5173;
 
-    vcmtpRecv vcmtpRecv(tcpAddr, tcpPort, localAddr, localPort);
+    vcmtpRecv vcmtpRecv(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecv.Start();
     while(1);
 }
