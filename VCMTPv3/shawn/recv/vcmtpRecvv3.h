@@ -2,17 +2,17 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
- * @filename: vcmtpRecv.h
+ * @filename: vcmtpRecvv3.h
  *
  * @history:
- *      Created on : Oct 2, 2014
+ *      Created on : Oct 17, 2014
  *      Author     : Shawn <sc7cq@virginia.edu>
  */
 
-#ifndef VCMTPRECV_H_
-#define VCMTPRECV_H_
+#ifndef VCMTPRECVV3_H_
+#define VCMTPRECVV3_H_
 
-#include "../vcmtpBase.h"
+#include "vcmtpBase.h"
 #include <stdint.h>
 #include <string>
 #include <sys/select.h>
@@ -21,25 +21,17 @@
 
 using namespace std;
 
-class vcmtpRecv : public vcmtpBase {
+class vcmtpRecvv3 {
 public:
     vcmtpRecv(string tcpAddr,
               const unsigned short tcpPort,
-              string localAddr,
-              const unsigned short localPort);
+              string mcastAddr,
+              const unsigned short mcastPort,
+              ReceivingApplicationNotifier& notifier);
     ~vcmtpRecv();
 
-    void    Start();
-    void    StartReceivingThread();
-    void    RunReceivingThread();
-    int     udpBindIP2Sock(string senderAddr, const unsigned short port);
-    void    McastPacketHandler();
-    void    BOFHandler(char* VcmtpPacket);
-    void    BOMDHandler(char* VcmtpPacket);
-    void    EOFHandler(char* VcmtpPacket);
-    void    EOMDHandler();
-    void    recvFile(char* VcmtpPacket);
-    void    recvMemData(char* VcmtpPacket);
+    void    Start(); // initialize the private variables
+    void    Stop();
 
 private:
     string           tcpAddr;           /* Address of TCP server for missed data     */
@@ -56,9 +48,19 @@ private:
     int              fileDescriptor;   /* file descriptor where to store a received file */
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOFMsg           BOFmsg;
-    BOPMsg          BOMDmsg;
+    BOPMsg           BOMDmsg;
+    ReceivingApplicationNotifier& notifier;
+    void*            prodptr; // void pointer obtained from receiving application indicating where to save the incoming data
 
     static void*  StartReceivingThread(void* ptr);
+    void    StartReceivingThread();
+    void    RunReceivingThread();
+    // basically it's joinGroup(), and should be called by Start()
+    int     udpBindIP2Sock(string senderAddr, const unsigned short port);
+    void    McastPacketHandler();
+    void    BOPHandler(char* VcmtpPacket);
+    void    EOPHandler();
+    void    recvMemData(char* VcmtpPacket);
 };
 
-#endif /* VCMTPRECV_H_ */
+#endif /* VCMTPRECVV3_H_ */
