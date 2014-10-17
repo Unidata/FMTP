@@ -15,25 +15,21 @@
 
 
 typedef struct VcmtpPacketHeader {
-    uint64_t   indexid;    // identify both file and memdata by this indexid.
-    uint64_t   seqnum;
-    uint64_t   payloadlen;
-    uint64_t   flags;
+    uint32_t   indexid;    // identify both file and memdata by this indexid.
+    uint32_t   seqnum;
+    uint16_t   payloadlen;
+    uint16_t   flags;
 } VcmtpHeader;
 
-typedef struct VcmtpBOFMessage {
-    uint64_t   filesize;
-    char       filename[256];
-} BOFMsg;
 
 const int VCMTP_PACKET_LEN = 1460;
 const int VCMTP_HEADER_LEN = sizeof(VcmtpHeader);
 const int VCMTP_DATA_LEN   = VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 
 typedef struct VcmtpBOPMessage {
-    uint64_t   prodsize;
+    uint32_t   prodsize; //max size is 4GB
     uint16_t   metaSize;
-    char       metadata[VCMTP_DATA_LEN-8-2];
+    char       metadata[VCMTP_DATA_LEN-4-2];
 } BOPMsg;
 
 const uint64_t VCMTP_BOF       = 0x00000001;
@@ -48,7 +44,7 @@ class vcmtpBase {
 public:
     vcmtpBase();
     ~vcmtpBase();
-
+	
 private:
 };
 
