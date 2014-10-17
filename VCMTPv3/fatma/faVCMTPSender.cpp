@@ -65,7 +65,11 @@ void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
 	 header->vcmtp_payload_size = 1428;
 	 header->flags = VCMTP_BOF;
 	 
+<<<<<<< HEAD
+	 cout<<"file id="<<	header->file_id << " size of the field = "<<sizeof(header->file_id)<<endl;
+=======
 	 cout<<"file id="<<	header->prod_index << " size of the field = "<<sizeof(header->prod_index)<<endl;
+>>>>>>> 82cfec31af0a2a5b720794c50951d785457ec1ba
 	 cout<<"seq_num=  "<<	header->seq_number<< " size of the field = "<<sizeof(header->seq_number)<<endl;
 	 cout<<"vcmtp payload size = "<<	header->vcmtp_payload_size << " size of the field = "<<sizeof(header->vcmtp_payload_size)<<endl;
 	 cout<<"flags="<< header->flags<< " size of the field = "<<sizeof(header->flags)<<endl;

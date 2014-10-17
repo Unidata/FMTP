@@ -27,24 +27,13 @@ class vcmtpRecv : public vcmtpBase {
 public:
     vcmtpRecv(string tcpAddr,
               const unsigned short tcpPort,
+              string mcastAddr,
+              const unsigned short mcastPort,
               ReceivingApplicationNotifier& notifier);
     ~vcmtpRecv();
 
-    void    Start();
-    void    StartReceivingThread();
-    void    RunReceivingThread();
-    void    joinGroup(string senderAddr, const unsigned short port);
-    void    McastPacketHandler();
-    void    BOFHandler(char* VcmtpPacket);
-    void    BOMDHandler(char* VcmtpPacket);
-    void    EOFHandler(char* VcmtpPacket);
-    void    EOMDHandler();
-    void    recvFile(char* VcmtpPacket);
-    void    recvMemData(char* VcmtpPacket);
-    /**
-     * Stops this VCMTP receiver. Blocks until the receiver terminates.
-     */
-    void    stop();
+    void    Start(); // initialize the private variables
+    void    Stop();
 
 private:
     string           tcpAddr;           /* Address of TCP server for missed data     */
@@ -61,10 +50,19 @@ private:
     int              fileDescriptor;   /* file descriptor where to store a received file */
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOFMsg           BOFmsg;
-    BOPMsg           BOPmsg;
+    BOPMsg           BOMDmsg;
     ReceivingApplicationNotifier& notifier;
+    void*            prodptr; // void pointer obtained from receiving application indicating where to save the incoming data
 
     static void*  StartReceivingThread(void* ptr);
+    void    StartReceivingThread();
+    void    RunReceivingThread();
+    // basically it's joinGroup(), and should be called by Start()
+    int     udpBindIP2Sock(string senderAddr, const unsigned short port);
+    void    McastPacketHandler();
+    void    BOPHandler(char* VcmtpPacket);
+    void    EOPHandler();
+    void    recvMemData(char* VcmtpPacket);
 };
 
 #endif /* VCMTPRECV_H_ */

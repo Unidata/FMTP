@@ -50,7 +50,14 @@ void vcmtpRecv::Start()
     StartReceivingThread();
 }
 
-void vcmtpRecv::joinGroup(string localAddr, const unsigned short localPort)
+void vcmtpRecv::Stop()
+{
+    // close all the sock_fd
+    // call pthread_join()
+    // make sure all resources are released
+}
+
+int vcmtpRecv::udpBindIP2Sock(string localAddr, const unsigned short localPort)
 {
     bzero(&sender, sizeof(sender));
     sender.sin_family = AF_INET;
@@ -193,7 +200,7 @@ void vcmtpRecv::EOFHandler(char* VcmtpPacket)
     close(fileDescriptor);
 }
 
-void vcmtpRecv::BOMDHandler(char* VcmtpPacket)
+void vcmtpRecv::BOPHandler(char* VcmtpPacket)
 {
     char*    VcmtpPacketHeader = VcmtpPacket;
     char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
@@ -228,8 +235,11 @@ void vcmtpRecv::BOMDHandler(char* VcmtpPacket)
     std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
     std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
     std::cout << "(BOP) prodSize: " << BOPmsg.prodsize << std::endl;
-    std::cout << "(BOP) prodID: " << BOPmsg.prodid << std::endl;
+    std::cout << "(BOP) metaSize: " << BOPmsg.metasize << std::endl;
     #endif
+
+    notifier.notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
+                           BOPmsg.metaSize, &prodptr);
 }
 
 void vcmtpRecv::recvMemData(char* VcmtpPacket)
