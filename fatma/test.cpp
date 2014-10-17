@@ -16,13 +16,21 @@ int main()
 {
 	const u_int64_t id=1;
 	string prodName="FHA2";
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> 82cfec31af0a2a5b720794c50951d785457ec1ba
 	faVCMTPSender* sender;
-	sender= new faVCMTPSender(id,"128.143.137.117",5173);
+	sender= new faVCMTPSender(id,"127.0.0.1",5173);
 	cout<<"main(): create new vcmtp sender with file id = "<<id<<endl;
 	//pass the address and port number of the receiver
 	//sender->CreateUPDSocket("128.143.137.117",5173);
+<<<<<<< HEAD
 	char *filename = "/home/fatma/FatmaVCMTP/FHA2";
+=======
+	char *filename = "memdata";
+>>>>>>> 82cfec31af0a2a5b720794c50951d785457ec1ba
 	int fd;
 	fd = open(filename,O_RDONLY);
 	if(fd>0)

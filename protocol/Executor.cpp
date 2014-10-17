@@ -59,9 +59,16 @@ void* Wip::start(
         void* arg)
 {
     Wip* wip = (Wip*)arg;
-    wip->result = wip->task.start();
-    wip->executor.moveToCompleted(wip);
-    return wip->result;
+
+    try {
+        wip->result = wip->task.start();
+        wip->executor.moveToCompleted(wip);
+        return wip->result;
+    }
+    catch (std::exception& e) {
+        wip->except = &e;
+        return 0;
+    }
 }
 
 void Wip::stop()

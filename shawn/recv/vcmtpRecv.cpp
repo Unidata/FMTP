@@ -2,7 +2,7 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  * @licence: Published under GPLv3
  *
- * @filename: vcmtpReceiver.cpp
+ * @filename: vcmtpRecv.cpp
  *
  * @history:
  *      Created on : Oct 2, 2014
@@ -124,7 +124,7 @@ void vcmtpRecv::McastPacketHandler()
         EOFHandler(packet_buffer);
     }
     else if ( be64toh(header->flags) & VCMTP_EOMD ) {
-        EOMDHandler(packet_buffer);
+        EOMDHandler();
     }
 }
 
@@ -288,7 +288,7 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
     }
 }
 
-void vcmtpRecv::EOMDHandler(char* VcmtpPacket)
+void vcmtpRecv::EOMDHandler()
 {
-    std::cout << "Mem data received." << std::endl;
+    std::cout << "Mem data completely received." << std::endl;
 }

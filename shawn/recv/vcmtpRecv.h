@@ -12,7 +12,7 @@
 #ifndef VCMTPRECV_H_
 #define VCMTPRECV_H_
 
-#include "vcmtpBase.h"
+#include "../vcmtpBase.h"
 #include <stdint.h>
 #include <string>
 #include <sys/select.h>
@@ -37,7 +37,7 @@ public:
     void    BOFHandler(char* VcmtpPacket);
     void    BOMDHandler(char* VcmtpPacket);
     void    EOFHandler(char* VcmtpPacket);
-    void    EOMDHandler(char* VcmtpPacket);
+    void    EOMDHandler();
     void    recvFile(char* VcmtpPacket);
     void    recvMemData(char* VcmtpPacket);
 
@@ -56,7 +56,7 @@ private:
     int              fileDescriptor;   /* file descriptor where to store a received file */
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOFMsg           BOFmsg;
-    BOMDMsg          BOMDmsg;
+    BOPMsg          BOMDmsg;
 
     static void*  StartReceivingThread(void* ptr);
 };

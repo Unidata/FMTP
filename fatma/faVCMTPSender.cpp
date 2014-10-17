@@ -60,12 +60,16 @@ void faVCMTPSender::SendBOFMessage(uint64_t fileSize, const char* fileName)
 	/*// create the content of the vcmtp header
 	 char msg_packet[1460];
 	 VcmtpHeader* header = (VcmtpHeader*) msg_packet;
-	 header->file_id = fileId;//send the file_id to the fileId passed to the sendBOFMessage
+	 header->prod_index = fileId;//send the prod_index to the fileId passed to the sendBOFMessage
 	 header->seq_number = 0;// the sequence number for the bof message is always zero
 	 header->vcmtp_payload_size = 1428;
 	 header->flags = VCMTP_BOF;
 	 
+<<<<<<< HEAD
 	 cout<<"file id="<<	header->file_id << " size of the field = "<<sizeof(header->file_id)<<endl;
+=======
+	 cout<<"file id="<<	header->prod_index << " size of the field = "<<sizeof(header->prod_index)<<endl;
+>>>>>>> 82cfec31af0a2a5b720794c50951d785457ec1ba
 	 cout<<"seq_num=  "<<	header->seq_number<< " size of the field = "<<sizeof(header->seq_number)<<endl;
 	 cout<<"vcmtp payload size = "<<	header->vcmtp_payload_size << " size of the field = "<<sizeof(header->vcmtp_payload_size)<<endl;
 	 cout<<"flags="<< header->flags<< " size of the field = "<<sizeof(header->flags)<<endl;
@@ -206,7 +210,7 @@ void faVCMTPSender::sendMemoryData(void* data, uint64_t dataLength, string &prod
 			cout<<"VCMTPSender::sendMemoryData()::SendData() success, count= "<<count<<endl;
 		
 		remained_size -= data_size;
-		data += data_size; //move the data pointer to the beginning of the next block
+		data = (char*)data + data_size; //move the data pointer to the beginning of the next block
 		seqNum += data_size;
 	}
 	

@@ -4,12 +4,12 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= CommUtil protocol
+SUBDIRS 		= shawn
 ACLOCAL_AMFLAGS         = -I m4
 EXTRA_DIST		= m4
 lib_LTLIBRARIES		= libvcmtp.la
 libvcmtp_la_SOURCES	= dummy.c
-libvcmtp_la_LIBADD	= CommUtil/lib.la protocol/lib.la
+libvcmtp_la_LIBADD	= shawn/lib.la
 dist_doc_data		= CHANGE_LOG COPYRIGHT README
 
 version.m4:             CHANGE_LOG
