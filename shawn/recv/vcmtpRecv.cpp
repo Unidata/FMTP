@@ -23,15 +23,15 @@
 
 
 vcmtpRecv::vcmtpRecv(
-    string                  tcpAddr,
-    const unsigned short    tcpPort,
-    string                  localAddr,
-    const unsigned short    localPort)
+    string                        tcpAddr,
+    const unsigned short          tcpPort,
+    ReceivingApplicationNotifier& notifier)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
-    localAddr(localAddr),
-    localPort(localPort)
+    localAddr(0),
+    localPort(0),
+    notifier(notifier)
 {
     max_sock_fd = 0;
     mcast_sock = 0;
@@ -46,11 +46,11 @@ vcmtpRecv::~vcmtpRecv()
 
 void vcmtpRecv::Start()
 {
-    udpBindIP2Sock(localAddr, localPort);
+    joinGroup(localAddr, localPort);
     StartReceivingThread();
 }
 
-int vcmtpRecv::udpBindIP2Sock(string localAddr, const unsigned short localPort)
+void vcmtpRecv::joinGroup(string localAddr, const unsigned short localPort)
 {
     bzero(&sender, sizeof(sender));
     sender.sin_family = AF_INET;
@@ -61,7 +61,6 @@ int vcmtpRecv::udpBindIP2Sock(string localAddr, const unsigned short localPort)
     if( bind(mcast_sock, (sockaddr*)&sender, sizeof(sender)) < 0 )
         perror("udpBindIP2Sock() binding socket failed.");
     FD_SET(mcast_sock, &read_sock_set);
-    return 0;
 }
 
 void vcmtpRecv::StartReceivingThread()
@@ -199,28 +198,37 @@ void vcmtpRecv::BOMDHandler(char* VcmtpPacket)
     char*    VcmtpPacketHeader = VcmtpPacket;
     char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
 
-    // every time a new BOMD arrives, save the header to check following data packets
+    // every time a new BOP arrives, save the header to check following data packets
     memcpy(&vcmtpHeader.indexid,    VcmtpPacketHeader,    8);
     memcpy(&vcmtpHeader.seqnum,     (VcmtpPacketHeader+8),  8);
     memcpy(&vcmtpHeader.payloadlen, (VcmtpPacketHeader+16), 8);
     memcpy(&vcmtpHeader.flags,      (VcmtpPacketHeader+24), 8);
-    // every time a new BOMD arrives, save the msg to check following data packets
-    memcpy(&BOMDmsg.prodsize,   VcmtpPacketData, 8);
-    memcpy(BOMDmsg.prodid,      (VcmtpPacketData+8), 256);
+    // every time a new BOP arrives, save the msg to check following data packets
+    uint64_t uint64;
+    uint32_t uint32;
+    uint16_t uint16;
+
+    (void)memcpy(&BOPmsg.prodsize, VcmtpPacketData, 8);
+    (void)memcpy(&BOPmsg.metasize, VcmtpPacketData+8, 2);
+
+#define MIN(a,b) ((a) <= (b) ? (a) : (b))
 
     vcmtpHeader.indexid    = be64toh(vcmtpHeader.indexid);
     vcmtpHeader.seqnum     = be64toh(vcmtpHeader.seqnum);
     vcmtpHeader.payloadlen = be64toh(vcmtpHeader.payloadlen);
     vcmtpHeader.flags      = be64toh(vcmtpHeader.flags);
-    BOMDmsg.prodsize       = be64toh(BOMDmsg.prodsize);
+    BOPmsg.prodsize        = be64toh(BOPmsg.prodsize);
+    BOPmsg.metasize        = be16toh(BOPmsg.metasize);
+    (void)memcpy(BOPmsg.metadata, VcmtpPacket+10,
+            MIN(BOPmsg.metasize, sizeof(BOPmsg.metadata)));
 
     #ifdef DEBUG
     std::cout << "(VCMTP Header) indexID: " << vcmtpHeader.indexid << std::endl;
     std::cout << "(VCMTP Header) Seq Num: " << vcmtpHeader.seqnum << std::endl;
     std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
     std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
-    std::cout << "(BOMD) prodSize: " << BOMDmsg.prodsize << std::endl;
-    std::cout << "(BOMD) prodID: " << BOMDmsg.prodid << std::endl;
+    std::cout << "(BOP) prodSize: " << BOPmsg.prodsize << std::endl;
+    std::cout << "(BOP) prodID: " << BOPmsg.prodid << std::endl;
     #endif
 }
 
@@ -291,4 +299,11 @@ void vcmtpRecv::recvMemData(char* VcmtpPacket)
 void vcmtpRecv::EOMDHandler()
 {
     std::cout << "Mem data completely received." << std::endl;
+}
+
+void vcmtpRecv::stop()
+{
+    close(mcast_sock);
+    close(retx_tcp_sock);
+    pthread_join(recv_thread, 0);
 }

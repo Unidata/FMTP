@@ -13,6 +13,8 @@
 #define VCMTPRECV_H_
 
 #include "../vcmtpBase.h"
+#include "ReceivingApplicationNotifier.h"
+
 #include <stdint.h>
 #include <string>
 #include <sys/select.h>
@@ -25,14 +27,13 @@ class vcmtpRecv : public vcmtpBase {
 public:
     vcmtpRecv(string tcpAddr,
               const unsigned short tcpPort,
-              string localAddr,
-              const unsigned short localPort);
+              ReceivingApplicationNotifier& notifier);
     ~vcmtpRecv();
 
     void    Start();
     void    StartReceivingThread();
     void    RunReceivingThread();
-    int     udpBindIP2Sock(string senderAddr, const unsigned short port);
+    void    joinGroup(string senderAddr, const unsigned short port);
     void    McastPacketHandler();
     void    BOFHandler(char* VcmtpPacket);
     void    BOMDHandler(char* VcmtpPacket);
@@ -40,6 +41,10 @@ public:
     void    EOMDHandler();
     void    recvFile(char* VcmtpPacket);
     void    recvMemData(char* VcmtpPacket);
+    /**
+     * Stops this VCMTP receiver. Blocks until the receiver terminates.
+     */
+    void    stop();
 
 private:
     string           tcpAddr;           /* Address of TCP server for missed data     */
@@ -56,7 +61,8 @@ private:
     int              fileDescriptor;   /* file descriptor where to store a received file */
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOFMsg           BOFmsg;
-    BOPMsg          BOMDmsg;
+    BOPMsg           BOPmsg;
+    ReceivingApplicationNotifier& notifier;
 
     static void*  StartReceivingThread(void* ptr);
 };

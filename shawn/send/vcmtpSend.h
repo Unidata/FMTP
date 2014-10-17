@@ -27,12 +27,36 @@ public:
               const char* recvAddr,
               const unsigned short recvPort);
     ~vcmtpSend();
-    void    SendBOMDMsg(uint64_t prodSize, char* prodName, int sizeOfProdName);
-    void    CreateUDPSocket(const char* recvName, unsigned short int recvPort);
-    void    sendMemData(char* data, uint64_t prodSize, string &prodName);
-    void    sendEOMDMsg();
-    ssize_t SendTo(const void* buff, size_t len, int flags);
-    ssize_t SendData(void* header, const size_t headerLen,
+    void     startGroup(const char* addr, unsigned port);
+    void     SendBOMDMsg(uint64_t prodSize, char* prodName, int sizeOfProdName);
+    void     CreateUDPSocket(const char* recvName, unsigned short int recvPort);
+    void     sendMemData(char* data, uint64_t prodSize, string &prodName);
+    /**
+     * Transfers a contiguous block of memory.
+     *
+     * @param[in] data      Memory data to be sent.
+     * @param[in] dataSize  Size of the memory data in bytes.
+     * @return              Index of the product.
+     */
+    uint32_t vcmtpSend::sendProduct(void* data, size_t dataSize) {
+        return sendProduct(data, dataSize, 0, 0);
+    };
+    /**
+     * Transfers application-specific metadata and a contiguous block of memory.
+     *
+     * @param[in] data      Memory data to be sent.
+     * @param[in] dataSize  Size of the memory data in bytes.
+     * @param[in] metadata  Application-specific metadata to be sent before the
+     *                      data. May be 0, in which case no metadata is sent.
+     * @param[in] metaSize  Size of the metadata in bytes. Must be less than
+     *                      1428. May be 0, in which case no metadata is sent.
+     * @return              Index of the product.
+     */
+    uint32_t vcmtpSend::sendProduct(void* data, size_t dataSize, void* metadata,
+            unsigned metaSize);
+    void     sendEOMDMsg();
+    ssize_t  SendTo(const void* buff, size_t len, int flags);
+    ssize_t  SendData(void* header, const size_t headerLen,
                      void* data, const size_t dataLen);
 
 private:

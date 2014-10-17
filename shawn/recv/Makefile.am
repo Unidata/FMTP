@@ -7,4 +7,6 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= vcmtpRecv.cpp vcmtpRecv.h
+lib_la_SOURCES		= ReceivingApplicationNotifier.cpp \
+			  ReceivingApplicationNotifier.h \
+                          vcmtpRecv.cpp vcmtpRecv.h

@@ -33,7 +33,7 @@ const int VCMTP_DATA_LEN   = VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 
 typedef struct VcmtpBOPMessage {
     uint64_t   prodsize;
-    uint16_t   metaSize;
+    uint16_t   metasize;
     char       metadata[VCMTP_DATA_LEN-8-2];
 } BOPMsg;
 

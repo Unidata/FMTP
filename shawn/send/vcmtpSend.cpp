@@ -21,6 +21,23 @@
 
 using namespace std;
 
+/**
+ * Causes multicast packets to be sent to a given service address.
+ *
+ * @param[in] addr  Internet address in dotted decimal notation.
+ * @param[in] port  Port number.
+ */
+void vcmtpSend::startGroup(const char* addr, unsigned port)
+{
+    // TODO
+}
+
+uint32_t vcmtpSend::sendProduct(void* data, size_t dataSize, void* metadata,
+        unsigned metaSize)
+{
+    // TODO
+}
+
 /*****************************************************************************
  * Class Name: vcmtpSend
  * Function Name: vcmtpSend()

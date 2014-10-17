@@ -14,15 +14,19 @@
 #ifndef RECEIVING_APPLICATION_NOTIFIER_H_
 #define RECEIVING_APPLICATION_NOTIFIER_H_
 
+#include <stdint.h>
+#include <sys/types.h>
+
 /**
  * This base class notifies a receiving application about events.
  */
 class ReceivingApplicationNotifier {
 public:
-    virtual ~ReceivingApplicationNotifier() {};
+    virtual ~ReceivingApplicationNotifier() = 0;        // definition must exist
 
     /**
-     * Notifies the receiving application about the beginning of a product.
+     * Notifies the receiving application about the beginning of a product. This
+     * method is thread-safe.
      *
      * @param[in]  prodSize  Size of the product in bytes.
      * @param[in]  metadata  Application-level product metadata.
@@ -34,11 +38,17 @@ public:
 
     /**
      * Notifies the receiving application about the complete reception of the
-     * previous product.
+     * previous product. This method is thread-safe.
      */
     virtual void notify_of_eop() = 0;
 
-    virtual void notify_of_missed_prod(uint32_t prodIndex);
+    /**
+     * Notifies the receiving application about a product that the VCMTP layer
+     * missed. This method is thread-safe.
+     *
+     * @param[in] prodIndex  Index of the missed product.
+     */
+    virtual void notify_of_missed_prod(uint32_t prodIndex) = 0;
 };
 
 #endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */

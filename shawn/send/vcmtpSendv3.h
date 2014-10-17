@@ -16,12 +16,25 @@
 
 class vcmtpSendv3 {
 public:
-    vcmtpSendv3();
-    virtual ~vcmtpSendv3();
+    /**
+     * Constructs an instance.
+     *
+     * @param[in] addr           Internet address in dotted decimal format.
+     * @param[in] port           Port number.
+     */
+    vcmtpSendv3(const char* addr, unsigned port);
+    /**
+     * Constructs an instance.
+     *
+     * @param[in] addr           Internet address in dotted decimal format.
+     * @param[in] port           Port number.
+     * @param[in] initProdIndex  Initial value for the product index. Supports
+     *                           VCMTP handling a stream of products and
+     *                           communication with the application layer.
+     */
+    vcmtpSendv3(const char* addr, unsigned port, uint32_t initProdIndex);
 
-    void sendProdStream(const char* streamName, uint32_t initProdIndex);
-
-    void startGroup(const char* addr, unsigned port);
+    ~vcmtpSendv3();
 
     /**
      * Transfers a contiguous block of memory.
