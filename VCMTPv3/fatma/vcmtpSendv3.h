@@ -1,5 +1,5 @@
 /*
-*vcmtpSendv3.h
+ *vcmtpSendv3.h
  *
  *  Created on: Oct 16, 2014
  *      Author: fatmaal-ali
@@ -14,11 +14,13 @@
 #include"vcmtpBase.h"
 class vcmtpSendv3 {
 public:
-    vcmtpSendv3();
-    virtual ~vcmtpSendv3();
+    vcmtpSendv3(const char* addr,const ushort port);
+    vcmtpSendv3(const char* addr,const ushort port, uint32_t initProdIndex);
 
-    void sendProdStream(const char* streamName, uint32_t initProdIndex);
-    void startGroup(const char* addr,const ushort port);
+    ~vcmtpSendv3();
+
+    //void sendProdStream(const char* streamName, uint32_t initProdIndex);
+    //void startGroup(const char* addr,const ushort port);
 
     /**
      * Transfers a contiguous block of memory.
@@ -43,14 +45,15 @@ public:
     uint32_t sendProduct(void* data, size_t dataSize, void* metadata,
             unsigned metaSize);
 
-    uint32_t SendBOPMessage(uint64_t prodSize, void* metadata, unsigned metaSize);
-    uint32_t sendEOPMessage();
-
 private:
-    uint64_t prodId;
+    uint32_t prodIndex;
     UdpSocket* udpsocket;
+    void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
+    void sendEOPMessage();
 
 };
 
 #endif /* VCMTPSENDV3_H_ */
+
+
 
