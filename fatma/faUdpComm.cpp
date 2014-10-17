@@ -111,7 +111,9 @@ ssize_t UdpComm::SendTo(const void* buff, size_t len, int flags)
 
 size_t UdpComm::SendData( void*  header, const size_t headerLen,  void*  data, const size_t dataLen)
 {
-	struct iovec iov[2];//vector including the two memory locations
+	
+	//    connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
+    struct iovec iov[2];//vector including the two memory locations
 	
     iov[0].iov_base = header;
     iov[0].iov_len  = headerLen;
