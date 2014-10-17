@@ -14,7 +14,6 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <endian.h>
 #include <strings.h>
 #include <memory.h>
 #include <pthread.h>
@@ -59,12 +58,12 @@ void vcmtpRecvv3::Stop()
     // make sure all resources are released
 }
 
-void vcmtpRecvv3::joinGroup(string localAddr, const unsigned short localPort)
+void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
     bzero(&mcastgroup, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
-    mcastgroup.sin_addr.s_addr = inet_addr(localAddr.c_str());
-    mcastgroup.sin_port = htons(localPort);
+    mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
+    mcastgroup.sin_port = htons(mcastPort);
     if( (mcast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
     if( bind(mcast_sock, (sockaddr*)&mcastgroup, sizeof(mcastgroup)) < 0 )
@@ -97,33 +96,33 @@ void vcmtpRecvv3::RunReceivingThread()
 
         // tests to see if multicast_sock is part of the set
         if (FD_ISSET(mcast_sock, &read_set)) {
-            McastPacketHandler();
+            mcastMonitor();
         }
 
         // tests to see if retrans_tcp_sock is part of the set
         if (FD_ISSET(retx_tcp_sock, &read_set)) {
-            //HandleUnicastPacket();
         }
     }
     pthread_exit(0);
 }
 
-void vcmtpRecvv3::McastPacketHandler()
+void vcmtpRecvv3::mcastMonitor()
 {
     static char packet_buffer[MAX_VCMTP_PACKET_LEN];
     bzero(packet_buffer, sizeof(packet_buffer));
     VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
 
-    if (recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
+    if ( recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL,
+         NULL) < 0 )
         perror("vcmtpRecvv3::HandleMulticastPacket() recv error");
-    if ( be64toh(header->flags) & VCMTP_BOP ) {
+    if ( ntohl(header->flags) & VCMTP_BOP ) {
         BOPHandler(packet_buffer);
     }
-    else if ( be64toh(header->flags) & VCMTP_MEM_DATA ) {
+    else if ( ntohl(header->flags) & VCMTP_MEM_DATA ) {
         recvMemData(packet_buffer);
     }
-    else if ( be64toh(header->flags) & VCMTP_EOP ) {
-        EOPHandler(packet_buffer);
+    else if ( ntohl(header->flags) & VCMTP_EOP ) {
+        EOPHandler();
     }
 }
 
@@ -132,32 +131,38 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     char*    VcmtpPacketHeader = VcmtpPacket;
     char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
 
-    // every time a new BOMD arrives, save the header to check following data packets
-    memcpy(&vcmtpHeader.indexid,    VcmtpPacketHeader,    8);
-    memcpy(&vcmtpHeader.seqnum,     (VcmtpPacketHeader+8),  8);
-    memcpy(&vcmtpHeader.payloadlen, (VcmtpPacketHeader+16), 8);
-    memcpy(&vcmtpHeader.flags,      (VcmtpPacketHeader+24), 8);
-    // every time a new BOMD arrives, save the msg to check following data packets
-    memcpy(&BOMDmsg.prodsize,   VcmtpPacketData, 8);
-    memcpy(BOMDmsg.prodid,      (VcmtpPacketData+8), 256);
+    // every time a new BOP arrives, save the header to check following data packets
+    memcpy(&vcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
+    memcpy(&vcmtpHeader.seqnum,     VcmtpPacketHeader+4,    4);
+    memcpy(&vcmtpHeader.payloadlen, VcmtpPacketHeader+8,    2);
+    memcpy(&vcmtpHeader.flags,      VcmtpPacketHeader+10,   2);
 
-    vcmtpHeader.indexid    = be64toh(vcmtpHeader.indexid);
-    vcmtpHeader.seqnum     = be64toh(vcmtpHeader.seqnum);
-    vcmtpHeader.payloadlen = be64toh(vcmtpHeader.payloadlen);
-    vcmtpHeader.flags      = be64toh(vcmtpHeader.flags);
-    BOMDmsg.prodsize       = be64toh(BOMDmsg.prodsize);
+    // every time a new BOP arrives, save the msg to check following data packets
+    memcpy(&BOPmsg.prodsize,  VcmtpPacketData,   4);
+    memcpy(&BOPmsg.metasize,  VcmtpPacketData+4, 2);
+    memcpy(BOPmsg.metadata,   VcmtpPacketData+6, BOPmsg.metasize);
+
+    vcmtpHeader.prodindex  = ntohl(vcmtpHeader.prodindex);
+    vcmtpHeader.seqnum     = ntohl(vcmtpHeader.seqnum);
+    vcmtpHeader.payloadlen = ntohs(vcmtpHeader.payloadlen);
+    vcmtpHeader.flags      = ntohs(vcmtpHeader.flags);
+    BOPmsg.prodsize        = ntohl(BOPmsg.prodsize);
+    BOPmsg.metasize        = ntohs(BOPmsg.metasize);
 
     #ifdef DEBUG
-    std::cout << "(VCMTP Header) indexID: " << vcmtpHeader.indexid << std::endl;
+    std::cout << "(VCMTP Header) prodindex: " << vcmtpHeader.prodindex << std::endl;
     std::cout << "(VCMTP Header) Seq Num: " << vcmtpHeader.seqnum << std::endl;
     std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
     std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
-    std::cout << "(BOP) prodSize: " << BOPmsg.prodsize << std::endl;
-    std::cout << "(BOP) metaSize: " << BOPmsg.metasize << std::endl;
+    std::cout << "(BOP) prodsize: " << BOPmsg.prodsize << std::endl;
+    std::cout << "(BOP) metasize: " << BOPmsg.metasize << std::endl;
+    std::cout << "(BOP) metadata: " << BOPmsg.metadata << std::endl;
     #endif
 
+    #ifdef LDM
     notifier.notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
                            BOPmsg.metaSize, &prodptr);
+    #endif
 }
 
 void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
@@ -166,17 +171,17 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     char*        VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
     VcmtpHeader  tmpVcmtpHeader;
 
-    memcpy(&tmpVcmtpHeader.indexid,     VcmtpPacketHeader,    8);
-    memcpy(&tmpVcmtpHeader.seqnum,     (VcmtpPacketHeader+8),  8);
-    memcpy(&tmpVcmtpHeader.payloadlen, (VcmtpPacketHeader+16), 8);
-    memcpy(&tmpVcmtpHeader.flags,      (VcmtpPacketHeader+24), 8);
-    tmpVcmtpHeader.indexid = be64toh(tmpVcmtpHeader.indexid);
-    tmpVcmtpHeader.seqnum = be64toh(tmpVcmtpHeader.seqnum);
-    tmpVcmtpHeader.payloadlen = be64toh(tmpVcmtpHeader.payloadlen);
-    tmpVcmtpHeader.flags = be64toh(tmpVcmtpHeader.flags);
+    memcpy(&tmpVcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
+    memcpy(&tmpVcmtpHeader.seqnum,     (VcmtpPacketHeader+4),  4);
+    memcpy(&tmpVcmtpHeader.payloadlen, (VcmtpPacketHeader+8),  2);
+    memcpy(&tmpVcmtpHeader.flags,      (VcmtpPacketHeader+10), 2);
+    tmpVcmtpHeader.prodindex  = ntohl(tmpVcmtpHeader.prodindex);
+    tmpVcmtpHeader.seqnum     = ntohl(tmpVcmtpHeader.seqnum);
+    tmpVcmtpHeader.payloadlen = ntohs(tmpVcmtpHeader.payloadlen);
+    tmpVcmtpHeader.flags      = ntohs(tmpVcmtpHeader.flags);
 
     // check for the first mem data packet
-    if(tmpVcmtpHeader.indexid == vcmtpHeader.indexid &&
+    if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
        tmpVcmtpHeader.seqnum == 0)
     {
     #ifdef DEBUG
@@ -200,8 +205,8 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
         vcmtpHeader.flags      = tmpVcmtpHeader.flags;
     }
     // check for the packet sequence to detect missing packets
-    else if(tmpVcmtpHeader.indexid == vcmtpHeader.indexid && vcmtpHeader.seqnum
-            + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
+    else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
+            vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
     {
     #ifdef DEBUG
         uint8_t testvar1;

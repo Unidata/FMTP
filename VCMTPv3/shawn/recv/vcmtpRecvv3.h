@@ -13,6 +13,7 @@
 #define VCMTPRECVV3_H_
 
 #include "vcmtpBase.h"
+#include "ReceivingApplicationNotifier.h"
 #include <stdint.h>
 #include <string>
 #include <sys/select.h>
@@ -53,8 +54,8 @@ private:
     static void*  StartReceivingThread(void* ptr);
     void    StartReceivingThread();
     void    RunReceivingThread();
-    void    joinGroup(string senderAddr, const unsigned short port);
-    void    McastPacketHandler();
+    void    joinGroup(string mcastAddr, const unsigned short mcastPort);
+    void    mcastMonitor();
     void    BOPHandler(char* VcmtpPacket);
     void    EOPHandler();
     void    recvMemData(char* VcmtpPacket);
