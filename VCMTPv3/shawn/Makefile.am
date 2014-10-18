@@ -4,9 +4,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= recv send
+SUBDIRS 		= recv
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h \
-			  ReceivingApplicationNotifier.h
-lib_la_LIBADD		= recv/lib.la send/lib.la
-
+lib_la_SOURCES		= ReceivingApplicationNotifier.h
+lib_la_LIBADD		= recv/lib.la

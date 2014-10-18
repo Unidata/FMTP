@@ -86,12 +86,10 @@ AM_COND_IF([HAVE_OPMOCK],
 
 AC_CONFIG_FILES([
     Makefile
-    CommUtil/Makefile
-    protocol/Makefile
-    fatma/Makefile
-    shawn/Makefile
-    shawn/recv/Makefile
-    shawn/send/Makefile
+    VCMTPv3/Makefile
+    VCMTPv3/fatma/Makefile
+    VCMTPv3/shawn/Makefile
+    VCMTPv3/shawn/recv/Makefile
     test/protocol/Executor/Makefile
 ])
 

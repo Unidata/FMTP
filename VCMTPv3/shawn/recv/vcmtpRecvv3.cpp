@@ -26,7 +26,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     const unsigned short    tcpPort,
     string                  mcastAddr,
     const unsigned short    mcastPort,
-    ReceivingApplicationNotifier& notifier);
+    ReceivingApplicationNotifier& notifier)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),

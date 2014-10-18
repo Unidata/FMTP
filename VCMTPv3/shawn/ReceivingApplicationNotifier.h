@@ -22,7 +22,7 @@
  */
 class ReceivingApplicationNotifier {
 public:
-    virtual ~ReceivingApplicationNotifier() = 0;        // definition must exist
+    virtual ~ReceivingApplicationNotifier() {};        // definition must exist
 
     /**
      * Notifies the receiving application about the beginning of a product. This

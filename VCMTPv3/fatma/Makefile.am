@@ -7,4 +7,6 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= faVCMTPSender.cpp faUdpComm.cpp
+lib_la_SOURCES		= vcmtpSendv3.cpp vcmtpSendv3.h \
+			  UdpSocket.cpp UdpSocket.h
+lib_la_CPPFLAGS		= -I..

@@ -14,8 +14,17 @@
 #include"vcmtpBase.h"
 class vcmtpSendv3 {
 public:
-    vcmtpSendv3(const char* addr,const ushort port);
-    vcmtpSendv3(const char* addr,const ushort port, uint32_t initProdIndex);
+    vcmtpSendv3(
+            const char*  tcpAddr,
+            const ushort tcpPort,
+            const char*  mcastAddr,
+            const ushort mcastPort);
+    vcmtpSendv3(
+            const char*  tcpAddr,
+            const ushort tcpPort,
+            const char*  mcastAddr,
+            const ushort mcastPort,
+            uint32_t     initProdIndex);
 
     ~vcmtpSendv3();
 

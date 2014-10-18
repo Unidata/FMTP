@@ -24,12 +24,12 @@ using namespace std;
 
 class vcmtpRecvv3 {
 public:
-    vcmtpRecv(string tcpAddr,
+    vcmtpRecvv3(string tcpAddr,
               const unsigned short tcpPort,
               string mcastAddr,
               const unsigned short mcastPort,
               ReceivingApplicationNotifier& notifier);
-    ~vcmtpRecv();
+    ~vcmtpRecvv3();
 
     void    Start(); // initialize the private variables
     void    Stop();

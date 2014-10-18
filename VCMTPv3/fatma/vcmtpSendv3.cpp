@@ -10,29 +10,44 @@
 /**
  * This constructor should be used when sending any memory data.
  *
+ * @param[in] tcpAddr       TCP server address.
+ * @param[in] tcpPort       TCP server port.
  * @param[in] mcastAddr     Multicast group address.
  * @param[in] mcastPort     Multicast group port.
  *
  */
-vcmtpSendv3::vcmtpSendv3(const char* mcastAddr,const ushort mcastPort) {
+vcmtpSendv3::vcmtpSendv3(
+            const char*  tcpAddr,
+            const ushort tcpPort,
+            const char*  mcastAddr,
+            const ushort mcastPort)
+{
 	udpsocket=0;
 	prodIndex=0;
-	vcmtpSendv3( mcastAddr,mcastPort,prodIndex);
+	vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
 }
 
 /**
  * This constructor should be used when sending a stream of product.
  *
+ * @param[in] tcpAddr         TCP server address.
+ * @param[in] tcpPort         TCP server port.
  * @param[in] mcastAddr       Multicast group address.
  * @param[in] mcastPort       Multicast group port.
  * @param[in] initProdIndex   Initial product index set by the user application
  *                            to identify the first product index of the stream.
  *
  */
-vcmtpSendv3::vcmtpSendv3(const char* mcastAddr,const ushort mcastPort, uint32_t initProdIndex)
+vcmtpSendv3::vcmtpSendv3(
+            const char*  tcpAddr,
+            const ushort tcpPort,
+            const char*  mcastAddr,
+            const ushort mcastPort,
+            uint32_t     initProdIndex)
 {
 	prodIndex=initProdIndex;
 	udpsocket=new UdpSocket(mcastAddr,mcastPort);
+	// TODO: use `tcpAddr` and `tcpPort`
 }
 
 vcmtpSendv3::~vcmtpSendv3() {
