@@ -163,7 +163,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, u
 			cout<<"vcmtpSendv3::sendProduct::SendData() success"<<endl;
 
 		remained_size -= data_size;
-		data += data_size; //move the data pointer to the beginning of the next block
+		data = (char*)data + data_size; //move the data pointer to the beginning of the next block
 		seqNum += data_size;
 	}
 
