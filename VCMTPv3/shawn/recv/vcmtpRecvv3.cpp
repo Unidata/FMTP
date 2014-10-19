@@ -178,10 +178,9 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     std::cout << "(BOP) metadata: " << BOPmsg.metadata << std::endl;
     #endif
 
-    #ifdef LDM
-    notifier.notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
-                           BOPmsg.metaSize, &prodptr);
-    #endif
+    if (notifier)
+        notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
+                               BOPmsg.metasize, &prodptr);
 }
 
 void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
