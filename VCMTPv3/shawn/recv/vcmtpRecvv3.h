@@ -24,13 +24,21 @@ using namespace std;
 
 class vcmtpRecvv3 {
 public:
-    /*
+    /**
+     * @param[in] tcpAddr    Internet address of the VCMTP TCP server.
+     * @param[in] tcpPort    Port number of the VCMTP TCP server.
+     * @param[in] mcastAddr  Internet address of the multicast group in
+     *                       dotted-decimal form.
+     * @param[in] mcastPort  Port number of the multicast group.
+     * @param[in] notifier   Notifier of the receiving application about events.
+     *                       Call shall not delete until it's no longer needed,
+     *                       at which time caller should delete.
+     */
     vcmtpRecvv3(string tcpAddr,
               const unsigned short tcpPort,
               string mcastAddr,
               const unsigned short mcastPort,
-              ReceivingApplicationNotifier& notifier);
-    */
+              ReceivingApplicationNotifier* notifier);
     vcmtpRecvv3(string tcpAddr,
               const unsigned short tcpPort,
               string mcastAddr,
@@ -54,7 +62,7 @@ private:
     struct sockaddr_in  mcastgroup;
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOPMsg           BOPmsg;
-    //ReceivingApplicationNotifier& notifier;
+    ReceivingApplicationNotifier* notifier;
     void*            prodptr;          // void pointer obtained from receiving application indicating where to save the incoming data
 
     static void*  StartReceivingThread(void* ptr);

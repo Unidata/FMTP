@@ -21,13 +21,12 @@
 #include <unistd.h>
 
 
-/*
 vcmtpRecvv3::vcmtpRecvv3(
-    string                  tcpAddr,
-    const unsigned short    tcpPort,
-    string                  mcastAddr,
-    const unsigned short    mcastPort,
-    ReceivingApplicationNotifier& notifier)
+    string                        tcpAddr,
+    const unsigned short          tcpPort,
+    string                        mcastAddr,
+    const unsigned short          mcastPort,
+    ReceivingApplicationNotifier* notifier)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
@@ -41,7 +40,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     recv_thread = 0;
     retx_thread = 0;
 }
-*/
 
 vcmtpRecvv3::vcmtpRecvv3(
     string                  tcpAddr,
@@ -52,7 +50,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
-    mcastPort(mcastPort)
+    mcastPort(mcastPort),
+    notifier(0)
 {
     max_sock_fd = 0;
     mcast_sock = 0;
