@@ -90,7 +90,6 @@ AC_CONFIG_FILES([
     VCMTPv3/fatma/Makefile
     VCMTPv3/shawn/Makefile
     VCMTPv3/shawn/recv/Makefile
-    test/protocol/Executor/Makefile
 ])
 
 AC_OUTPUT

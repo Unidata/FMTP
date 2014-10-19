@@ -4,6 +4,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
+EXTRA_DIST		= vcmtpBase.cpp vcmtpBase.h
 SUBDIRS 		= fatma shawn
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h
