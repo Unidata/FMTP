@@ -135,13 +135,13 @@ void vcmtpRecvv3::mcastMonitor()
     if ( recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL,
          NULL) < 0 )
         perror("vcmtpRecvv3::HandleMulticastPacket() recv error");
-    if ( ntohl(header->flags) & VCMTP_BOP ) {
+    if ( ntohs(header->flags) & VCMTP_BOP ) {
         BOPHandler(packet_buffer);
     }
-    else if ( ntohl(header->flags) & VCMTP_MEM_DATA ) {
+    else if ( ntohs(header->flags) & VCMTP_MEM_DATA ) {
         recvMemData(packet_buffer);
     }
-    else if ( ntohl(header->flags) & VCMTP_EOP ) {
+    else if ( ntohs(header->flags) & VCMTP_EOP ) {
         EOPHandler();
     }
 }
