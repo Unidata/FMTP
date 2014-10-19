@@ -1,12 +1,12 @@
 CC = g++
-INCLUDE = ../
+INCLUDE = ../../
+INCLUDE2 = ../
 LIB =
 ELFFILE = vcmtpRecvv3
-VCMTPBASE = ../../
 DEBUG_FLAG = DEBUG
 
-$(ELFFILE): main.cpp vcmtpRecv.cpp $(VCMTPBASE)vcmtpBase.cpp
-	$(CC) -D$(DEBUG_FLAG) -I$(INCLUDE) -pthread -o $(ELFFILE) main.cpp vcmtpRecv.cpp $(VCMTPBASE)vcmtpBase.cpp
+$(ELFFILE): main.cpp vcmtpRecvv3.cpp
+	$(CC) -D$(DEBUG_FLAG) -I$(INCLUDE) -I$(INCLUDE2) -pthread -o $(ELFFILE) main.cpp vcmtpRecvv3.cpp
 
 .PHONY : clean
 clean:
