@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     string mcastAddr               = "0.0.0.0";
     const unsigned short mcastPort = 5173;
 
-    vcmtpRecv vcmtpRecv(tcpAddr, tcpPort, mcastAddr, mcastPort);
-    vcmtpRecv.Start();
+    vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
+    vcmtpRecvv3.Start();
     while(1);
 }

@@ -24,11 +24,17 @@ using namespace std;
 
 class vcmtpRecvv3 {
 public:
+    /*
     vcmtpRecvv3(string tcpAddr,
               const unsigned short tcpPort,
               string mcastAddr,
               const unsigned short mcastPort,
               ReceivingApplicationNotifier& notifier);
+    */
+    vcmtpRecvv3(string tcpAddr,
+              const unsigned short tcpPort,
+              string mcastAddr,
+              const unsigned short mcastPort);
     ~vcmtpRecvv3();
 
     void    Start(); // initialize the private variables
@@ -48,7 +54,7 @@ private:
     struct sockaddr_in  mcastgroup;
     VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
     BOPMsg           BOPmsg;
-    ReceivingApplicationNotifier& notifier;
+    //ReceivingApplicationNotifier& notifier;
     void*            prodptr;          // void pointer obtained from receiving application indicating where to save the incoming data
 
     static void*  StartReceivingThread(void* ptr);
