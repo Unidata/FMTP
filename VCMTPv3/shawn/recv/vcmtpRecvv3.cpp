@@ -165,7 +165,9 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
 
     // every time a new BOP arrives, save the msg to check following data packets
     memcpy(&BOPmsg.prodsize,  VcmtpPacketData,   4);
-    memcpy(&BOPmsg.metasize,  VcmtpPacketData+4, 2);
+    memcpy(&BOPmsg.metasize,  (VcmtpPacketData+4), 2);
+    BOPmsg.metasize = ntohs(BOPmsg.metasize);
+    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN ? AVAIL_BOP_LEN : BOPmsg.metasize;
     memcpy(BOPmsg.metadata,   VcmtpPacketData+6, BOPmsg.metasize);
 
     vcmtpHeader.prodindex  = ntohl(vcmtpHeader.prodindex);
@@ -173,7 +175,6 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     vcmtpHeader.payloadlen = ntohs(vcmtpHeader.payloadlen);
     vcmtpHeader.flags      = ntohs(vcmtpHeader.flags);
     BOPmsg.prodsize        = ntohl(BOPmsg.prodsize);
-    BOPmsg.metasize        = ntohs(BOPmsg.metasize);
 
     #ifdef DEBUG
     std::cout << "(VCMTP Header) prodindex: " << vcmtpHeader.prodindex << std::endl;
