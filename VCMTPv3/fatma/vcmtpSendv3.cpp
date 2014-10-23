@@ -101,8 +101,8 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
    //send the bomd message
    if (udpsocket->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
 	   cout<<"vcmtpSendv3::SendBOPMessage::SendTo error\n";
-   else
-	   cout<<"vcmtpSendv3::SendBOPMessage::SendTo success\n";
+   //else
+	   //cout<<"vcmtpSendv3::SendBOPMessage::SendTo success\n";
 
 }
 
@@ -144,10 +144,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, u
 	size_t remained_size = dataSize; //to keep track of how many bytes of the whole data remain
 	while (remained_size > 0) //check if there is more data to send
 	{
-		cout<<"vcmtpSendv3::sendProduct: remained_size= "<<remained_size<<endl;
-
 		uint data_size = remained_size < VCMTP_DATA_LEN ? remained_size: VCMTP_DATA_LEN;
-		cout<<"vcmtpSendv3::sendProduct: data_size= "<<data_size<<endl;
 
 		payLen = htons(data_size);
 		seqNum = htonl(seqNum);
@@ -159,8 +156,8 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, u
 
 		if (udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data,data_size) < 0)
 			cout<<"vcmtpSendv3::sendProduct::SendData() error"<<endl;
-		else
-			cout<<"vcmtpSendv3::sendProduct::SendData() success"<<endl;
+		//else
+		//	cout<<"vcmtpSendv3::sendProduct::SendData() success"<<endl;
 
 		remained_size -= data_size;
 		data = (char*)data + data_size; //move the data pointer to the beginning of the next block
@@ -197,8 +194,8 @@ void vcmtpSendv3::sendEOPMessage()
 	//send the eomd message
     if (udpsocket->SendTo(vcmtp_packet,VCMTP_HEADER_LEN) < 0)
         cout<<"vcmtpSendv3::sendEOPMessage::SendTo error\n";
-    else
-        cout<<"vcmtpSendv3::sendEOPMessage::SendTo success\n";
+    //else
+    //    cout<<"vcmtpSendv3::sendEOPMessage::SendTo success\n";
 }
 
 

@@ -14,6 +14,7 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <strings.h>
 #include <memory.h>
 #include <pthread.h>
@@ -85,8 +86,12 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
     mcastgroup.sin_port = htons(mcastPort);
     if( (mcast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
-    if( bind(mcast_sock, (sockaddr*)&mcastgroup, sizeof(mcastgroup)) < 0 )
+    if( bind(mcast_sock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup)) < 0 )
         perror("vcmtpRecvv3::joinGroup() binding socket failed.");
+    mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    if( setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0 )
+        perror("vcmtpRecvv3::joinGroup() setsockopt failed.");
     FD_SET(mcast_sock, &read_sock_set);
 }
 
