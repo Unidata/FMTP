@@ -83,10 +83,6 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
     uint32_t prodsize    = htonl(prodSize);
     uint16_t maxmetasize = htons(maxMetaSize);
 
-    char meta[AVAIL_BOP_LEN];
-    bzero(meta,sizeof(meta));
-  //  strncpy(meta,(char*)metadata,maxMetaSize);
-    memcpy(meta,metadata,maxMetaSize);
     //create the content of the vcmtp header
    memcpy(&vcmtp_header->prodindex,   &prodindex, 4);//fix these offset numbers
    memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
@@ -96,7 +92,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
    //create the content of the BOP
    memcpy(&vcmtp_data->prodsize, &prodsize,             4);
    memcpy(&vcmtp_data->metasize, &maxmetasize,          2);
-   memcpy(&vcmtp_data->metadata, meta,        maxMetaSize);
+   memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
 
    //send the bomd message
    if (udpsocket->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
