@@ -83,7 +83,6 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
     bzero(&mcastgroup, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
     mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
-    //mcastgroup.sin_addr.s_addr = inet_addr(INADDR_ANY);
     mcastgroup.sin_port = htons(mcastPort);
     if( (mcast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
