@@ -76,12 +76,12 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
     bzero(vcmtp_packet, sizeof(vcmtp_packet)); //clear up the vcmtp packet
 
     //convert the variables from native binary  to network binary representation
-    uint32_t prodindex   = htobe32(prodIndex);
-    uint32_t seqNum      = htobe32(0);//for BOP sequence number is always zero
-    uint16_t payLen      = htobe16(maxMetaSize+(VCMTP_DATA_LEN - AVAIL_BOP_LEN));
-    uint16_t flags       = htobe16(VCMTP_BOP);
-    uint32_t prodsize    = htobe32(prodSize);
-    uint16_t maxmetasize = htobe16(maxMetaSize);
+    uint32_t prodindex   = htonl(prodIndex);
+    uint32_t seqNum      = htonl(0);//for BOP sequence number is always zero
+    uint16_t payLen      = htons(maxMetaSize+(VCMTP_DATA_LEN - AVAIL_BOP_LEN));
+    uint16_t flags       = htons(VCMTP_BOP);
+    uint32_t prodsize    = htonl(prodSize);
+    uint16_t maxmetasize = htons(maxMetaSize);
 
     char meta[AVAIL_BOP_LEN];
     bzero(meta,sizeof(meta));
@@ -136,8 +136,8 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, u
 	unsigned char vcmtpHeader[VCMTP_HEADER_LEN]; //create a vcmtp header
 	VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader;
 
-	uint32_t prodindex = htobe32(prodIndex); // change the name to prodIndex
-	uint16_t flags     = htobe16(VCMTP_MEM_DATA);
+	uint32_t prodindex = htonl(prodIndex); // change the name to prodIndex
+	uint16_t flags     = htons(VCMTP_MEM_DATA);
 	uint16_t payLen;
 	uint32_t seqNum    = 0; //The first data packet will always start with block seqNum =0;
 
@@ -146,8 +146,8 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, u
 	{
 		uint data_size = remained_size < VCMTP_DATA_LEN ? remained_size: VCMTP_DATA_LEN;
 
-		payLen = htobe16(data_size);
-		seqNum = htobe32(seqNum);
+		payLen = htons(data_size);
+		seqNum = htonl(seqNum);
 
 		memcpy(&header->prodindex,  &prodindex, 4);
 		memcpy(&header->seqnum,     &seqNum,    4);
@@ -181,10 +181,10 @@ void vcmtpSendv3::sendEOPMessage()
     bzero(vcmtp_packet, sizeof(vcmtp_packet)); //clear up the vcmtp packet
 
     //convert the variables from native binary  to network binary representation
-    uint32_t prodindex = htobe32(prodIndex);
-    uint32_t seqNum    = htobe32(0); //seqNum for the EOP should always be zero
-    uint16_t payLen    = htobe16(0);
-    uint16_t flags     = htobe16(VCMTP_EOP);
+    uint32_t prodindex = htonl(prodIndex);
+    uint32_t seqNum    = htonl(0); //seqNum for the EOP should always be zero
+    uint16_t payLen    = htons(0);
+    uint16_t flags     = htons(VCMTP_EOP);
     //create the content of the vcmtp header
     memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
     memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
