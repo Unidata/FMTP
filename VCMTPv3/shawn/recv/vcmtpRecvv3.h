@@ -35,14 +35,14 @@ public:
      *                       at which time caller should delete.
      */
     vcmtpRecvv3(string tcpAddr,
-              const unsigned short tcpPort,
-              string mcastAddr,
-              const unsigned short mcastPort,
-              ReceivingApplicationNotifier* notifier);
+                const unsigned short tcpPort,
+                string mcastAddr,
+                const unsigned short mcastPort,
+                ReceivingApplicationNotifier* notifier);
     vcmtpRecvv3(string tcpAddr,
-              const unsigned short tcpPort,
-              string mcastAddr,
-              const unsigned short mcastPort);
+                const unsigned short tcpPort,
+                string mcastAddr,
+                const unsigned short mcastPort);
     ~vcmtpRecvv3();
 
     void    Start(); // initialize the private variables
@@ -64,6 +64,7 @@ private:
     BOPMsg           BOPmsg;
     ReceivingApplicationNotifier* notifier;
     void*            prodptr;          // void pointer obtained from receiving application indicating where to save the incoming data
+    struct ip_mreq   mreq;
 
     static void*  StartReceivingThread(void* ptr);
     void    StartReceivingThread();
