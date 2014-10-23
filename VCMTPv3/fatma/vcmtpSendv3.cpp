@@ -85,8 +85,8 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
 
     char meta[AVAIL_BOP_LEN];
     bzero(meta,sizeof(meta));
-    strncpy(meta,(char*)metadata,maxMetaSize);
-
+  //  strncpy(meta,(char*)metadata,maxMetaSize);
+    memcpy(meta,metadata,maxMetaSize);
     //create the content of the vcmtp header
    memcpy(&vcmtp_header->prodindex,   &prodindex, 4);//fix these offset numbers
    memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
