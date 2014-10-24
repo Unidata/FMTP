@@ -36,9 +36,12 @@ typedef struct VcmtpBOPMessage {
     char       metadata[AVAIL_BOP_LEN];
 } BOPMsg;
 
-const uint64_t VCMTP_BOP       = 0x00000001;
-const uint64_t VCMTP_EOP       = 0x00000002;
-const uint64_t VCMTP_MEM_DATA  = 0x00000004;
+const uint16_t VCMTP_BOP       = 0x00000001;
+const uint16_t VCMTP_EOP       = 0x00000002;
+const uint16_t VCMTP_MEM_DATA  = 0x00000004;
+const uint16_t VCMTP_RETX_REQ  = 0x00000008;
+const uint16_t VCMTP_RETX_REJ  = 0x00000010;
+const uint16_t VCMTP_RETX_END  = 0x00000020;
 
 
 class vcmtpBase {
