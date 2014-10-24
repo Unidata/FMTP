@@ -176,12 +176,8 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
 
     #ifdef DEBUG
     std::cout << "(VCMTP Header) prodindex: " << vcmtpHeader.prodindex << std::endl;
-    std::cout << "(VCMTP Header) Seq Num: " << vcmtpHeader.seqnum << std::endl;
-    std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
-    std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
     std::cout << "(BOP) prodsize: " << BOPmsg.prodsize << std::endl;
     std::cout << "(BOP) metasize: " << BOPmsg.metasize << std::endl;
-    std::cout << "(BOP) metadata: " << BOPmsg.metadata << std::endl;
     #endif
 
     if (notifier)
@@ -208,7 +204,7 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
        tmpVcmtpHeader.seqnum == 0)
     {
-    #ifdef DEBUG
+    #ifdef DEBUG2
         uint8_t testvar1;
         uint8_t testvar2;
         uint8_t testvar3;
@@ -232,7 +228,7 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
     {
-    #ifdef DEBUG
+    #ifdef DEBUG2
         uint8_t testvar1;
         uint8_t testvar2;
         uint8_t testvar3;
