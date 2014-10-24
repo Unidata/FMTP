@@ -251,5 +251,5 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
 
 void vcmtpRecvv3::EOPHandler()
 {
-    std::cout << "Mem data completely received." << std::endl;
+    std::cout << "(EOP) data-product completely received." << std::endl;
 }
