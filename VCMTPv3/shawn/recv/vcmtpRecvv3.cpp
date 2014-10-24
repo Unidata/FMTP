@@ -175,9 +175,9 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     BOPmsg.prodsize        = ntohl(BOPmsg.prodsize);
 
     #ifdef DEBUG
-    std::cout << "(VCMTP Header) prodindex: " << vcmtpHeader.prodindex << std::endl;
-    std::cout << "(BOP) prodsize: " << BOPmsg.prodsize << std::endl;
-    std::cout << "(BOP) metasize: " << BOPmsg.metasize << std::endl;
+    std::cout << "(BOP) prodindex: " << vcmtpHeader.prodindex;
+    std::cout << "    prodsize: " << BOPmsg.prodsize;
+    std::cout << "    metasize: " << BOPmsg.metasize << std::endl;
     #endif
 
     if (notifier)
