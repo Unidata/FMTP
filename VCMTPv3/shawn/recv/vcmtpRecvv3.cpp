@@ -237,6 +237,12 @@ void vcmtpRecvv3::mcastMonitor()
     }
 }
 
+
+/**
+ * Parse BOP message and call notifier to notify receiving application.
+ *
+ * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+ */
 void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
 {
     char*    VcmtpPacketHeader = VcmtpPacket;
@@ -272,6 +278,12 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
                                BOPmsg.metasize, &prodptr);
 }
 
+
+/**
+ * Parse data blocks, directly store and check for missing blocks.
+ *
+ * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+ */
 void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
 {
     char*        VcmtpPacketHeader = VcmtpPacket;
@@ -339,6 +351,12 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     }
 }
 
+
+/**
+ * Report a successful received EOP.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::EOPHandler()
 {
     std::cout << "(EOP) data-product completely received." << std::endl;
