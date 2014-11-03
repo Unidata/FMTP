@@ -1,13 +1,29 @@
-/*
+/**
  * Copyright (C) 2014 University of Virginia. All rights reserved.
- * @licence: Published under GPLv3
  *
- * @filename: vcmtpRecvv3v3.cpp
+ * @file      vcmtpRecvv3.cpp
+ * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Oct 17, 2014
  *
- * @history:
- *      Created on : Oct 17, 2014
- *      Author     : Shawn <sc7cq@virginia.edu>
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief
+ *
+ * Receiver side of VCMTPv3 protocol. It handles incoming multicast packets
+ * and issues retransmission requests to the sender side.
  */
+
 
 #include "vcmtpRecvv3.h"
 #include <stdio.h>
@@ -22,6 +38,16 @@
 #include <unistd.h>
 
 
+/**
+ * Constructs the receiver side instance (for integration with LDM).
+ *
+ * @param[in] tcpAddr       Tcp unicast address for retransmission.
+ * @param[in] tcpPort       Tcp unicast port for retransmission.
+ * @param[in] mcastAddr     Udp multicast address for receiving data products.
+ * @param[in] mcastPort     Udp multicast port for receiving data products.
+ * @param[in] notifier      Callback function to notify receiving application
+ *                          of incoming Begin-Of-Product messages.
+ */
 vcmtpRecvv3::vcmtpRecvv3(
     string                        tcpAddr,
     const unsigned short          tcpPort,
@@ -42,6 +68,15 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_thread = 0;
 }
 
+
+/**
+ * Constructs the receiver side instance (for independent tests).
+ *
+ * @param[in] tcpAddr       Tcp unicast address for retransmission.
+ * @param[in] tcpPort       Tcp unicast port for retransmission.
+ * @param[in] mcastAddr     Udp multicast address for receiving data products.
+ * @param[in] mcastPort     Udp multicast port for receiving data products.
+ */
 vcmtpRecvv3::vcmtpRecvv3(
     string                  tcpAddr,
     const unsigned short    tcpPort,
@@ -61,16 +96,35 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_thread = 0;
 }
 
+
+/**
+ * Destructs the receiver side instance.
+ *
+ * @param[in] none
+ */
 vcmtpRecvv3::~vcmtpRecvv3()
 {
 }
 
+
+/**
+ * Join given multicast group (defined by mcastAddr:mcastPort) to receive
+ * multicasting products and start receiving thread to listen on the socket.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::Start()
 {
     joinGroup(mcastAddr, mcastPort);
     StartReceivingThread();
 }
 
+
+/**
+ * Stop current running threads, close all sockets and release resources.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::Stop()
 {
     // close all the sock_fd
@@ -78,6 +132,13 @@ void vcmtpRecvv3::Stop()
     // make sure all resources are released
 }
 
+
+/**
+ * Constructs the receiver side instance (for independent tests).
+ *
+ * @param[in] mcastAddr     Udp multicast address for receiving data products.
+ * @param[in] mcastPort     Udp multicast port for receiving data products.
+ */
 void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
     bzero(&mcastgroup, sizeof(mcastgroup));
@@ -95,17 +156,36 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
     FD_SET(mcast_sock, &read_sock_set);
 }
 
+
+/**
+ * Create a new thread to run StartReceivingThread().
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::StartReceivingThread()
 {
     pthread_create(&recv_thread, NULL, &vcmtpRecvv3::StartReceivingThread, this);
 }
 
+
+/**
+ * Run receiving thread in a newly created thread.
+ *
+ * @param[in] ptr        A pointer points to this thread itself.
+ */
 void* vcmtpRecvv3::StartReceivingThread(void* ptr)
 {
     ((vcmtpRecvv3*)ptr)->RunReceivingThread();
     return NULL;
 }
 
+
+/**
+ * Listen on both multicast thread and unicast thread to handle receiving and
+ * retransmission.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::RunReceivingThread()
 {
     fd_set  read_set;
@@ -130,6 +210,13 @@ void vcmtpRecvv3::RunReceivingThread()
     pthread_exit(0);
 }
 
+
+/**
+ * Listen on both multicast thread and unicast thread to handle receiving and
+ * retransmission. Check flag field and can corresponding handler.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::mcastMonitor()
 {
     static char packet_buffer[MAX_VCMTP_PACKET_LEN];
@@ -246,6 +333,9 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
 
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
+    }
+    else {
+        // missing block
     }
 }
 
