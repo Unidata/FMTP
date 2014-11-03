@@ -18,7 +18,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details at http://www.gnu.org/copyleft/gpl.html
  *
- * @brief
+ * @brief     Define the entity of VCMTPv3 method function.
  *
  * Receiver side of VCMTPv3 protocol. It handles incoming multicast packets
  * and issues retransmission requests to the sender side.
@@ -87,7 +87,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    notifier(0)
+    notifier(0)    /*!< constructor called by independent test program will
+                    set notifier to NULL */
 {
     max_sock_fd = 0;
     mcast_sock = 0;
@@ -104,6 +105,7 @@ vcmtpRecvv3::vcmtpRecvv3(
  */
 vcmtpRecvv3::~vcmtpRecvv3()
 {
+    /** destructor should call Stop() to terminate all processes */
 }
 
 
@@ -134,7 +136,7 @@ void vcmtpRecvv3::Stop()
 
 
 /**
- * Constructs the receiver side instance (for independent tests).
+ * Join multicast group specified by mcastAddr:mcastPort.
  *
  * @param[in] mcastAddr     Udp multicast address for receiving data products.
  * @param[in] mcastPort     Udp multicast port for receiving data products.
@@ -248,13 +250,13 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     char*    VcmtpPacketHeader = VcmtpPacket;
     char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
 
-    // every time a new BOP arrives, save the header to check following data packets
+    /** every time a new BOP arrives, save the header to check following data packets */
     memcpy(&vcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
     memcpy(&vcmtpHeader.seqnum,     VcmtpPacketHeader+4,    4);
     memcpy(&vcmtpHeader.payloadlen, VcmtpPacketHeader+8,    2);
     memcpy(&vcmtpHeader.flags,      VcmtpPacketHeader+10,   2);
 
-    // every time a new BOP arrives, save the msg to check following data packets
+    /** every time a new BOP arrives, save the msg to check following data packets */
     memcpy(&BOPmsg.prodsize,  VcmtpPacketData,   4);
     memcpy(&BOPmsg.metasize,  (VcmtpPacketData+4), 2);
     BOPmsg.metasize = ntohs(BOPmsg.metasize);
@@ -299,7 +301,7 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     tmpVcmtpHeader.payloadlen = ntohs(tmpVcmtpHeader.payloadlen);
     tmpVcmtpHeader.flags      = ntohs(tmpVcmtpHeader.flags);
 
-    // check for the first mem data packet
+    /** check for the first mem data packet */
     if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
        tmpVcmtpHeader.seqnum == 0)
     {
@@ -323,7 +325,7 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
         vcmtpHeader.flags      = tmpVcmtpHeader.flags;
     }
-    // check for the packet sequence to detect missing packets
+    /** check for the packet sequence to detect missing packets */
     else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
     {
@@ -347,7 +349,7 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
     }
     else {
-        // missing block
+        /** handle missing block */
     }
 }
 
