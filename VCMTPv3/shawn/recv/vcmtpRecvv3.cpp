@@ -183,7 +183,7 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
     std::cout << "(BOP) prodsize: " << BOPmsg.prodsize << std::endl;
     std::cout << "(BOP) metasize: " << BOPmsg.metasize << std::endl;
-    std::cout << "(BOP) metadata: " << BOPmsg.metadata << std::endl;
+    // std::cout << "(BOP) metadata: " << BOPmsg.metadata << std::endl; BINARY DATA!!!
     #endif
 
     if (notifier)

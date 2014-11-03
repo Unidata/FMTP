@@ -161,9 +161,8 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, u
 	}
 
 	sendEOPMessage();
-	prodIndex++;//increment the file id to use it for the next data transmission
 
-	return prodIndex-1;
+	return prodIndex++;
 }
 /**
  * Send the EOP message to the receiver to identify
