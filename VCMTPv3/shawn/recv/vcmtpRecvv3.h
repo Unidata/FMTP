@@ -1,13 +1,29 @@
-/*
+/**
  * Copyright (C) 2014 University of Virginia. All rights reserved.
- * @licence: Published under GPLv3
  *
- * @filename: vcmtpRecvv3.h
+ * @file      vcmtpRecvv3.h
+ * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Oct 17, 2014
  *
- * @history:
- *      Created on : Oct 17, 2014
- *      Author     : Shawn <sc7cq@virginia.edu>
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Define the interfaces of VCMTPv3 receiver.
+ *
+ * Receiver side of VCMTPv3 protocol. It handles incoming multicast packets
+ * and issues retransmission requests to the sender side.
  */
+
 
 #ifndef VCMTPRECVV3_H_
 #define VCMTPRECVV3_H_
@@ -24,16 +40,6 @@ using namespace std;
 
 class vcmtpRecvv3 {
 public:
-    /**
-     * @param[in] tcpAddr    Internet address of the VCMTP TCP server.
-     * @param[in] tcpPort    Port number of the VCMTP TCP server.
-     * @param[in] mcastAddr  Internet address of the multicast group in
-     *                       dotted-decimal form.
-     * @param[in] mcastPort  Port number of the multicast group.
-     * @param[in] notifier   Notifier of the receiving application about events.
-     *                       Call shall not delete until it's no longer needed,
-     *                       at which time caller should delete.
-     */
     vcmtpRecvv3(string tcpAddr,
                 const unsigned short tcpPort,
                 string mcastAddr,
@@ -45,12 +51,12 @@ public:
                 const unsigned short mcastPort);
     ~vcmtpRecvv3();
 
-    void    Start(); // initialize the private variables
+    void    Start();
     void    Stop();
 
 private:
-    string           tcpAddr;           /* Address of TCP server for missed data     */
-    unsigned short   tcpPort;           /* Port number of TCP server for missed data */
+    string           tcpAddr;
+    unsigned short   tcpPort;
     string           mcastAddr;
     unsigned short   mcastPort;
     int              max_sock_fd;
@@ -58,13 +64,13 @@ private:
     int              retx_tcp_sock;
     pthread_t        recv_thread;
     pthread_t        retx_thread;
-    fd_set           read_sock_set;
+    fd_set           read_sock_set; /*!< a set of sockets to be read */
     struct sockaddr_in  mcastgroup;
-    VcmtpHeader      vcmtpHeader;      /* store header for each vcmtp packet */
-    BOPMsg           BOPmsg;
-    ReceivingApplicationNotifier* notifier;
-    void*            prodptr;          // void pointer obtained from receiving application indicating where to save the incoming data
-    struct ip_mreq   mreq;
+    VcmtpHeader      vcmtpHeader;   /*!< temporary header buffer for each vcmtp packet */
+    BOPMsg           BOPmsg;        /*!< begin of product struct */
+    ReceivingApplicationNotifier* notifier; /*!< callback function of the receiving application */
+    void*            prodptr;       /*!< pointer to a start point in product queue */
+    struct ip_mreq   mreq;          /*!< struct of multicast object */
 
     static void*  StartReceivingThread(void* ptr);
     void    StartReceivingThread();

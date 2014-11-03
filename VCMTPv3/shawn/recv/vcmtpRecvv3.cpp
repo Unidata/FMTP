@@ -1,13 +1,29 @@
-/*
+/**
  * Copyright (C) 2014 University of Virginia. All rights reserved.
- * @licence: Published under GPLv3
  *
- * @filename: vcmtpRecvv3v3.cpp
+ * @file      vcmtpRecvv3.cpp
+ * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Oct 17, 2014
  *
- * @history:
- *      Created on : Oct 17, 2014
- *      Author     : Shawn <sc7cq@virginia.edu>
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Define the entity of VCMTPv3 method function.
+ *
+ * Receiver side of VCMTPv3 protocol. It handles incoming multicast packets
+ * and issues retransmission requests to the sender side.
  */
+
 
 #include "vcmtpRecvv3.h"
 #include <stdio.h>
@@ -22,6 +38,16 @@
 #include <unistd.h>
 
 
+/**
+ * Constructs the receiver side instance (for integration with LDM).
+ *
+ * @param[in] tcpAddr       Tcp unicast address for retransmission.
+ * @param[in] tcpPort       Tcp unicast port for retransmission.
+ * @param[in] mcastAddr     Udp multicast address for receiving data products.
+ * @param[in] mcastPort     Udp multicast port for receiving data products.
+ * @param[in] notifier      Callback function to notify receiving application
+ *                          of incoming Begin-Of-Product messages.
+ */
 vcmtpRecvv3::vcmtpRecvv3(
     string                        tcpAddr,
     const unsigned short          tcpPort,
@@ -42,6 +68,15 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_thread = 0;
 }
 
+
+/**
+ * Constructs the receiver side instance (for independent tests).
+ *
+ * @param[in] tcpAddr       Tcp unicast address for retransmission.
+ * @param[in] tcpPort       Tcp unicast port for retransmission.
+ * @param[in] mcastAddr     Udp multicast address for receiving data products.
+ * @param[in] mcastPort     Udp multicast port for receiving data products.
+ */
 vcmtpRecvv3::vcmtpRecvv3(
     string                  tcpAddr,
     const unsigned short    tcpPort,
@@ -52,7 +87,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    notifier(0)
+    notifier(0)    /*!< constructor called by independent test program will
+                    set notifier to NULL */
 {
     max_sock_fd = 0;
     mcast_sock = 0;
@@ -61,16 +97,36 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_thread = 0;
 }
 
+
+/**
+ * Destructs the receiver side instance.
+ *
+ * @param[in] none
+ */
 vcmtpRecvv3::~vcmtpRecvv3()
 {
+    /** destructor should call Stop() to terminate all processes */
 }
 
+
+/**
+ * Join given multicast group (defined by mcastAddr:mcastPort) to receive
+ * multicasting products and start receiving thread to listen on the socket.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::Start()
 {
     joinGroup(mcastAddr, mcastPort);
     StartReceivingThread();
 }
 
+
+/**
+ * Stop current running threads, close all sockets and release resources.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::Stop()
 {
     // close all the sock_fd
@@ -78,6 +134,13 @@ void vcmtpRecvv3::Stop()
     // make sure all resources are released
 }
 
+
+/**
+ * Join multicast group specified by mcastAddr:mcastPort.
+ *
+ * @param[in] mcastAddr     Udp multicast address for receiving data products.
+ * @param[in] mcastPort     Udp multicast port for receiving data products.
+ */
 void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
     bzero(&mcastgroup, sizeof(mcastgroup));
@@ -88,26 +151,43 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
     if( bind(mcast_sock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup)) < 0 )
         perror("vcmtpRecvv3::joinGroup() binding socket failed.");
-    /*
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     if( setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0 )
         perror("vcmtpRecvv3::joinGroup() setsockopt failed.");
-    */
     FD_SET(mcast_sock, &read_sock_set);
 }
 
+
+/**
+ * Create a new thread to run StartReceivingThread().
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::StartReceivingThread()
 {
     pthread_create(&recv_thread, NULL, &vcmtpRecvv3::StartReceivingThread, this);
 }
 
+
+/**
+ * Run receiving thread in a newly created thread.
+ *
+ * @param[in] ptr        A pointer points to this thread itself.
+ */
 void* vcmtpRecvv3::StartReceivingThread(void* ptr)
 {
     ((vcmtpRecvv3*)ptr)->RunReceivingThread();
     return NULL;
 }
 
+
+/**
+ * Listen on both multicast thread and unicast thread to handle receiving and
+ * retransmission.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::RunReceivingThread()
 {
     fd_set  read_set;
@@ -132,6 +212,13 @@ void vcmtpRecvv3::RunReceivingThread()
     pthread_exit(0);
 }
 
+
+/**
+ * Listen on both multicast thread and unicast thread to handle receiving and
+ * retransmission. Check flag field and can corresponding handler.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::mcastMonitor()
 {
     static char packet_buffer[MAX_VCMTP_PACKET_LEN];
@@ -152,18 +239,24 @@ void vcmtpRecvv3::mcastMonitor()
     }
 }
 
+
+/**
+ * Parse BOP message and call notifier to notify receiving application.
+ *
+ * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+ */
 void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
 {
     char*    VcmtpPacketHeader = VcmtpPacket;
     char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
 
-    // every time a new BOP arrives, save the header to check following data packets
+    /** every time a new BOP arrives, save the header to check following data packets */
     memcpy(&vcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
     memcpy(&vcmtpHeader.seqnum,     VcmtpPacketHeader+4,    4);
     memcpy(&vcmtpHeader.payloadlen, VcmtpPacketHeader+8,    2);
     memcpy(&vcmtpHeader.flags,      VcmtpPacketHeader+10,   2);
 
-    // every time a new BOP arrives, save the msg to check following data packets
+    /** every time a new BOP arrives, save the msg to check following data packets */
     memcpy(&BOPmsg.prodsize,  VcmtpPacketData,   4);
     memcpy(&BOPmsg.metasize,  (VcmtpPacketData+4), 2);
     BOPmsg.metasize = ntohs(BOPmsg.metasize);
@@ -177,13 +270,9 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     BOPmsg.prodsize        = ntohl(BOPmsg.prodsize);
 
     #ifdef DEBUG
-    std::cout << "(VCMTP Header) prodindex: " << vcmtpHeader.prodindex << std::endl;
-    std::cout << "(VCMTP Header) Seq Num: " << vcmtpHeader.seqnum << std::endl;
-    std::cout << "(VCMTP Header) payloadLen: " << vcmtpHeader.payloadlen << std::endl;
-    std::cout << "(VCMTP Header) flags: " << vcmtpHeader.flags << std::endl;
-    std::cout << "(BOP) prodsize: " << BOPmsg.prodsize << std::endl;
-    std::cout << "(BOP) metasize: " << BOPmsg.metasize << std::endl;
-    // std::cout << "(BOP) metadata: " << BOPmsg.metadata << std::endl; BINARY DATA!!!
+    std::cout << "(BOP) prodindex: " << vcmtpHeader.prodindex;
+    std::cout << "    prodsize: " << BOPmsg.prodsize;
+    std::cout << "    metasize: " << BOPmsg.metasize << std::endl;
     #endif
 
     if (notifier)
@@ -191,6 +280,12 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
                                BOPmsg.metasize, &prodptr);
 }
 
+
+/**
+ * Parse data blocks, directly store and check for missing blocks.
+ *
+ * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+ */
 void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
 {
     char*        VcmtpPacketHeader = VcmtpPacket;
@@ -206,11 +301,11 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     tmpVcmtpHeader.payloadlen = ntohs(tmpVcmtpHeader.payloadlen);
     tmpVcmtpHeader.flags      = ntohs(tmpVcmtpHeader.flags);
 
-    // check for the first mem data packet
+    /** check for the first mem data packet */
     if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
        tmpVcmtpHeader.seqnum == 0)
     {
-    #ifdef DEBUG
+    #ifdef DEBUG2
         uint8_t testvar1;
         uint8_t testvar2;
         uint8_t testvar3;
@@ -230,11 +325,11 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
         vcmtpHeader.flags      = tmpVcmtpHeader.flags;
     }
-    // check for the packet sequence to detect missing packets
+    /** check for the packet sequence to detect missing packets */
     else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
     {
-    #ifdef DEBUG
+    #ifdef DEBUG2
         uint8_t testvar1;
         uint8_t testvar2;
         uint8_t testvar3;
@@ -253,9 +348,18 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
     }
+    else {
+        /** handle missing block */
+    }
 }
 
+
+/**
+ * Report a successful received EOP.
+ *
+ * @param[in] none
+ */
 void vcmtpRecvv3::EOPHandler()
 {
-    std::cout << "Mem data completely received." << std::endl;
+    std::cout << "(EOP) data-product completely received." << std::endl;
 }
