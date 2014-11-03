@@ -1,9 +1,30 @@
-/*
- *vcmtpSendv3.h
+/**
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
  *
- *  Created on: Oct 16, 2014
- *      Author: fatmaal-ali
+ * @file      vcmtpSendv3.h
+ * @author    Fatma Alali <fha6np@virginia.edu>
+ *            Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Oct 16, 2014
+ *
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Define the interfaces of VCMTPv3 sender side method function.
+ *
+ * Sender side of VCMTPv3 protocol. It multicasts packets out to multiple
+ * receivers and retransmits missing blocks to the receivers.
  */
+
 
 #ifndef VCMTPSENDV3_H_
 #define VCMTPSENDV3_H_
@@ -40,6 +61,3 @@ private:
 };
 
 #endif /* VCMTPSENDV3_H_ */
-
-
-

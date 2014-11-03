@@ -18,7 +18,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details at http://www.gnu.org/copyleft/gpl.html
  *
- * @brief     Define the entity of VCMTPv3 method function.
+ * @brief     Define the entity of VCMTPv3 receiver side method function.
  *
  * Receiver side of VCMTPv3 protocol. It handles incoming multicast packets
  * and issues retransmission requests to the sender side.

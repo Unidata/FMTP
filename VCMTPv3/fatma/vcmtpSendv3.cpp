@@ -1,109 +1,134 @@
-/*
- *vcmtpSendv3.cpp
+/**
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
  *
- *  Created on: Oct 16, 2014
- *      Author: fatmaal-ali
+ * @file      vcmtpSendv3.cpp
+ * @author    Fatma Alali <fha6np@virginia.edu>
+ *            Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Oct 16, 2014
+ *
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Define the entity of VCMTPv3 sender side method function.
+ *
+ * Sender side of VCMTPv3 protocol. It multicasts packets out to multiple
+ * receivers and retransmits missing blocks to the receivers.
  */
+
 
 #include "vcmtpSendv3.h"
 
 /**
- * This constructor should be used when sending any memory data.
+ * Construct a sender instance with prodIndex maintained by sender itself.
  *
- * @param[in] tcpAddr       TCP server address.
- * @param[in] tcpPort       TCP server port.
+ * @param[in] tcpAddr       Unicast address of the sender.
+ * @param[in] tcpPort       Unicast port of the sender.
  * @param[in] mcastAddr     Multicast group address.
  * @param[in] mcastPort     Multicast group port.
- *
  */
-vcmtpSendv3::vcmtpSendv3(
-            const char*  tcpAddr,
-            const ushort tcpPort,
-            const char*  mcastAddr,
-            const ushort mcastPort)
+vcmtpSendv3::vcmtpSendv3(const char*  tcpAddr,
+                         const ushort tcpPort,
+                         const char*  mcastAddr,
+                         const ushort mcastPort)
 {
-	udpsocket=0;
-	prodIndex=0;
-	vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
+    udpsocket=0;
+    prodIndex=0;
+    vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
 }
+
 
 /**
- * This constructor should be used when sending a stream of product.
+ * Construct a sender instance with prodIndex specified and initialized by
+ * receiving applications.
  *
- * @param[in] tcpAddr         TCP server address.
- * @param[in] tcpPort         TCP server port.
+ * @param[in] tcpAddr         Unicast address of the sender.
+ * @param[in] tcpPort         Unicast port of the sender.
  * @param[in] mcastAddr       Multicast group address.
  * @param[in] mcastPort       Multicast group port.
- * @param[in] initProdIndex   Initial product index set by the user application
- *                            to identify the first product index of the stream.
- *
+ * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
  */
-vcmtpSendv3::vcmtpSendv3(
-            const char*  tcpAddr,
-            const ushort tcpPort,
-            const char*  mcastAddr,
-            const ushort mcastPort,
-            uint32_t     initProdIndex)
+vcmtpSendv3::vcmtpSendv3(const char*  tcpAddr,
+                         const ushort tcpPort,
+                         const char*  mcastAddr,
+                         const ushort mcastPort,
+                         uint32_t     initProdIndex)
 {
-	prodIndex=initProdIndex;
-	udpsocket=new UdpSocket(mcastAddr,mcastPort);
-	// TODO: use `tcpAddr` and `tcpPort`
+    prodIndex=initProdIndex;
+    udpsocket=new UdpSocket(mcastAddr,mcastPort);
+    // TODO: use `tcpAddr` and `tcpPort`
 }
 
-vcmtpSendv3::~vcmtpSendv3() {
-	// TODO Auto-generated destructor stub
+
+/**
+ * Deconstruct the sender instance.
+ *
+ * @param[in] none
+ */
+vcmtpSendv3::~vcmtpSendv3()
+{
 }
+
+
 /**
  * Send the BOP message to the receiver.
  *
  * @param[in] prodSize       The size of the product.
- * @param[in] metadata       metadata  Application-specific metadata to be sent before the
+ * @param[in] metadata       Application-specific metadata to be sent before the
  *                           data. May be 0, in which case no metadata is sent.
- * @param[in] metaSize       Size of the metadata in bytes. Must be less than or equals
- *                           1442. May be 0, in which case no metadata is sent.
- *
+ * @param[in] metaSize       Size of the metadata in bytes. Must be less than
+ *                           or equals 1442. May be 0, in which case no metadata
+ *                           is sent.
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize)
 {
     uint16_t maxMetaSize = metaSize>AVAIL_BOP_LEN?AVAIL_BOP_LEN:metaSize;
-    //const int PACKET_SIZE = VCMTP_HEADER_LEN + maxMetaSize + 6;
 
     const int PACKET_SIZE = VCMTP_HEADER_LEN + maxMetaSize + (VCMTP_DATA_LEN - AVAIL_BOP_LEN);
-    unsigned char vcmtp_packet[PACKET_SIZE]; //create the vcmtp packet
-    VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet; //create a vcmtp header pointer that point at the beginning of the vcmtp packet
-    VcmtpBOPMessage*   vcmtp_data   = (VcmtpBOPMessage*)   (vcmtp_packet + VCMTP_HEADER_LEN); //create vcmtp data pointer that points to the location just after the header
+    unsigned char vcmtp_packet[PACKET_SIZE];
+    /** create a vcmtp header pointer that point at the beginning of the vcmtp packet */
+    VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet;
+    /** create vcmtp data pointer that points to the location just after the header */
+    VcmtpBOPMessage*   vcmtp_data   = (VcmtpBOPMessage*) (vcmtp_packet + VCMTP_HEADER_LEN);
 
-    bzero(vcmtp_packet, sizeof(vcmtp_packet)); //clear up the vcmtp packet
+    bzero(vcmtp_packet, sizeof(vcmtp_packet));
 
-    //convert the variables from native binary  to network binary representation
+    /** convert the variables from native binary to network binary representation */
     uint32_t prodindex   = htonl(prodIndex);
-    uint32_t seqNum      = htonl(0);//for BOP sequence number is always zero
+    uint32_t seqNum      = htonl(0);        /** for BOP sequence number is always zero */
     uint16_t payLen      = htons(maxMetaSize+(VCMTP_DATA_LEN - AVAIL_BOP_LEN));
     uint16_t flags       = htons(VCMTP_BOP);
     uint32_t prodsize    = htonl(prodSize);
     uint16_t maxmetasize = htons(maxMetaSize);
 
-    //create the content of the vcmtp header
-   memcpy(&vcmtp_header->prodindex,   &prodindex, 4);//fix these offset numbers
+   /** create the content of the vcmtp header */
+   memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
    memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
    memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
    memcpy(&vcmtp_header->flags,       &flags,     2);
 
-   //create the content of the BOP
+   /** create the content of the BOP */
    memcpy(&vcmtp_data->prodsize, &prodsize,             4);
    memcpy(&vcmtp_data->metasize, &maxmetasize,          2);
    memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
 
-   //send the bomd message
+   /** send the bomd message */
    if (udpsocket->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
-	   cout<<"vcmtpSendv3::SendBOPMessage::SendTo error\n";
-   //else
-	   //cout<<"vcmtpSendv3::SendBOPMessage::SendTo success\n";
-
+       cout<<"vcmtpSendv3::SendBOPMessage::SendTo error\n";
 }
 
+
 /**
- * Transfers a contiguous block of memory.
+ * Transfer a contiguous block of memory (without metadata).
  *
  * @param[in] data      Memory data to be sent.
  * @param[in] dataSize  Size of the memory data in bytes.
@@ -114,85 +139,85 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
     return sendProduct(data, dataSize, 0, 0);
 };
 
+
 /**
- * Transfers Application-specific metadata and a contiguous block of memory.
+ * Transfer Application-specified metadata and a contiguous block of memory.
  *
  * @param[in] data      Memory data to be sent.
  * @param[in] dataSize  Size of the memory data in bytes.
  * @param[in] metadata  Application-specific metadata to be sent before the
  *                      data. May be 0, in which case no metadata is sent.
  * @param[in] metaSize  Size of the metadata in bytes. Must be less than or
- *                      equal 1442 bytes. May be 0, in which case no metadata is sent.
+ *                      equal 1442 bytes. May be 0, in which case no metadata
+ *                      is sent.
  * @return              Index of the product.
  */
-uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata, unsigned metaSize)
+uint32_t vcmtpSendv3::sendProduct(void* data,
+                                  size_t dataSize,
+                                  void* metadata,
+                                  unsigned metaSize)
 {
+    SendBOPMessage(dataSize, metadata, metaSize);
+    unsigned char vcmtpHeader[VCMTP_HEADER_LEN];
+    VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader;
 
-	SendBOPMessage(dataSize, metadata, metaSize);
-	unsigned char vcmtpHeader[VCMTP_HEADER_LEN]; //create a vcmtp header
-	VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader;
+    uint32_t prodindex = htonl(prodIndex);
+    uint16_t flags     = htons(VCMTP_MEM_DATA);
+    uint16_t payLen;
+    uint32_t seqNum    = 0;
 
-	uint32_t prodindex = htonl(prodIndex); // change the name to prodIndex
-	uint16_t flags     = htons(VCMTP_MEM_DATA);
-	uint16_t payLen;
-	uint32_t seqNum    = 0; //The first data packet will always start with block seqNum =0;
+    size_t remained_size = dataSize;
+    /** check if there is more data to send */
+    while (remained_size > 0)
+    {
+        uint data_size = remained_size < VCMTP_DATA_LEN ? remained_size: VCMTP_DATA_LEN;
 
-	size_t remained_size = dataSize; //to keep track of how many bytes of the whole data remain
-	while (remained_size > 0) //check if there is more data to send
-	{
-		uint data_size = remained_size < VCMTP_DATA_LEN ? remained_size: VCMTP_DATA_LEN;
+        payLen = htons(data_size);
+        seqNum = htonl(seqNum);
 
-		payLen = htons(data_size);
-		seqNum = htonl(seqNum);
+        memcpy(&header->prodindex,  &prodindex, 4);
+        memcpy(&header->seqnum,     &seqNum,    4);
+        memcpy(&header->payloadlen, &payLen,    2);
+        memcpy(&header->flags,      &flags,     2);
 
-		memcpy(&header->prodindex,  &prodindex, 4);
-		memcpy(&header->seqnum,     &seqNum,    4);
-		memcpy(&header->payloadlen, &payLen,    2);
-		memcpy(&header->flags,      &flags,     2);
+        if (udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data,data_size) < 0)
+            cout<<"vcmtpSendv3::sendProduct::SendData() error"<<endl;
 
-		if (udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data,data_size) < 0)
-			cout<<"vcmtpSendv3::sendProduct::SendData() error"<<endl;
-		//else
-		//	cout<<"vcmtpSendv3::sendProduct::SendData() success"<<endl;
+        remained_size -= data_size;
+        /** move the data pointer to the beginning of the next block */
+        data = (char*)data + data_size;
+        seqNum += data_size;
+    }
+    sendEOPMessage();
 
-		remained_size -= data_size;
-		data = (char*)data + data_size; //move the data pointer to the beginning of the next block
-		seqNum += data_size;
-	}
-
-	sendEOPMessage();
-
-	return prodIndex++;
+    return prodIndex++;
 }
+
+
 /**
- * Send the EOP message to the receiver to identify
- * the end of a product transmission
+ * Send the EOP message to the receiver to indicate the end of a product
+ * transmission.
  *
+ * @param[in] none
  */
 void vcmtpSendv3::sendEOPMessage()
 {
     unsigned char vcmtp_packet[VCMTP_HEADER_LEN];
     VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet;
-    bzero(vcmtp_packet, sizeof(vcmtp_packet)); //clear up the vcmtp packet
+    bzero(vcmtp_packet, sizeof(vcmtp_packet));
 
-    //convert the variables from native binary  to network binary representation
     uint32_t prodindex = htonl(prodIndex);
-    uint32_t seqNum    = htonl(0); //seqNum for the EOP should always be zero
+    /** seqNum for the EOP should always be zero */
+    uint32_t seqNum    = htonl(0);
     uint16_t payLen    = htons(0);
     uint16_t flags     = htons(VCMTP_EOP);
-    //create the content of the vcmtp header
+    /** create the content of the vcmtp header */
     memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
     memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
     memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
     memcpy(&vcmtp_header->flags,       &flags,     2);
 
-	//send the eomd message
+    /** send the EOMD message */
     if (udpsocket->SendTo(vcmtp_packet,VCMTP_HEADER_LEN) < 0)
         cout<<"vcmtpSendv3::sendEOPMessage::SendTo error\n";
-    //else
-    //    cout<<"vcmtpSendv3::sendEOPMessage::SendTo success\n";
 }
-
-
-
-
