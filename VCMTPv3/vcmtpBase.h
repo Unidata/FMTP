@@ -43,10 +43,20 @@ typedef struct VcmtpPacketHeader {
     uint16_t   flags;
 } VcmtpHeader;
 
+/**
+ * struct of Vcmtp retx-request-message
+ */
+typedef struct VcmtpRetxReqMessage {
+	uint32_t startpos;
+	uint16_t length;
+}RetxReqMsg;
+
+
 const int MAX_VCMTP_PACKET_LEN = 1460;
 const int VCMTP_HEADER_LEN     = sizeof(VcmtpHeader);
 const int VCMTP_DATA_LEN       = MAX_VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 const int AVAIL_BOP_LEN        = VCMTP_DATA_LEN - 4 - 2; /*!< prosize is 4 bytes, metasize is 2 bytes */
+const int RETX_REQ_LEN         = sizeof(RetxReqMsg);
 
 /**
  * structure of Begin-Of-Product message
@@ -63,6 +73,7 @@ const uint16_t VCMTP_MEM_DATA  = 0x00000004;
 const uint16_t VCMTP_RETX_REQ  = 0x00000008;
 const uint16_t VCMTP_RETX_REJ  = 0x00000010;
 const uint16_t VCMTP_RETX_END  = 0x00000020;
+const uint16_t VCMTP_BOP_REQ   = 0x00000040;
 
 
 class vcmtpBase {
