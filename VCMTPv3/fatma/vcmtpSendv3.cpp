@@ -53,7 +53,7 @@ vcmtpSendv3::vcmtpSendv3(const char*  tcpAddr,
  *
  * @param[in] tcpAddr         Unicast address of the sender.
  * @param[in] tcpPort         Unicast port of the sender or 0, in which case one
- *                            is chosen by the operating-sytem.
+ *                            is chosen by the operating-system.
  * @param[in] mcastAddr       Multicast group address.
  * @param[in] mcastPort       Multicast group port.
  * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
