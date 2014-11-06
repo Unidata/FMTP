@@ -6,5 +6,5 @@
 
 SUBDIRS 		= recv
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= ReceivingApplicationNotifier.h
+lib_la_SOURCES		= dummy.cxx
 lib_la_LIBADD		= recv/lib.la
