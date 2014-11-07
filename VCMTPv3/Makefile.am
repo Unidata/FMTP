@@ -7,5 +7,6 @@
 EXTRA_DIST		= vcmtpBase.cpp vcmtpBase.h
 SUBDIRS 		= fatma shawn
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h
+lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h \
+			  ReceivingApplicationNotifier.h
 lib_la_LIBADD		= fatma/lib.la shawn/lib.la
