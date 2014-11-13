@@ -1,39 +1,35 @@
-/**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+/*
+ *vcmtpSendv3.h
  *
- * @file      vcmtpSendv3.h
- * @author    Fatma Alali <fha6np@virginia.edu>
- *            Shawn Chen <sc7cq@virginia.edu>
- * @version   1.0
- * @date      Oct 16, 2014
- *
- * @section   LICENSE
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or（at your option）
- * any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details at http://www.gnu.org/copyleft/gpl.html
- *
- * @brief     Define the interfaces of VCMTPv3 sender side method function.
- *
- * Sender side of VCMTPv3 protocol. It multicasts packets out to multiple
- * receivers and retransmits missing blocks to the receivers.
+ *  Created on: Oct 16, 2014
+ *      Author: fatmaal-ali
  */
-
 
 #ifndef VCMTPSENDV3_H_
 #define VCMTPSENDV3_H_
 
 
 #include <sys/types.h>
-#include"UdpSocket.h"
-#include"vcmtpBase.h"
+#include "UdpSocket.h"
+#include "TcpSocket.h"
+#include "ProductInfo.h"
+#include "vcmtpBase.h"
+#include <pthread.h>
+#include <map>
+
+typedef struct prodInfo {
+    uint32_t   prodindex;
+    uint32_t   prodsize;
+    void* 	   dataptr;
+    uint16_t   metasize;
+    char       metadata[AVAIL_BOP_LEN];
+    pthread_mutex_t numReceivLock;
+    int        numOfReceivers;
+
+} prodinfo;
+
 class vcmtpSendv3 {
+friend class TcpSocket;
 public:
     vcmtpSendv3(
             const char*  tcpAddr,
@@ -48,16 +44,33 @@ public:
             uint32_t     initProdIndex);
 
     ~vcmtpSendv3();
+
     uint32_t sendProduct(void* data, size_t dataSize);
     uint32_t sendProduct(void* data, size_t dataSize, void* metadata,
             unsigned metaSize);
+	ushort getTcpPort();
+
 
 private:
     uint32_t prodIndex;
     UdpSocket* udpsocket;
+    TcpSocket* tcpsocket;
+    //prodInfo* product;
+    ProductInfo* product;
+    //map<uint32_t , prodInfo> productList; //map the prodIndex requested by the receiver through tcp connection to the productInfo
+    map<uint32_t , ProductInfo> productList;
+    //TODO find a better name for this list
+    map<uint32_t , int> prodEndRetxList; //map roductIndex to a counter of the number of receivers for this specific prodIndex
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
+    static void RunRetransThread(int sock);
+
+	pthread_mutex_t prod_list_mutex;
+
 
 };
 
 #endif /* VCMTPSENDV3_H_ */
+
+
+

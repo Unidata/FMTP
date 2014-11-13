@@ -1,5 +1,5 @@
 /*
-*UdpSocket.h
+ * UdpSocket.h
  *
  *  Created on: Oct 16, 2014
  *      Author: fatmaal-ali
@@ -28,10 +28,9 @@ public:
 
 private:
 	int sock_fd;
-	struct sockaddr_in recv_addr;
+	struct sockaddr_in mcast_addr;
 };
 
 
 
 #endif /* UDPSOCKET_H_ */
-

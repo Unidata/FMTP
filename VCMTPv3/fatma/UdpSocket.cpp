@@ -1,5 +1,5 @@
 /*
-*UdpSocket.cpp
+ * UdpSocket.cpp
  *
  *  Created on: Oct 16, 2014
  *      Author: fatmaal-ali
@@ -10,24 +10,24 @@
 /**
  * Set the IP address and port of the receiver and connect to the upd socket.
  *
- * @param[in] recvAddr     IP address of the receiver.
+ * @param[in] mcastAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
  */
-UdpSocket::UdpSocket(const char* recvAddr,ushort port) {
+UdpSocket::UdpSocket(const char* mcastAddr,ushort port) {
 	// create a UDP datagram socket.
 	if ( (sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		cout<<"UdpSocket::UdpSocket error";
 	}
-	// clear struct recv_addr.
-	bzero(&recv_addr, sizeof(recv_addr));
+	// clear struct mcastAddr.
+	bzero(&mcast_addr, sizeof(mcast_addr));
 	// set connection type to IPv4
-	recv_addr.sin_family = AF_INET;
+	mcast_addr.sin_family = AF_INET;
 	//set the address to the receiver address passed to the constructor
-	recv_addr.sin_addr.s_addr =inet_addr(recvAddr);
+	mcast_addr.sin_addr.s_addr =inet_addr(mcastAddr);
 	//set the port number to the port number passed to the constructor
-	recv_addr.sin_port = htons(port);
+	mcast_addr.sin_port = htons(port);
 
-	connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
+	connect(sock_fd,(struct sockaddr *) &mcast_addr, sizeof(mcast_addr));
 
 }
 
@@ -37,7 +37,7 @@ UdpSocket::~UdpSocket() {
 
 ssize_t UdpSocket::SendTo(const void* buff, size_t len)
 {
-	return sendto(sock_fd, buff, len, 0, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
+	return sendto(sock_fd, buff, len, 0, (struct sockaddr *) &mcast_addr, sizeof(mcast_addr));
 }
 
 size_t UdpSocket::SendData( void*  header, const size_t headerLen,  void*  data, const size_t dataLen)
@@ -50,5 +50,4 @@ size_t UdpSocket::SendData( void*  header, const size_t headerLen,  void*  data,
 
     return writev(sock_fd, iov, 2);
 }
-
 
