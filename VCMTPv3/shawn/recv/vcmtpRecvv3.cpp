@@ -105,6 +105,7 @@ vcmtpRecvv3::vcmtpRecvv3(
  */
 vcmtpRecvv3::~vcmtpRecvv3()
 {
+    /** destructor should call Stop() to terminate all processes */
     Stop();
 }
 
