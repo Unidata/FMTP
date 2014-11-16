@@ -26,9 +26,6 @@ UdpSocket::UdpSocket(const char* recvAddr,ushort port) {
 	recv_addr.sin_addr.s_addr =inet_addr(recvAddr);
 	//set the port number to the port number passed to the constructor
 	recv_addr.sin_port = htons(port);
-
-	connect(sock_fd,(struct sockaddr *) &recv_addr, sizeof(recv_addr));
-
 }
 
 UdpSocket::~UdpSocket() {
