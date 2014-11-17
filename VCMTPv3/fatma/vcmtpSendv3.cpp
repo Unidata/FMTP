@@ -36,13 +36,13 @@
  * @param[in] mcastAddr     Multicast group address.
  * @param[in] mcastPort     Multicast group port.
  */
-vcmtpSendv3::vcmtpSendv3(const char*  tcpAddr,
-                         const ushort tcpPort,
-                         const char*  mcastAddr,
-                         const ushort mcastPort)
+vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
+                         const unsigned short tcpPort,
+                         const char*          mcastAddr,
+                         const unsigned short mcastPort)
 {
-    udpsocket=0;
-    prodIndex=0;
+    udpsocket = 0;
+    prodIndex = 0;
     vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
 }
 
@@ -58,15 +58,15 @@ vcmtpSendv3::vcmtpSendv3(const char*  tcpAddr,
  * @param[in] mcastPort       Multicast group port.
  * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
  */
-vcmtpSendv3::vcmtpSendv3(const char*  tcpAddr,
-                         const ushort tcpPort,
-                         const char*  mcastAddr,
-                         const ushort mcastPort,
-                         uint32_t     initProdIndex)
+vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
+                         const unsigned short tcpPort,
+                         const char*          mcastAddr,
+                         const unsigned short mcastPort,
+                         uint32_t             initProdIndex)
 {
-    prodIndex=initProdIndex;
-    udpsocket=new UdpSocket(mcastAddr,mcastPort);
-    // TODO: use `tcpAddr` and `tcpPort`
+    prodIndex = initProdIndex;
+    udpsocket = new UdpSocket(mcastAddr,mcastPort);
+    tcpsend   = new TcpSend(tcpAddr, tcpPort);
 }
 
 
@@ -221,4 +221,10 @@ void vcmtpSendv3::sendEOPMessage()
     /** send the EOMD message */
     if (udpsocket->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
         cout << "vcmtpSendv3::sendEOPMessage::SendTo error" << endl;
+}
+
+
+void vcmtpSendv3::acceptConn()
+{
+    tcpsend->acceptConn();
 }

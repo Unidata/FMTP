@@ -32,29 +32,34 @@
 
 #include <sys/types.h>
 #include "UdpSocket.h"
+#include "TcpSend.h"
 #include "vcmtpBase.h"
+
+
 class vcmtpSendv3 {
 public:
     vcmtpSendv3(
-            const char*  tcpAddr,
-            const ushort tcpPort,
-            const char*  mcastAddr,
-            const ushort mcastPort);
+            const char*          tcpAddr,
+            const unsigned short tcpPort,
+            const char*          mcastAddr,
+            const unsigned short mcastPort);
     vcmtpSendv3(
-            const char*  tcpAddr,
-            const ushort tcpPort,
-            const char*  mcastAddr,
-            const ushort mcastPort,
-            uint32_t     initProdIndex);
+            const char*          tcpAddr,
+            const unsigned short tcpPort,
+            const char*          mcastAddr,
+            const unsigned short mcastPort,
+            uint32_t             initProdIndex);
 
     ~vcmtpSendv3();
     uint32_t sendProduct(char* data, size_t dataSize);
     uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
-            unsigned metaSize);
+                         unsigned metaSize);
+    void acceptConn();
 
 private:
     uint32_t prodIndex;
     UdpSocket* udpsocket;
+    TcpSend*   tcpsend;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
 

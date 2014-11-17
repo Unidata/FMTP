@@ -1,15 +1,15 @@
-#ifndef TCPSOCKET_H_
-#define TCPSOCKET_H_
+#ifndef TCPSEND_H_
+#define TCPSEND_H_
 
 #include <string>
 
 using namespace std;
 
-class TcpSocket
+class TcpSend
 {
     public:
-        TcpSocket(string tcpAddr, unsigned short tcpPort);
-        ~TcpSocket();
+        TcpSend(string tcpAddr, unsigned short tcpPort);
+        ~TcpSend();
         void acceptConn();
     private:
         int sockfd;
@@ -17,4 +17,4 @@ class TcpSocket
         struct sockaddr_in servAddr;
 };
 
-#endif /* TCPSOCKET_H_ */
+#endif /* TCPSEND_H_ */
