@@ -13,23 +13,24 @@
 int main()
 {
 	char data[]="ldm checksum";
-	void* metadata=data;
+	char* metadata = data;
 	unsigned int metaSize=sizeof(data);
 
 	vcmtpSendv3* sender;
 	sender= new vcmtpSendv3("127.0.0.1",1234,"128.143.137.117",5173,0);
+	//sender= new vcmtpSendv3("127.0.0.1",1234,"127.0.0.1",5173,0);
 	char *filename = "TESTDATA";
 	int fd;
 	fd = open(filename,O_RDONLY);
 	if(fd>0)
 	{
-		void* data;
+		char* data;
 		data = (char*) mmap(0, 2856, PROT_READ, MAP_FILE | MAP_SHARED, fd,0);
 		if (data == MAP_FAILED)
 			cout<<"file map failed"<<endl;
 
 		//	while(1){
-		sender->sendProduct(data,2856, metadata,metaSize);
+		sender->sendProduct(data, 2856, metadata, metaSize);
 		//	sleep(1);
 		//	}
 

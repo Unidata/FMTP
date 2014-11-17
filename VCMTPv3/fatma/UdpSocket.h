@@ -11,7 +11,7 @@
 
 #include "vcmtpBase.h"
 #include <sys/socket.h>
-#include<iostream>
+#include <iostream>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/uio.h>
@@ -21,10 +21,10 @@ using namespace std;
 
 class UdpSocket {
 public:
-	UdpSocket(const char* recvAddr,ushort port);
-	virtual ~UdpSocket();
+	UdpSocket(const char* recvAddr,unsigned short port);
+	~UdpSocket();
 	ssize_t SendTo(const void* buff, size_t len);
-	size_t SendData( void*  header,const size_t headerLen,  void*  data, const size_t dataLen);
+	size_t SendData(char* header, const size_t headerLen, char* data, const size_t dataLen);
 
 private:
 	int sock_fd;

@@ -31,8 +31,8 @@
 
 
 #include <sys/types.h>
-#include"UdpSocket.h"
-#include"vcmtpBase.h"
+#include "UdpSocket.h"
+#include "vcmtpBase.h"
 class vcmtpSendv3 {
 public:
     vcmtpSendv3(
@@ -48,8 +48,8 @@ public:
             uint32_t     initProdIndex);
 
     ~vcmtpSendv3();
-    uint32_t sendProduct(void* data, size_t dataSize);
-    uint32_t sendProduct(void* data, size_t dataSize, void* metadata,
+    uint32_t sendProduct(char* data, size_t dataSize);
+    uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
             unsigned metaSize);
 
 private:

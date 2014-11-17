@@ -13,7 +13,7 @@
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
  */
-UdpSocket::UdpSocket(const char* recvAddr,ushort port) {
+UdpSocket::UdpSocket(const char* recvAddr,unsigned short port) {
 	// create a UDP datagram socket.
 	if ( (sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		cout<<"UdpSocket::UdpSocket error";
@@ -37,15 +37,20 @@ ssize_t UdpSocket::SendTo(const void* buff, size_t len)
 	return sendto(sock_fd, buff, len, 0, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
 
-size_t UdpSocket::SendData( void*  header, const size_t headerLen,  void*  data, const size_t dataLen)
+size_t UdpSocket::SendData(char* header, const size_t headerLen, char* data, const size_t dataLen)
 {
-	struct iovec iov[2];//vector including the two memory locations
+    int ret;
+    struct iovec iov[2];//vector including the two memory locations
     iov[0].iov_base = header;
     iov[0].iov_len  = headerLen;
     iov[1].iov_base = data;
     iov[1].iov_len  = dataLen;
 
-    return writev(sock_fd, iov, 2);
+    //connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
+
+    ret = writev(sock_fd, iov, 2);
+    std::cout << ret << std::endl;
+    return ret;
 }
 
 
