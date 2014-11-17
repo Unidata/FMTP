@@ -4,8 +4,8 @@ LIB =
 ELFFILE = vcmtpRecvv3
 DEBUG_FLAG = DEBUG
 
-$(ELFFILE): main.cpp vcmtpRecvv3.cpp
-	$(CC) -D$(DEBUG_FLAG) -I$(INCLUDE) -pthread -o $(ELFFILE) main.cpp vcmtpRecvv3.cpp
+$(ELFFILE): main.cpp TcpRecv.cpp vcmtpRecvv3.cpp
+	$(CC) -D$(DEBUG_FLAG) -I$(INCLUDE) -pthread -o $(ELFFILE) main.cpp TcpRecv.cpp vcmtpRecvv3.cpp
 
 .PHONY : clean
 clean:

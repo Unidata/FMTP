@@ -119,6 +119,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
 void vcmtpRecvv3::Start()
 {
     joinGroup(mcastAddr, mcastPort);
+    tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartReceivingThread();
 }
 
@@ -363,4 +364,10 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
 void vcmtpRecvv3::EOPHandler()
 {
     std::cout << "(EOP) data-product completely received." << std::endl;
+}
+
+
+void vcmtpRecvv3::sendRetxReq()
+{
+    tcprecv->sendData();
 }

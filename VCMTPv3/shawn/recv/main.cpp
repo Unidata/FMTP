@@ -4,12 +4,13 @@
 
 int main(int argc, char* argv[])
 {
-    string tcpAddr                 = "127.0.0.1";
-    const unsigned short tcpPort   = 5000;
+    string tcpAddr                 = "128.143.137.117";
+    const unsigned short tcpPort   = 1234;
     string mcastAddr               = "233.0.225.123";
     const unsigned short mcastPort = 5173;
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecvv3.Start();
+    vcmtpRecvv3.sendRetxReq();
     while(1);
 }

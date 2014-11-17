@@ -35,6 +35,7 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include "TcpRecv.h"
 
 using namespace std;
 
@@ -53,6 +54,7 @@ public:
 
     void    Start();
     void    Stop();
+    void    sendRetxReq();
 
 private:
     string           tcpAddr;
@@ -71,6 +73,7 @@ private:
     ReceivingApplicationNotifier* notifier; /*!< callback function of the receiving application */
     void*            prodptr;       /*!< pointer to a start point in product queue */
     struct ip_mreq   mreq;          /*!< struct of multicast object */
+    TcpRecv*          tcprecv;
 
     static void*  StartReceivingThread(void* ptr);
     void    StartReceivingThread();
