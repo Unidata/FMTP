@@ -14,17 +14,17 @@
  * @param[in] port         Port number of the receiver.
  */
 UdpSocket::UdpSocket(const char* recvAddr, unsigned short port) {
-    // create a UDP datagram socket.
-    if ( (sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    /** create a UDP datagram socket. */
+    if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         cout<<"UdpSocket::UdpSocket error";
     }
-    // clear struct recv_addr.
+    /** clear struct recv_addr. */
     bzero(&recv_addr, sizeof(recv_addr));
-    // set connection type to IPv4
+    /** set connection type to IPv4 */
     recv_addr.sin_family = AF_INET;
-    //set the address to the receiver address passed to the constructor
+    /** set the address to the receiver address passed to the constructor */
     recv_addr.sin_addr.s_addr =inet_addr(recvAddr);
-    //set the port number to the port number passed to the constructor
+    /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(port);
     connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
@@ -41,7 +41,8 @@ ssize_t UdpSocket::SendTo(const void* buff, size_t len)
 ssize_t UdpSocket::SendData(char* header, const size_t headerLen, char* data, const size_t dataLen)
 {
     int ret;
-    struct iovec iov[2];//vector including the two memory locations
+    /** vector including the two memory locations */
+    struct iovec iov[2];
     iov[0].iov_base = header;
     iov[0].iov_len  = headerLen;
     iov[1].iov_base = data;
@@ -51,5 +52,3 @@ ssize_t UdpSocket::SendData(char* header, const size_t headerLen, char* data, co
     ret = writev(sock_fd, iov, 2);
     return ret;
 }
-
-

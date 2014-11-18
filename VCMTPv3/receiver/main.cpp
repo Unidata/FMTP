@@ -4,7 +4,7 @@
 
 int main(int argc, char* argv[])
 {
-    string tcpAddr                 = "128.143.137.117";
+    string tcpAddr                 = "172.25.99.89";
     const unsigned short tcpPort   = 1234;
     string mcastAddr               = "233.0.225.123";
     const unsigned short mcastPort = 5173;

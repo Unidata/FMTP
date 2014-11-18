@@ -73,7 +73,7 @@ private:
     ReceivingApplicationNotifier* notifier; /*!< callback function of the receiving application */
     void*            prodptr;       /*!< pointer to a start point in product queue */
     struct ip_mreq   mreq;          /*!< struct of multicast object */
-    TcpRecv*          tcprecv;
+    TcpRecv*         tcprecv;
 
     static void*  StartReceivingThread(void* ptr);
     void    StartReceivingThread();
