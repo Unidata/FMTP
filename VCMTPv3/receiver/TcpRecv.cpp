@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <strings.h>
 #include <unistd.h>
+#include <sys/uio.h>
 #include "TcpRecv.h"
 
 using namespace std;
@@ -26,10 +27,14 @@ TcpRecv::~TcpRecv()
     close(sockfd);
 }
 
-void TcpRecv::sendData()
+ssize_t TcpRecv::sendData(char* header, size_t headLen, char* payload, size_t payLen)
 {
-    char buffer[256] = "hello world";
-    int n = write(sockfd, buffer, sizeof(buffer));
-    if(n < 0)
-        std::cout << "TcpRecv::sendRetxReq() error writing socket" << std::endl;
+    struct iovec iov[2];
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headLen;
+    iov[1].iov_base = payload;
+    iov[1].iov_len  = payLen;
+
+    int retval = writev(sockfd, iov, 2);
+    return retval;
 }

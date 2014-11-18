@@ -21,14 +21,14 @@ using namespace std;
 
 class UdpSocket {
 public:
-	UdpSocket(const char* recvAddr,unsigned short port);
-	~UdpSocket();
-	ssize_t SendTo(const void* buff, size_t len);
-	size_t SendData(char* header, const size_t headerLen, char* data, const size_t dataLen);
+    UdpSocket(const char* recvAddr,unsigned short port);
+    ~UdpSocket();
+    ssize_t SendTo(const void* buff, size_t len);
+    ssize_t SendData(char* header, const size_t headerLen, char* data, const size_t dataLen);
 
 private:
-	int sock_fd;
-	struct sockaddr_in recv_addr;
+    int sock_fd;
+    struct sockaddr_in recv_addr;
 };
 
 

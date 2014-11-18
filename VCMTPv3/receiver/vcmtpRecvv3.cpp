@@ -369,5 +369,7 @@ void vcmtpRecvv3::EOPHandler()
 
 void vcmtpRecvv3::sendRetxReq()
 {
-    tcprecv->sendData();
+    char buf[100] = "hello world!";
+    char buf2[100] = "this is rivanna";
+    tcprecv->sendData(buf, sizeof(buf), buf2, sizeof(buf2));
 }
