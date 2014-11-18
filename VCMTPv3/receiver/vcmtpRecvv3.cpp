@@ -153,10 +153,12 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
     if( bind(mcast_sock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup)) < 0 )
         perror("vcmtpRecvv3::joinGroup() binding socket failed.");
+    /*
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     if( setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0 )
         perror("vcmtpRecvv3::joinGroup() setsockopt failed.");
+    */
     FD_SET(mcast_sock, &read_sock_set);
 }
 
@@ -277,9 +279,9 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     std::cout << "    metasize: " << BOPmsg.metasize << std::endl;
     #endif
 
-    if (notifier)
+    if(notifier)
         notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
-                               BOPmsg.metasize, &prodptr);
+                                BOPmsg.metasize, &prodptr);
 }
 
 
@@ -307,22 +309,6 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
        tmpVcmtpHeader.seqnum == 0)
     {
-    #ifdef DEBUG2
-        uint8_t testvar1;
-        uint8_t testvar2;
-        uint8_t testvar3;
-        uint8_t testvar4;
-        memcpy(&testvar1, VcmtpPacketData, 1);
-        memcpy(&testvar2, VcmtpPacketData+1, 1);
-        memcpy(&testvar3, VcmtpPacketData+2, 1);
-        memcpy(&testvar4, VcmtpPacketData+3, 1);
-        printf("%x ", testvar1);
-        printf("%x ", testvar2);
-        printf("%x ", testvar3);
-        printf("%x ", testvar4);
-        printf("...\n");
-    #endif
-
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
         vcmtpHeader.flags      = tmpVcmtpHeader.flags;
@@ -331,22 +317,6 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpVcmtpHeader.seqnum)
     {
-    #ifdef DEBUG2
-        uint8_t testvar1;
-        uint8_t testvar2;
-        uint8_t testvar3;
-        uint8_t testvar4;
-        memcpy(&testvar1, VcmtpPacketData, 1);
-        memcpy(&testvar2, VcmtpPacketData+1, 1);
-        memcpy(&testvar3, VcmtpPacketData+2, 1);
-        memcpy(&testvar4, VcmtpPacketData+3, 1);
-        printf("%x ", testvar1);
-        printf("%x ", testvar2);
-        printf("%x ", testvar3);
-        printf("%x ", testvar4);
-        printf("...\n");
-    #endif
-
         vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
         vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
     }
@@ -367,9 +337,20 @@ void vcmtpRecvv3::EOPHandler()
 }
 
 
-void vcmtpRecvv3::sendRetxReq()
+void vcmtpRecvv3::sendRetxEnd()
 {
-    char buf[100] = "hello world!";
-    char buf2[100] = "this is rivanna";
-    tcprecv->sendData(buf, sizeof(buf), buf2, sizeof(buf2));
+    char pktBuf[VCMTP_HEADER_LEN];
+    bzero(pktBuf, sizeof(pktBuf));
+
+    uint32_t prodindex = htonl(vcmtpHeader.prodindex);
+    uint32_t seqNum    = htonl(0);
+    uint16_t payLen    = htons(0);
+    uint16_t flags     = htons(VCMTP_RETX_END);
+
+    memcpy(pktBuf,    &prodindex, 4);
+    memcpy(pktBuf+4,  &seqNum,    4);
+    memcpy(pktBuf+8,  &payLen,    2);
+    memcpy(pktBuf+10, &flags,     2);
+
+    tcprecv->sendData(pktBuf, sizeof(pktBuf), NULL, 0);
 }

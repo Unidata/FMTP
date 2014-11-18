@@ -54,7 +54,7 @@ public:
 
     void    Start();
     void    Stop();
-    void    sendRetxReq();
+    void    sendRetxEnd();
 
 private:
     string           tcpAddr;
