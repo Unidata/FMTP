@@ -55,6 +55,7 @@ public:
     uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
                          unsigned metaSize);
     void acceptConn();
+    void readSock();
 
 private:
     uint32_t prodIndex;
@@ -62,7 +63,6 @@ private:
     TcpSend*   tcpsend;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
-
 };
 
 #endif /* VCMTPSENDV3_H_ */

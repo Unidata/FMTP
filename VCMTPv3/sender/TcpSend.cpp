@@ -4,7 +4,9 @@
 #include <strings.h>
 #include <iostream>
 #include <unistd.h>
+#include <stdio.h>
 #include "TcpSend.h"
+#include "vcmtpBase.h"
 
 using namespace std;
 
@@ -23,6 +25,7 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
     listen(sockfd, 5);
 }
 
+
 TcpSend::~TcpSend()
 {
     // need modified here to close all sockets
@@ -30,17 +33,19 @@ TcpSend::~TcpSend()
     close(sockfd);
 }
 
+
 void TcpSend::acceptConn()
 {
-    char buffer[256];
-    bzero(buffer,256);
-
     struct sockaddr_in cliAddr;
     socklen_t clilen = sizeof(cliAddr);
     newsockfd = accept(sockfd, (struct sockaddr *) &cliAddr, &clilen);
     if(newsockfd < 0)
         std::cout << "TcpSend::accept() error accepting new connection" << std::endl;
+}
 
-    int n = read(newsockfd, buffer, 255);
-    std::cout << "Received msg: " << buffer << std::endl;
+
+void TcpSend::readSock(char* pktBuf)
+{
+    if(read(newsockfd, pktBuf, VCMTP_HEADER_LEN) < 0)
+        perror("TcpSend::readSock() error reading from socket");
 }

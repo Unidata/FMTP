@@ -17,7 +17,8 @@ int main()
 	unsigned int metaSize=sizeof(data);
 
 	vcmtpSendv3* sender;
-	sender = new vcmtpSendv3("0.0.0.0", 1234, "233.0.225.123", 5173, 0);
+	//sender = new vcmtpSendv3("0.0.0.0", 1234, "233.0.225.123", 5173, 0);
+	sender = new vcmtpSendv3("0.0.0.0", 1234, "172.25.99.89", 5173, 0);
 	char *filename = "TESTDATA";
 	int fd;
 	fd = open(filename,O_RDONLY);
@@ -28,11 +29,9 @@ int main()
 		if (data == MAP_FAILED)
 			cout<<"file map failed"<<endl;
 
-		//	while(1){
-		sender->sendProduct(data, 2856, metadata, metaSize);
         sender->acceptConn();
-		//	sleep(1);
-		//	}
+		sender->sendProduct(data, 2856, metadata, metaSize);
+        sender->readSock();
 
 		munmap(data, 2856);
 		close(fd);

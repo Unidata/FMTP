@@ -27,6 +27,7 @@
 
 
 #include "vcmtpSendv3.h"
+#include <stdio.h>
 
 /**
  * Construct a sender instance with prodIndex maintained by sender itself.
@@ -124,7 +125,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
 
    /** send the bomd message */
    if (udpsocket->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
-       cout<<"vcmtpSendv3::SendBOPMessage::SendTo error\n";
+       perror("vcmtpSendv3::SendBOPMessage::SendTo error");
 }
 
 
@@ -138,7 +139,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned met
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
 {
     return sendProduct(data, dataSize, 0, 0);
-};
+}
 
 
 /**
@@ -182,7 +183,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
         memcpy(&header->flags,      &flags,     2);
 
         if(udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size) < 0)
-            cout << "vcmtpSendv3::sendProduct::SendData() error" << endl;
+            perror("vcmtpSendv3::sendProduct::SendData() error");
 
         remained_size -= data_size;
         /** move the data pointer to the beginning of the next block */
@@ -220,11 +221,26 @@ void vcmtpSendv3::sendEOPMessage()
 
     /** send the EOMD message */
     if (udpsocket->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
-        cout << "vcmtpSendv3::sendEOPMessage::SendTo error" << endl;
+        perror("vcmtpSendv3::sendEOPMessage::SendTo error");
 }
 
 
 void vcmtpSendv3::acceptConn()
 {
     tcpsend->acceptConn();
+}
+
+
+void vcmtpSendv3::readSock()
+{
+    char pktBuf[VCMTP_HEADER_LEN];
+    bzero(pktBuf, sizeof(pktBuf));
+    uint16_t flags;
+
+    tcpsend->readSock(pktBuf);
+
+    memcpy(&flags, pktBuf+10, 2);
+    flags = ntohs(flags);
+    if(flags & VCMTP_RETX_END)
+        std::cout << "Received Flag: VCMTP_RETX_END" << std::endl;
 }

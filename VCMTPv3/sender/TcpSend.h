@@ -11,6 +11,7 @@ class TcpSend
         TcpSend(string tcpAddr, unsigned short tcpPort);
         ~TcpSend();
         void acceptConn();
+        void readSock(char* pktBuf);
     private:
         int sockfd;
         int newsockfd;
