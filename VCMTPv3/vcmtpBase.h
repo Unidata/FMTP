@@ -47,9 +47,9 @@ typedef struct VcmtpPacketHeader {
  * struct of Vcmtp retx-request-message
  */
 typedef struct VcmtpRetxReqMessage {
-	uint32_t startpos;
-	uint16_t length;
-}RetxReqMsg;
+    uint32_t startpos;
+    uint16_t length;
+} RetxReqMsg;
 
 
 const int MAX_VCMTP_PACKET_LEN = 1460;
