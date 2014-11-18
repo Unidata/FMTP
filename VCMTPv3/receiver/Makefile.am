@@ -1,10 +1,12 @@
-# Copyright 2014 University Corporation for Atmospheric Research. All rights
-# reserved. See the file COPYRIGHT in the top-level source-directory of this
-# package for copying and redistribution conditions.
+# Copyright 2014 University Corporation for Atmospheric Research
+#
+# This file is part of the Unidata LDM package.  See the file COPYRIGHT in
+# the top-level source-directory of the package for copying and redistribution
+# conditions.
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= recv
+EXTRA_DIST		= main.cpp Makefile_recv
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= dummy.cxx
-lib_la_LIBADD		= recv/lib.la
+lib_la_SOURCES		= vcmtpRecvv3.cpp vcmtpRecvv3.h
+lib_la_CPPFLAGS		= -I$(srcdir)/.. -I$(srcdir)/../..
