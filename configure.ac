@@ -87,9 +87,8 @@ AM_COND_IF([HAVE_OPMOCK],
 AC_CONFIG_FILES([
     Makefile
     VCMTPv3/Makefile
-    VCMTPv3/fatma/Makefile
-    VCMTPv3/shawn/Makefile
-    VCMTPv3/shawn/recv/Makefile
+    VCMTPv3/receiver/Makefile
+    VCMTPv3/sender/Makefile
 ])
 
 AC_OUTPUT

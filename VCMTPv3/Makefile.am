@@ -5,8 +5,8 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 EXTRA_DIST		= vcmtpBase.cpp vcmtpBase.h
-SUBDIRS 		= fatma shawn
+SUBDIRS 		= receiver sender
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h \
 			  ReceivingApplicationNotifier.h
-lib_la_LIBADD		= fatma/lib.la shawn/lib.la
+lib_la_LIBADD		= receiver/lib.la sender/lib.la
