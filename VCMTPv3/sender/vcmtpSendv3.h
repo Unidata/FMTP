@@ -56,6 +56,7 @@ public:
                          unsigned metaSize);
     void acceptConn();
     void readSock();
+    int getTcpPortNum();
 
 private:
     uint32_t prodIndex;

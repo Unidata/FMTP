@@ -8,10 +8,11 @@ using namespace std;
 class TcpSend
 {
     public:
-        TcpSend(string tcpAddr, unsigned short tcpPort);
+        TcpSend(string tcpAddr, unsigned short tcpPort = 0);
         ~TcpSend();
         void acceptConn();
         void readSock(char* pktBuf);
+        int getPortNum();
     private:
         int sockfd;
         int newsockfd;
