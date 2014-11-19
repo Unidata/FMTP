@@ -244,3 +244,14 @@ void vcmtpSendv3::readSock()
     if(flags & VCMTP_RETX_END)
         std::cout << "Received Flag: VCMTP_RETX_END" << std::endl;
 }
+
+/**
+ * Return the local port number.
+ *
+ * @retval -1	Error getting port number. perror() is called.
+ * @return 		the local port number in host order.
+ */
+int vcmtpSendv3::getTcpPortNum()
+{
+	return tcpsend->getPortNum();
+}

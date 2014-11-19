@@ -19,3 +19,5 @@ Makefile.in
 tags
 .DS_Store
 Makefile
+.project
+.cproject
