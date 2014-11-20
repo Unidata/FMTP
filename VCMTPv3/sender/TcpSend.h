@@ -12,7 +12,7 @@ class TcpSend
         ~TcpSend();
         void acceptConn();
         void readSock(char* pktBuf);
-        int getPortNum();
+        unsigned short getPortNum();
     private:
         int sockfd;
         int newsockfd;

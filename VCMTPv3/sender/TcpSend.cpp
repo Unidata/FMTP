@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -5,6 +6,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <stdio.h>
+#include <system_error>
 #include "TcpSend.h"
 #include "vcmtpBase.h"
 
@@ -65,17 +67,17 @@ void TcpSend::readSock(char* pktBuf)
 /**
  * Return the local port number.
  *
- * @retval -1	Error getting port number. perror() is called.
- * @return 		the local port number in host order.
+ * @return 	              The local port number in host byte-order.
+ * @throws std::system_error  The port number cannot be obtained.
  */
-int TcpSend::getPortNum()
+unsigned short TcpSend::getPortNum()
 {
-	struct sockaddr_in tmpAddr;
-	socklen_t tmpAddrLen = sizeof(tmpAddr);
-	int stat = getsockname(sockfd, (struct sockaddr *) &tmpAddr, &tmpAddrLen);
-	if(stat < 0) {
-		perror("TcpSend::getPortNum() error getting port number");
-		return -1;
-	}
-	return ntohs(tmpAddr.sin_port);
+    struct sockaddr_in tmpAddr;
+    socklen_t          tmpAddrLen = sizeof(tmpAddr);
+
+    if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
+        throw std::system_error(errno, system_category(),
+                "TcpSend::getPortNum() error getting port number");
+
+    return ntohs(tmpAddr.sin_port);
 }

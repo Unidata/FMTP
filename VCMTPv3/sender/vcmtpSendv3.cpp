@@ -248,10 +248,10 @@ void vcmtpSendv3::readSock()
 /**
  * Return the local port number.
  *
- * @retval -1	Error getting port number. perror() is called.
- * @return 		the local port number in host order.
+ * @return 	              The local port number in host byte-order.
+ * @throws std::system_error  The port number cannot be obtained.
  */
-int vcmtpSendv3::getTcpPortNum()
+unsigned short vcmtpSendv3::getTcpPortNum()
 {
 	return tcpsend->getPortNum();
 }
