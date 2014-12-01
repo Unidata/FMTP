@@ -34,6 +34,31 @@
 #include "UdpSocket.h"
 #include "TcpSend.h"
 #include "vcmtpBase.h"
+#include "senderMetadata.h"
+#include <map>
+#include <set>
+#include <pthread.h>
+#include <ctime>
+
+class vcmtpSendv3;
+
+/**
+ * To contain multiple types of necessary information and transfer to the
+ * StartRetxThread() as one single parameter.
+ */
+struct StartRetxThreadInfo {
+	/**
+	 * A pointer to the vcmtpSendv3 instance itself which starts the
+	 * StartNewRetxThread().
+	 */
+	vcmtpSendv3* 	retxmitterptr;
+	/** The particular retx socket this running thread is listening on */
+	int				retxsockfd;
+    /** prodindex to prodptr map.  Format: <prodindex, prodptr> */
+	map<uint32_t, void*>* retxIndexProdptrMap;
+	/** A set that includes the unique id of all timeout products */
+	set<uint32_t>* 		timeoutsetptr;
+};
 
 
 class vcmtpSendv3 {
@@ -54,16 +79,30 @@ public:
     uint32_t sendProduct(char* data, size_t dataSize);
     uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
                          unsigned metaSize);
-    void acceptConn();
-    void readSock();
+    void startCoordinator();
+    static void* coordinator(void* ptr);
+    void initRetxConn();
     unsigned short getTcpPortNum();
+    void StartNewRetxThread(int newtcpsockfd);
+    static void* StartRetxThread(void* ptr);
+    bool isTimeout(RetxMetadata* retxmeta);
 
 private:
-    uint32_t prodIndex;
-    UdpSocket* udpsocket;
-    TcpSend*   tcpsend;
+    uint32_t 	prodIndex;
+    UdpSocket* 	udpsocket;
+    TcpSend*   	tcpsend;
+    senderMetadata sendMeta; /*!< maintaining metadata for retx use. */
+    //TODO: a more precise timeout mechanism should be studied.
+    /** first: socket fd;  second: pthread_t pointer */
+	map<int, pthread_t*> retxSockThreadMap;
+    /** first: socket fd;  second: retransmission finished indicator */
+	map<int, bool>	retxSockFinishMap;
+	/** first: socket fd;  second: pointer to the corresponding retxThreadInfo struct */
+	map<int, StartRetxThreadInfo*> retxSockInfoMap;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
+    void RunRetxThread(int retxsockfd, map<uint, void*>& retxIndexProdptrMap,
+					   set<uint>& timeoutset);
 };
 
 #endif /* VCMTPSENDV3_H_ */

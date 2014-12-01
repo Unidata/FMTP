@@ -19,7 +19,7 @@ int main()
 	vcmtpSendv3* sender;
 	//sender = new vcmtpSendv3("0.0.0.0", 1234, "233.0.225.123", 5173, 0);
 	//sender = new vcmtpSendv3("0.0.0.0", 1234, "172.25.99.89", 5173, 0);
-	sender = new vcmtpSendv3("0.0.0.0", 0, "172.25.99.89", 5173, 0);
+	sender = new vcmtpSendv3("192.168.0.101", 1234, "128.143.137.117", 5173, 0);
 	char *filename = "TESTDATA";
 	int fd;
 	fd = open(filename,O_RDONLY);
@@ -30,12 +30,12 @@ int main()
 		if (data == MAP_FAILED)
 			cout<<"file map failed"<<endl;
 
-        //sender->acceptConn();
+        sender->startCoordinator();
         int portnum = sender->getTcpPortNum();
+        sleep(3);
         if(portnum > 0)
         	cout << "Port Number: " << portnum << endl;
-		//sender->sendProduct(data, 2856, metadata, metaSize);
-        //sender->readSock();
+		sender->sendProduct(data, 2856, metadata, metaSize);
         while(1);
 
 		munmap(data, 2856);

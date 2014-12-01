@@ -9,6 +9,9 @@
 #include <system_error>
 #include "TcpSend.h"
 #include "vcmtpBase.h"
+#include <sys/uio.h>
+
+#define MAX_CONNECTION 5
 
 using namespace std;
 
@@ -34,33 +37,84 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
     servAddr.sin_port = htons(tcpPort);
     if(bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
         std::cout << "TcpSend::TcpSend() error binding socket" << std::endl;
-    listen(sockfd, 5);
+    /** listen() returns right away, it's non-blocking */
+    listen(sockfd, MAX_CONNECTION);
 }
 
 
 TcpSend::~TcpSend()
 {
     // need modified here to close all sockets
-    close(newsockfd);
     close(sockfd);
 }
 
 
-void TcpSend::acceptConn()
+int TcpSend::acceptConn()
 {
     struct sockaddr_in cliAddr;
     socklen_t clilen = sizeof(cliAddr);
-    newsockfd = accept(sockfd, (struct sockaddr *) &cliAddr, &clilen);
+    int newsockfd = accept(sockfd, (struct sockaddr *) &cliAddr, &clilen);
     if(newsockfd < 0)
-        //std::cout << "TcpSend::accept() error accepting new connection" << std::endl;
+    	//TODO: should throw an error here and return right away.
         perror("TcpSend::readSock() error reading from socket");
+
+	pthread_mutex_lock(&sockListMutex);
+	connSockList.push_back(newsockfd);
+	pthread_mutex_unlock(&sockListMutex);
+
+    return newsockfd;
 }
 
 
-void TcpSend::readSock(char* pktBuf)
+const list<int>& TcpSend::getConnSockList()
 {
-    if(read(newsockfd, pktBuf, VCMTP_HEADER_LEN) < 0)
-        perror("TcpSend::readSock() error reading from socket");
+	return connSockList;
+}
+
+
+/** unnecessary function */
+int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
+{
+    return read(retxsockfd, pktBuf, bufSize);
+}
+
+
+int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
+{
+	char recvbuf[VCMTP_HEADER_LEN];
+    int retval = read(retxsockfd, recvbuf, sizeof(recvbuf));
+    if(retval < 0)
+    	return retval;
+
+    memcpy(&recvheader->prodindex,  recvbuf,    4);
+    memcpy(&recvheader->seqnum,     recvbuf+4,  4);
+    memcpy(&recvheader->payloadlen, recvbuf+8,  2);
+    memcpy(&recvheader->flags,      recvbuf+10, 2);
+    recvheader->prodindex  = ntohl(recvheader->prodindex);
+    recvheader->seqnum	   = ntohl(recvheader->seqnum);
+    recvheader->payloadlen = ntohs(recvheader->payloadlen);
+    recvheader->flags	   = ntohs(recvheader->flags);
+    return retval;
+}
+
+
+int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload, size_t paylen)
+{
+	char headbuf[VCMTP_HEADER_LEN];
+    struct iovec iov[2];
+
+    memcpy(headbuf,    &sendheader->prodindex, 	4);
+    memcpy(headbuf+4,  &sendheader->seqnum, 	4);
+    memcpy(headbuf+8,  &sendheader->payloadlen, 2);
+    memcpy(headbuf+10, &sendheader->flags, 		2);
+
+    iov[0].iov_base = headbuf;
+    iov[0].iov_len  = sizeof(headbuf);
+    iov[1].iov_base = payload;
+    iov[1].iov_len  = paylen;
+
+    int retval = writev(retxsockfd, iov, 2);
+    return retval;
 }
 
 

@@ -43,6 +43,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
                          const unsigned short mcastPort)
 {
     udpsocket = 0;
+    tcpsend   = 0;
     prodIndex = 0;
     vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
 }
@@ -93,7 +94,7 @@ vcmtpSendv3::~vcmtpSendv3()
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize)
 {
-    uint16_t maxMetaSize = metaSize>AVAIL_BOP_LEN?AVAIL_BOP_LEN:metaSize;
+    uint16_t maxMetaSize = metaSize > AVAIL_BOP_LEN ? AVAIL_BOP_LEN : metaSize;
 
     const int PACKET_SIZE = VCMTP_HEADER_LEN + maxMetaSize + (VCMTP_DATA_LEN - AVAIL_BOP_LEN);
     unsigned char vcmtp_packet[PACKET_SIZE];
@@ -159,6 +160,30 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
                                   char* metadata,
                                   unsigned metaSize)
 {
+	RetxMetadata* senderProdMeta = new RetxMetadata(); /*!< init struct like a class */
+	/** get start time of multicasting for measuring product transmit time */
+	if (senderProdMeta == NULL)
+		perror("vcmtpSendv3::sendProduct() error creating new RetxMetadata instance");
+
+	/** update current prodindex in RetxMetadata */
+	senderProdMeta->prodindex 	   = prodIndex;
+	/** update current product length in RetxMetadata */
+	senderProdMeta->prodLength     = dataSize;
+	/** update current product pointer in RetxMetadata */
+	senderProdMeta->dataprod_p     = (void*) data;
+	//TODO: update retx timeout ratio here
+	//TODO: init retx timeout time here
+	/** get a full list of current connected sockets and add to unfinished set */
+	list<int> currSockList = tcpsend->getConnSockList();
+	for (list<int>::iterator it = currSockList.begin(); it != currSockList.end(); ++it)
+	{
+		senderProdMeta->unfinReceivers.insert(*it);
+	}
+	/** add current RetxMetadata into sendMetadata::indexMetaMap */
+	sendMeta.addRetxMetadata(senderProdMeta);
+	/** update multicast start time in RetxMetadata */
+	senderProdMeta->mcastStartTime = clock();
+
     SendBOPMessage(dataSize, metadata, metaSize);
     char vcmtpHeader[VCMTP_HEADER_LEN];
     VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader;
@@ -172,7 +197,8 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
     /** check if there is more data to send */
     while (remained_size > 0)
     {
-        unsigned int data_size = remained_size < VCMTP_DATA_LEN ? remained_size: VCMTP_DATA_LEN;
+        unsigned int data_size = remained_size < VCMTP_DATA_LEN ?
+        						 remained_size : VCMTP_DATA_LEN;
 
         payLen = htons(data_size);
         seqNum = htonl(seqNum);
@@ -191,6 +217,9 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
         seqNum += data_size;
     }
     sendEOPMessage();
+
+	/** get end time of multicasting for measuring product transmit time */
+	senderProdMeta->mcastEndTime = clock();
 
     return prodIndex++;
 }
@@ -219,31 +248,40 @@ void vcmtpSendv3::sendEOPMessage()
     memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
     memcpy(&vcmtp_header->flags,       &flags,     2);
 
-    /** send the EOMD message */
+    /** send the EOP message */
     if (udpsocket->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
         perror("vcmtpSendv3::sendEOPMessage::SendTo error");
 }
 
 
-void vcmtpSendv3::acceptConn()
+void vcmtpSendv3::startCoordinator()
 {
-    tcpsend->acceptConn();
+	pthread_t* new_t = new pthread_t();
+	pthread_create(new_t, NULL, &vcmtpSendv3::coordinator, this);
 }
 
 
-void vcmtpSendv3::readSock()
+void* vcmtpSendv3::coordinator(void* ptr)
 {
-    char pktBuf[VCMTP_HEADER_LEN];
-    bzero(pktBuf, sizeof(pktBuf));
-    uint16_t flags;
-
-    tcpsend->readSock(pktBuf);
-
-    memcpy(&flags, pktBuf+10, 2);
-    flags = ntohs(flags);
-    if(flags & VCMTP_RETX_END)
-        std::cout << "Received Flag: VCMTP_RETX_END" << std::endl;
+	vcmtpSendv3* sendptr = (vcmtpSendv3*) ptr;
+	sendptr->initRetxConn();
+	return NULL;
 }
+
+
+void vcmtpSendv3::initRetxConn()
+{
+	while(1)
+	{
+		int newtcpsockfd = tcpsend->acceptConn();
+		StartNewRetxThread(newtcpsockfd);
+	}
+	/*
+	for(int i=0; i<10; ++i)
+		cout << "vcmtpSendv3::initRetxConn() is running in #" << i << " iteration" << endl;
+	*/
+}
+
 
 /**
  * Return the local port number.
@@ -254,4 +292,179 @@ void vcmtpSendv3::readSock()
 unsigned short vcmtpSendv3::getTcpPortNum()
 {
 	return tcpsend->getPortNum();
+}
+
+
+void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
+{
+	pthread_t* t = new pthread_t();
+	retxSockThreadMap[newtcpsockfd] = t;
+	/** should be a map between product and boolean */
+	retxSockFinishMap[newtcpsockfd] = false;
+
+	StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
+	retxThreadInfo->retxmitterptr 		= this;
+	retxThreadInfo->retxsockfd 			= newtcpsockfd;
+	retxThreadInfo->retxIndexProdptrMap = new map<uint32_t, void*>();
+	retxThreadInfo->timeoutsetptr       = new set<uint32_t>();
+
+	retxSockInfoMap[newtcpsockfd] = retxThreadInfo;
+
+	pthread_create(t, NULL, &vcmtpSendv3::StartRetxThread, retxThreadInfo);
+}
+
+void* vcmtpSendv3::StartRetxThread(void* ptr)
+{
+	StartRetxThreadInfo* newptr = (StartRetxThreadInfo*) ptr;
+	newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd,
+										 *(newptr->retxIndexProdptrMap),
+										 *(newptr->timeoutsetptr));
+	return NULL;
+}
+
+
+void vcmtpSendv3::RunRetxThread(int retxsockfd,
+								map<uint32_t, void*>& retxIndexProdptrMap,
+								set<uint32_t>& timeoutset)
+{
+	cout << "RunRetxThread() new tcp socket id: " << retxsockfd << endl;
+	while(1);
+	map<uint32_t, void*>::iterator it;
+
+	//char recvbuf[MAX_VCMTP_PACKET_LEN];
+	//VcmtpHeader* recvheader = (VcmtpHeader*) recvbuf;
+	//char* recvpayload = recvbuf + VCMTP_HEADER_LEN;
+	VcmtpHeader* recvheader;
+	VcmtpHeader* sendheader;
+	char sendpayload[VCMTP_DATA_LEN];
+
+	while(1)
+	{
+		if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
+			perror("VCMTPSender::RunRetxThread() receive header error");
+
+		/** Handle a retransmission request */
+		if (recvheader->flags & VCMTP_RETX_REQ)
+		{
+			RetxMetadata* retxMeta = sendMeta.getMetadata(recvheader->prodindex);
+			/** if requested prodindex is not in metadata set, just ignore it */
+			if (retxMeta == NULL)
+			{
+				cout << "vcmtpSendv3::RunRetxThread() error: "
+					 << recvheader->prodindex << " not in metadata set." << endl;
+				continue;
+			}
+
+			/**
+			 * send retx_rej msg to receivers if one of these two conditions
+			 * are satisfied: 1.the retransmission for the data product has
+			 * already timed out. 2.the data product is already in the timeout
+			 * set.
+			 */
+			if ((timeoutset.find(recvheader->prodindex) != timeoutset.end()) ||
+				isTimeout(retxMeta))
+			{
+				sendheader->prodindex  = htonl(recvheader->prodindex);
+				sendheader->seqnum	   = htonl(recvheader->seqnum);
+				sendheader->payloadlen = htons(0);
+				sendheader->flags 	   = htons(VCMTP_RETX_REJ);
+				tcpsend->send(retxsockfd, sendheader, NULL, 0);
+
+				if(isTimeout(retxMeta))
+				{
+					timeoutset.insert(recvheader->prodindex);
+				}
+			}
+			else
+			{
+				/** get the pointer to the data product in product queue */
+				void* prodptr;
+				if ((it = retxIndexProdptrMap.find(recvheader->prodindex)) !=
+					retxIndexProdptrMap.end())
+				{
+					prodptr = it->second;
+				}
+				else
+				{
+					/**
+					 * The first time requesting for this prodptr associated
+					 * with the given prodindex. Fetch it from the RetxMetaData.
+					 * And add it to the retxIndexProdptrMap.
+					 */
+					prodptr = retxMeta->dataprod_p;
+					/** if failed to fetch prodptr, throw an error and skip */
+					if (prodptr == NULL)
+					{
+						perror("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
+						continue;
+					}
+					else
+						retxIndexProdptrMap[recvheader->prodindex] = prodptr;
+				}
+
+				/** construct the retx data block and send. */
+				uint16_t remainedSize  = recvheader->payloadlen;
+				uint32_t startPos      = recvheader->seqnum;
+				sendheader->prodindex  = htonl(recvheader->prodindex);
+				sendheader->flags      = htons(VCMTP_RETX_DATA);
+
+				/**
+				 * support for future requirement of sending multiple blocks in
+				 * one single shot.
+				 */
+				while (remainedSize > 0)
+				{
+					uint16_t payLen = remainedSize > VCMTP_DATA_LEN ?
+									  VCMTP_DATA_LEN : remainedSize;
+					sendheader->seqnum 	   = htonl(startPos);
+					sendheader->payloadlen = htons(payLen);
+
+					tcpsend->send(retxsockfd, sendheader,
+								  (char*)(prodptr) + startPos, (size_t) payLen);
+
+					startPos += payLen;
+					remainedSize -= payLen;
+				}
+			}
+		}
+		else if (recvheader->flags & VCMTP_RETX_END)
+		{
+			map<uint32_t, void*>::iterator it;
+			if ((it = retxIndexProdptrMap.find(recvheader->prodindex)) !=
+				retxIndexProdptrMap.end())
+			{
+				retxIndexProdptrMap.erase(it);
+			}
+			//TODO: release pointer in the metadata map
+
+			if (timeoutset.find(recvheader->prodindex) != timeoutset.end())
+			{
+				timeoutset.erase(recvheader->prodindex);
+			}
+
+			/** remove the specific receiver out of the unfinished receiver set */
+			sendMeta.removeFinishedReceiver(recvheader->prodindex, retxsockfd);
+
+			if(sendMeta.isRetxAllFinished(recvheader->prodindex))
+			{
+				//TODO: call LDM callback function to release product.
+			}
+		}
+	}
+}
+
+
+bool vcmtpSendv3::isTimeout(RetxMetadata* retxmeta)
+{
+	long double elapsedTime;
+	long double defaultTimeout;
+	clock_t currentTime = clock();
+	defaultTimeout = (retxmeta->mcastEndTime - retxmeta->mcastStartTime) /
+					 (double) CLOCKS_PER_SEC;
+	elapsedTime = (currentTime - retxmeta->mcastEndTime) /
+				  (double) CLOCKS_PER_SEC;
+	if (elapsedTime > defaultTimeout)
+		return true;
+	else
+		return false;
 }

@@ -4,11 +4,11 @@
 
 int main(int argc, char* argv[])
 {
-    string tcpAddr                 = "128.143.137.117";
+    string tcpAddr                 = "192.168.0.101";
     const unsigned short tcpPort   = 1234;
-    //string mcastAddr               = "128.143.137.117"; /** IP addr of rivanna */
+    string mcastAddr               = "128.143.137.117"; /** IP addr of rivanna */
     //string mcastAddr               = "233.0.225.123";
-    string mcastAddr               = "172.25.98.111";
+    //string mcastAddr               = "172.25.98.111";
     const unsigned short mcastPort = 5173;
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
