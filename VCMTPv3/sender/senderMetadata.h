@@ -14,7 +14,8 @@ struct RetxMetadata {
     clock_t   mcastStartTime;	 /*!< multicasting start time */
     clock_t   mcastEndTime; 	 /*!< multicasting end time */
     float	  retxTimeoutRatio;	 /*!< ratio to scale timeout time */
-    double	  retxTimeoutTime; 	 /*!< timeout time in seconds */
+    // use only a single float to hold timeout value
+    float        retxTimeoutTime; 	 /*!< timeout time in seconds */
     unsigned int timeoutSec; 	 /*!< seconds part of the timeout value */
     unsigned int timeoutuSec;  /*!< microseconds part of the timeout value */
     void* 	  dataprod_p; 		 /*!< pointer to the data product */

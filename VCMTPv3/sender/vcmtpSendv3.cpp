@@ -210,8 +210,10 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
         memcpy(&header->payloadlen, &payLen,    2);
         memcpy(&header->flags,      &flags,     2);
 
+        // clock(), stop-watch class
         if(udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size) < 0)
             perror("vcmtpSendv3::sendProduct::SendData() error");
+        // clock()
 
         remained_size -= data_size;
         /** move the data pointer to the beginning of the next block */
@@ -228,6 +230,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
 	senderProdMeta->timeoutuSec = 500000;
 
 	/** start a new timer thread here */
+	// throw exception in startTimerThread()
 	startTimerThread(prodIndex);
 
     return prodIndex++;
@@ -472,21 +475,27 @@ bool vcmtpSendv3::isTimeout(RetxMetadata* retxmeta)
 
 void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 {
-	pthread_t* t = new pthread_t();
+	pthread_t t;
 	StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
 	timerinfo->timerptr = this;
 	timerinfo->prodindex = prodindex;
 	timerinfo->sendmeta = sendMeta;
-	pthread_create(t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
+	// check return value
+	pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
+	// (void)
+	pthread_detach(t);
 }
 
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
 	StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
+	Timer timer;
+	timer->trigger(timerinfo->prodindex, sendmeta);
 	timerinfo->timerptr->triggerTimer(timerinfo->prodindex, timerinfo->sendmeta);
 	return NULL;
 }
 
+// don't need
 void vcmtpSendv3::triggerTimer(uint32_t prodindex, senderMetadata* sendmeta)
 {
 	Timer* timer = new Timer();
