@@ -38,6 +38,19 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 }
 
 
+void senderMetadata::rmRetxMetadata(uint32_t prodindex)
+{
+	map<uint32_t, RetxMetadata*>::iterator it;
+	pthread_rwlock_wrlock(&indexMetaMapLock);
+	if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
+	{
+		delete it->second;
+		indexMetaMap.erase(it);
+	}
+	pthread_rwlock_unlock(&indexMetaMapLock);
+}
+
+
 void senderMetadata::removeFinishedReceiver(uint32_t prodindex, int retxsockfd)
 {
 	map<uint32_t, RetxMetadata*>::iterator it;

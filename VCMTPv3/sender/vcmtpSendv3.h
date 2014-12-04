@@ -35,6 +35,7 @@
 #include "TcpSend.h"
 #include "vcmtpBase.h"
 #include "senderMetadata.h"
+#include "timer.h"
 #include <map>
 #include <set>
 #include <pthread.h>
@@ -88,10 +89,11 @@ public:
     bool isTimeout(RetxMetadata* retxmeta);
 
 private:
-    uint32_t 	prodIndex;
-    UdpSocket* 	udpsocket;
-    TcpSend*   	tcpsend;
+    uint32_t 	     prodIndex;
+    UdpSocket* 	 udpsocket;
+    TcpSend*   	 tcpsend;
     senderMetadata sendMeta; /*!< maintaining metadata for retx use. */
+    Timer*          perprodtimer;
     //TODO: a more precise timeout mechanism should be studied.
     /** first: socket fd;  second: pthread_t pointer */
 	map<int, pthread_t*> retxSockThreadMap;
@@ -102,7 +104,7 @@ private:
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
     void RunRetxThread(int retxsockfd, map<uint, void*>& retxIndexProdptrMap,
-					   set<uint>& timeoutset);
+					     set<uint>& timeoutset);
 };
 
 #endif /* VCMTPSENDV3_H_ */

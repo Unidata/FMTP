@@ -15,13 +15,16 @@ struct RetxMetadata {
     clock_t   mcastEndTime; 	 /*!< multicasting end time */
     float	  retxTimeoutRatio;	 /*!< ratio to scale timeout time */
     double	  retxTimeoutTime; 	 /*!< timeout time in seconds */
+    unsigned int seconds; 		 /*!< seconds part of the timeout value */
+    unsigned int useconds;     /*!< microseconds part of the timeout value */
     void* 	  dataprod_p; 		 /*!< pointer to the data product */
     set<int>  unfinReceivers;	 /*!< unfinished receiver set indexed by socket id */
 
 
     RetxMetadata(): prodindex(0), prodLength(0), mcastStartTime(0.0),
-    				mcastEndTime(0.0), retxTimeoutRatio(20.0),
-					retxTimeoutTime(99999999999.0), dataprod_p(NULL) {}
+    				  mcastEndTime(0.0), retxTimeoutRatio(20.0),
+					  retxTimeoutTime(99999999999.0), seconds(0), useconds(0),
+					  dataprod_p(NULL) {}
     virtual ~RetxMetadata() {}
 };
 
@@ -31,9 +34,9 @@ public:
 	senderMetadata();
 	~senderMetadata();
 
-	//void 	RemoveMessageMetadata(uint msg_id);
 	//void 	ClearAllMetadata();
 	void addRetxMetadata(RetxMetadata* ptrMeta);
+	void rmRetxMetadata(uint32_t prodindex);
 	RetxMetadata* getMetadata(uint32_t prodindex);
 	bool isRetxAllFinished(uint32_t prodindex);
 	void removeFinishedReceiver(uint32_t prodindex, int retxsockfd);
