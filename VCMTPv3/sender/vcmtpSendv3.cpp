@@ -347,22 +347,13 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 		if (recvheader->flags & VCMTP_RETX_REQ)
 		{
 			RetxMetadata* retxMeta = sendMeta.getMetadata(recvheader->prodindex);
-			/** if requested prodindex is not in metadata set, just ignore it */
-			if (retxMeta == NULL)
-			{
-				cout << "vcmtpSendv3::RunRetxThread() error: "
-					 << recvheader->prodindex << " not in metadata set." << endl;
-				continue;
-			}
-
 			/**
 			 * send retx_rej msg to receivers if one of these two conditions
-			 * are satisfied: 1.the retransmission for the data product has
-			 * already timed out. 2.the data product is already in the timeout
-			 * set.
+			 * are satisfied: 1.the per-product timer thread has removed the
+			 * prodindex. 2.the data product is already in the timeout set.
 			 */
 			if ((timeoutset.find(recvheader->prodindex) != timeoutset.end()) ||
-				isTimeout(retxMeta))
+				retxMeta == NULL)
 			{
 				sendheader->prodindex  = htonl(recvheader->prodindex);
 				sendheader->seqnum	   = htonl(recvheader->seqnum);
@@ -370,7 +361,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 				sendheader->flags 	   = htons(VCMTP_RETX_REJ);
 				tcpsend->send(retxsockfd, sendheader, NULL, 0);
 
-				if(isTimeout(retxMeta))
+				/** update the deletion of indexMetaMap in local timeoutset */
+				if(retxMeta == NULL)
 				{
 					timeoutset.insert(recvheader->prodindex);
 				}
