@@ -44,6 +44,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
 {
     udpsocket = 0;
     tcpsend   = 0;
+    sendMeta  = 0;
     prodIndex = 0;
     vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
 }
@@ -69,6 +70,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     prodIndex = initProdIndex;
     udpsocket = new UdpSocket(mcastAddr,mcastPort);
     tcpsend   = new TcpSend(tcpAddr, tcpPort);
+    sendMeta  = new senderMetadata();
 }
 
 
@@ -180,7 +182,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
 		senderProdMeta->unfinReceivers.insert(*it);
 	}
 	/** add current RetxMetadata into sendMetadata::indexMetaMap */
-	sendMeta.addRetxMetadata(senderProdMeta);
+	sendMeta->addRetxMetadata(senderProdMeta);
 	/** update multicast start time in RetxMetadata */
 	senderProdMeta->mcastStartTime = clock();
 
@@ -220,6 +222,13 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
 
 	/** get end time of multicasting for measuring product transmit time */
 	senderProdMeta->mcastEndTime = clock();
+
+	/** set up timer and trigger */
+	senderProdMeta->timeoutSec = 1;
+	senderProdMeta->timeoutuSec = 500000;
+
+	/** start a new timer thread here */
+	startTimerThread(prodIndex);
 
     return prodIndex++;
 }
@@ -346,7 +355,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 		/** Handle a retransmission request */
 		if (recvheader->flags & VCMTP_RETX_REQ)
 		{
-			RetxMetadata* retxMeta = sendMeta.getMetadata(recvheader->prodindex);
+			RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
 			/**
 			 * send retx_rej msg to receivers if one of these two conditions
 			 * are satisfied: 1.the per-product timer thread has removed the
@@ -435,9 +444,9 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			}
 
 			/** remove the specific receiver out of the unfinished receiver set */
-			sendMeta.removeFinishedReceiver(recvheader->prodindex, retxsockfd);
+			sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
 
-			if(sendMeta.isRetxAllFinished(recvheader->prodindex))
+			if(sendMeta->isRetxAllFinished(recvheader->prodindex))
 			{
 				//TODO: call LDM callback function to release product.
 			}
@@ -459,4 +468,27 @@ bool vcmtpSendv3::isTimeout(RetxMetadata* retxmeta)
 		return true;
 	else
 		return false;
+}
+
+void vcmtpSendv3::startTimerThread(uint32_t prodindex)
+{
+	pthread_t* t = new pthread_t();
+	StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
+	timerinfo->timerptr = this;
+	timerinfo->prodindex = prodindex;
+	timerinfo->sendmeta = sendMeta;
+	pthread_create(t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
+}
+
+void* vcmtpSendv3::runTimerThread(void* ptr)
+{
+	StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
+	timerinfo->timerptr->triggerTimer(timerinfo->prodindex, timerinfo->sendmeta);
+	return NULL;
+}
+
+void vcmtpSendv3::triggerTimer(uint32_t prodindex, senderMetadata* sendmeta)
+{
+	Timer* timer = new Timer();
+	timer->trigger(prodindex, sendmeta);
 }

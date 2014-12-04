@@ -8,7 +8,7 @@ class Timer
 public:
 	Timer();
 	~Timer();
-	void trigger(uint32_t prodindex, senderMetadata& sendmeta);
+	void trigger(uint32_t prodindex, senderMetadata* sendmeta);
 
 private:
 };

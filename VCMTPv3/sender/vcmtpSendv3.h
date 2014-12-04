@@ -47,7 +47,8 @@ class vcmtpSendv3;
  * To contain multiple types of necessary information and transfer to the
  * StartRetxThread() as one single parameter.
  */
-struct StartRetxThreadInfo {
+struct StartRetxThreadInfo
+{
 	/**
 	 * A pointer to the vcmtpSendv3 instance itself which starts the
 	 * StartNewRetxThread().
@@ -62,7 +63,16 @@ struct StartRetxThreadInfo {
 };
 
 
-class vcmtpSendv3 {
+struct StartTimerThreadInfo
+{
+	vcmtpSendv3* 	timerptr;
+	uint32_t		prodindex;
+	senderMetadata* sendmeta;
+};
+
+
+class vcmtpSendv3
+{
 public:
     vcmtpSendv3(
             const char*          tcpAddr,
@@ -89,11 +99,11 @@ public:
     bool isTimeout(RetxMetadata* retxmeta);
 
 private:
-    uint32_t 	     prodIndex;
-    UdpSocket* 	 udpsocket;
-    TcpSend*   	 tcpsend;
-    senderMetadata sendMeta; /*!< maintaining metadata for retx use. */
-    Timer*          perprodtimer;
+    uint32_t 	      prodIndex;
+    UdpSocket* 	  udpsocket;
+    TcpSend*   	  tcpsend;
+    senderMetadata* sendMeta; /*!< maintaining metadata for retx use. */
+    //Timer*          perprodtimer;
     //TODO: a more precise timeout mechanism should be studied.
     /** first: socket fd;  second: pthread_t pointer */
 	map<int, pthread_t*> retxSockThreadMap;
@@ -105,6 +115,9 @@ private:
     void sendEOPMessage();
     void RunRetxThread(int retxsockfd, map<uint, void*>& retxIndexProdptrMap,
 					     set<uint>& timeoutset);
+	void startTimerThread(uint32_t prodindex);
+    static void* runTimerThread(void* ptr);
+	void triggerTimer(uint32_t prodindex, senderMetadata* sendmeta);
 };
 
 #endif /* VCMTPSENDV3_H_ */
