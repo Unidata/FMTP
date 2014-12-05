@@ -65,7 +65,6 @@ struct StartRetxThreadInfo
 
 struct StartTimerThreadInfo
 {
-	vcmtpSendv3* 	timerptr;
 	uint32_t		prodindex;
 	senderMetadata* sendmeta;
 };
@@ -96,7 +95,6 @@ public:
     unsigned short getTcpPortNum();
     void StartNewRetxThread(int newtcpsockfd);
     static void* StartRetxThread(void* ptr);
-    bool isTimeout(RetxMetadata* retxmeta);
 
 private:
     uint32_t 	      prodIndex;
@@ -117,7 +115,6 @@ private:
 					     set<uint>& timeoutset);
 	void startTimerThread(uint32_t prodindex);
     static void* runTimerThread(void* ptr);
-	void triggerTimer(uint32_t prodindex, senderMetadata* sendmeta);
 };
 
 #endif /* VCMTPSENDV3_H_ */

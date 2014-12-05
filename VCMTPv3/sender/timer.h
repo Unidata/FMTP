@@ -6,11 +6,11 @@
 class Timer
 {
 public:
-	Timer();
+	Timer(uint32_t prodindex, senderMetadata* sendmeta);
 	~Timer();
-	void trigger(uint32_t prodindex, senderMetadata* sendmeta);
 
 private:
+	void trigger(uint32_t prodindex, senderMetadata* sendmeta);
 };
 
 #endif /* TIMER_H_ */

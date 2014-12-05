@@ -458,26 +458,10 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 }
 
 
-bool vcmtpSendv3::isTimeout(RetxMetadata* retxmeta)
-{
-	long double elapsedTime;
-	long double defaultTimeout;
-	clock_t currentTime = clock();
-	defaultTimeout = (retxmeta->mcastEndTime - retxmeta->mcastStartTime) /
-					 (double) CLOCKS_PER_SEC;
-	elapsedTime = (currentTime - retxmeta->mcastEndTime) /
-				  (double) CLOCKS_PER_SEC;
-	if (elapsedTime > defaultTimeout)
-		return true;
-	else
-		return false;
-}
-
 void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 {
 	pthread_t t;
-	StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
-	timerinfo->timerptr = this;
+	StartTimerThreadInfo* timerinfo;
 	timerinfo->prodindex = prodindex;
 	timerinfo->sendmeta = sendMeta;
 	// check return value
@@ -486,18 +470,10 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 	pthread_detach(t);
 }
 
+
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
 	StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
-	Timer timer;
-	timer->trigger(timerinfo->prodindex, sendmeta);
-	timerinfo->timerptr->triggerTimer(timerinfo->prodindex, timerinfo->sendmeta);
+	Timer timer(timerinfo->prodindex, timerinfo->sendmeta);
 	return NULL;
-}
-
-// don't need
-void vcmtpSendv3::triggerTimer(uint32_t prodindex, senderMetadata* sendmeta)
-{
-	Timer* timer = new Timer();
-	timer->trigger(prodindex, sendmeta);
 }
