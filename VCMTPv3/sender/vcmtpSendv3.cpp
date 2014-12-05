@@ -75,12 +75,15 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
 
 
 /**
- * Deconstruct the sender instance.
+ * Deconstruct the sender instance and release the initialized resources.
  *
  * @param[in] none
  */
 vcmtpSendv3::~vcmtpSendv3()
 {
+    delete udpsocket;
+    delete tcpsend;
+    delete sendMeta;
 }
 
 
@@ -229,8 +232,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
 	senderProdMeta->timeoutSec = 1;
 	senderProdMeta->timeoutuSec = 500000;
 
-	/** start a new timer thread here */
-	// throw exception in startTimerThread()
+	/** start a new timer for this product */
 	startTimerThread(prodIndex);
 
     return prodIndex++;
@@ -288,10 +290,6 @@ void vcmtpSendv3::initRetxConn()
 		int newtcpsockfd = tcpsend->acceptConn();
 		StartNewRetxThread(newtcpsockfd);
 	}
-	/*
-	for(int i=0; i<10; ++i)
-		cout << "vcmtpSendv3::initRetxConn() is running in #" << i << " iteration" << endl;
-	*/
 }
 
 
@@ -311,14 +309,12 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
 	pthread_t* t = new pthread_t();
 	retxSockThreadMap[newtcpsockfd] = t;
-	/** should be a map between product and boolean */
 	retxSockFinishMap[newtcpsockfd] = false;
 
 	StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
 	retxThreadInfo->retxmitterptr 		= this;
 	retxThreadInfo->retxsockfd 			= newtcpsockfd;
 	retxThreadInfo->retxIndexProdptrMap = new map<uint32_t, void*>();
-	retxThreadInfo->timeoutsetptr       = new set<uint32_t>();
 
 	retxSockInfoMap[newtcpsockfd] = retxThreadInfo;
 
@@ -329,15 +325,13 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
 {
 	StartRetxThreadInfo* newptr = (StartRetxThreadInfo*) ptr;
 	newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd,
-										 *(newptr->retxIndexProdptrMap),
-										 *(newptr->timeoutsetptr));
+										 *(newptr->retxIndexProdptrMap));
 	return NULL;
 }
 
 
 void vcmtpSendv3::RunRetxThread(int retxsockfd,
-								map<uint32_t, void*>& retxIndexProdptrMap,
-								set<uint32_t>& timeoutset)
+								map<uint32_t, void*>& retxIndexProdptrMap)
 {
 	cout << "RunRetxThread() new tcp socket id: " << retxsockfd << endl;
 	while(1);
@@ -353,31 +347,23 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 	while(1)
 	{
 		if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
-			perror("VCMTPSender::RunRetxThread() receive header error");
+			perror("vcmtpSendv3::RunRetxThread() receive header error");
 
+		RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
 		/** Handle a retransmission request */
 		if (recvheader->flags & VCMTP_RETX_REQ)
 		{
-			RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
 			/**
-			 * send retx_rej msg to receivers if one of these two conditions
-			 * are satisfied: 1.the per-product timer thread has removed the
-			 * prodindex. 2.the data product is already in the timeout set.
+			 * send retx_rej msg to receivers if the given condition is
+			 * satisfied: the per-product timer thread has removed the prodindex.
 			 */
-			if ((timeoutset.find(recvheader->prodindex) != timeoutset.end()) ||
-				retxMeta == NULL)
+			if (retxMeta == NULL)
 			{
 				sendheader->prodindex  = htonl(recvheader->prodindex);
 				sendheader->seqnum	   = htonl(recvheader->seqnum);
 				sendheader->payloadlen = htons(0);
 				sendheader->flags 	   = htons(VCMTP_RETX_REJ);
 				tcpsend->send(retxsockfd, sendheader, NULL, 0);
-
-				/** update the deletion of indexMetaMap in local timeoutset */
-				if(retxMeta == NULL)
-				{
-					timeoutset.insert(recvheader->prodindex);
-				}
 			}
 			else
 			{
@@ -439,19 +425,18 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			{
 				retxIndexProdptrMap.erase(it);
 			}
-			//TODO: release pointer in the metadata map
 
-			if (timeoutset.find(recvheader->prodindex) != timeoutset.end())
+			/** if timer is still sleeping, update metadata. Otherwise, skip */
+			if (retxMeta != NULL)
 			{
-				timeoutset.erase(recvheader->prodindex);
-			}
+				/** remove the specific receiver out of the unfinished receiver set */
+				sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
 
-			/** remove the specific receiver out of the unfinished receiver set */
-			sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
-
-			if(sendMeta->isRetxAllFinished(recvheader->prodindex))
-			{
-				//TODO: call LDM callback function to release product.
+				if(sendMeta->isRetxAllFinished(recvheader->prodindex))
+				{
+					//TODO: call LDM callback function to release product.
+					sendMeta->rmRetxMetadata(recvheader->prodindex);
+				}
 			}
 		}
 	}
@@ -464,9 +449,11 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 	StartTimerThreadInfo* timerinfo;
 	timerinfo->prodindex = prodindex;
 	timerinfo->sendmeta = sendMeta;
-	// check return value
-	pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
-	// (void)
+	int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
+	if(retval != 0)
+	{
+		perror("vcmtpSendv3::startTimerThread() pthread_create error");
+	}
 	pthread_detach(t);
 }
 

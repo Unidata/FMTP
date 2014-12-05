@@ -35,7 +35,6 @@ public:
 	senderMetadata();
 	~senderMetadata();
 
-	//void 	ClearAllMetadata();
 	void addRetxMetadata(RetxMetadata* ptrMeta);
 	void rmRetxMetadata(uint32_t prodindex);
 	RetxMetadata* getMetadata(uint32_t prodindex);
@@ -46,7 +45,6 @@ private:
     /** first: prodindex; second: pointer to metadata of the specified prodindex */
 	map<uint32_t, RetxMetadata*> indexMetaMap;
 	pthread_rwlock_t 		     indexMetaMapLock;
-	//pthread_rwlock_t 		     metadata_lock;
 };
 
 #endif /* SENDERMETADATA_H_ */

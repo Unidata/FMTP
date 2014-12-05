@@ -58,8 +58,6 @@ struct StartRetxThreadInfo
 	int				retxsockfd;
     /** prodindex to prodptr map.  Format: <prodindex, prodptr> */
 	map<uint32_t, void*>* retxIndexProdptrMap;
-	/** A set that includes the unique id of all timeout products */
-	set<uint32_t>* 		timeoutsetptr;
 };
 
 
@@ -101,7 +99,6 @@ private:
     UdpSocket* 	  udpsocket;
     TcpSend*   	  tcpsend;
     senderMetadata* sendMeta; /*!< maintaining metadata for retx use. */
-    //Timer*          perprodtimer;
     //TODO: a more precise timeout mechanism should be studied.
     /** first: socket fd;  second: pthread_t pointer */
 	map<int, pthread_t*> retxSockThreadMap;
@@ -111,8 +108,7 @@ private:
 	map<int, StartRetxThreadInfo*> retxSockInfoMap;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
-    void RunRetxThread(int retxsockfd, map<uint, void*>& retxIndexProdptrMap,
-					     set<uint>& timeoutset);
+    void RunRetxThread(int retxsockfd, map<uint, void*>& retxIndexProdptrMap);
 	void startTimerThread(uint32_t prodindex);
     static void* runTimerThread(void* ptr);
 };
