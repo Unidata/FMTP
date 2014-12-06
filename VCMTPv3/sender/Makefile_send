@@ -4,8 +4,9 @@ LIB =
 ELFFILE = vcmtpSendv3
 DEBUG_FLAG = DEBUG
 
-$(ELFFILE): test.cpp UdpSocket.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
-	$(CC) -D$(DEBUG_FLAG) -I$(INCLUDE) -pthread -o $(ELFFILE) test.cpp UdpSocket.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
+$(ELFFILE): test.cpp UdpSocket.cpp TcpSend.cpp senderMetadata.cpp timer.cpp vcmtpSendv3.cpp
+	$(CC) -D$(DEBUG_FLAG) -std=c++0x -I$(INCLUDE) -pthread -o $(ELFFILE) test.cpp UdpSocket.cpp TcpSend.cpp \
+		senderMetadata.cpp timer.cpp vcmtpSendv3.cpp
 
 .PHONY : clean
 clean:

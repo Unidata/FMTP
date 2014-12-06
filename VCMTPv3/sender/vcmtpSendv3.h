@@ -89,7 +89,6 @@ public:
                          unsigned metaSize);
     void startCoordinator();
     static void* coordinator(void* ptr);
-    void initRetxConn();
     unsigned short getTcpPortNum();
     void StartNewRetxThread(int newtcpsockfd);
     static void* StartRetxThread(void* ptr);

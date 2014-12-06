@@ -1,4 +1,5 @@
 #include "senderMetadata.h"
+#include <iostream>
 
 senderMetadata::senderMetadata()
 {

@@ -176,8 +176,6 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
 	senderProdMeta->prodLength     = dataSize;
 	/** update current product pointer in RetxMetadata */
 	senderProdMeta->dataprod_p     = (void*) data;
-	//TODO: update retx timeout ratio here
-	//TODO: init retx timeout time here
 	/** get a full list of current connected sockets and add to unfinished set */
 	list<int> currSockList = tcpsend->getConnSockList();
 	for (list<int>::iterator it = currSockList.begin(); it != currSockList.end(); ++it)
@@ -213,10 +211,8 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
         memcpy(&header->payloadlen, &payLen,    2);
         memcpy(&header->flags,      &flags,     2);
 
-        // clock(), stop-watch class
         if(udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size) < 0)
             perror("vcmtpSendv3::sendProduct::SendData() error");
-        // clock()
 
         remained_size -= data_size;
         /** move the data pointer to the beginning of the next block */
@@ -229,7 +225,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data,
 	senderProdMeta->mcastEndTime = clock();
 
 	/** set up timer and trigger */
-	senderProdMeta->timeoutSec = 1;
+	senderProdMeta->timeoutSec = 5;
 	senderProdMeta->timeoutuSec = 500000;
 
 	/** start a new timer for this product */
@@ -270,26 +266,22 @@ void vcmtpSendv3::sendEOPMessage()
 
 void vcmtpSendv3::startCoordinator()
 {
-	pthread_t* new_t = new pthread_t();
-	pthread_create(new_t, NULL, &vcmtpSendv3::coordinator, this);
+	pthread_t new_t;
+	pthread_create(&new_t, NULL, &vcmtpSendv3::coordinator, this);
+	pthread_detach(new_t);
 }
 
 
 void* vcmtpSendv3::coordinator(void* ptr)
 {
 	vcmtpSendv3* sendptr = (vcmtpSendv3*) ptr;
-	sendptr->initRetxConn();
-	return NULL;
-}
-
-
-void vcmtpSendv3::initRetxConn()
-{
+	int newtcpsockfd;
 	while(1)
 	{
-		int newtcpsockfd = tcpsend->acceptConn();
-		StartNewRetxThread(newtcpsockfd);
+		newtcpsockfd = sendptr->tcpsend->acceptConn();
+		sendptr->StartNewRetxThread(newtcpsockfd);
 	}
+	return NULL;
 }
 
 
@@ -307,8 +299,8 @@ unsigned short vcmtpSendv3::getTcpPortNum()
 
 void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
-	pthread_t* t = new pthread_t();
-	retxSockThreadMap[newtcpsockfd] = t;
+	pthread_t t;
+	retxSockThreadMap[newtcpsockfd] = &t;
 	retxSockFinishMap[newtcpsockfd] = false;
 
 	StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
@@ -318,7 +310,8 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 
 	retxSockInfoMap[newtcpsockfd] = retxThreadInfo;
 
-	pthread_create(t, NULL, &vcmtpSendv3::StartRetxThread, retxThreadInfo);
+	pthread_create(&t, NULL, &vcmtpSendv3::StartRetxThread, retxThreadInfo);
+	pthread_detach(t);
 }
 
 void* vcmtpSendv3::StartRetxThread(void* ptr)
@@ -446,7 +439,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 {
 	pthread_t t;
-	StartTimerThreadInfo* timerinfo;
+	StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
 	timerinfo->prodindex = prodindex;
 	timerinfo->sendmeta = sendMeta;
 	int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
@@ -462,5 +455,8 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
 {
 	StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
 	Timer timer(timerinfo->prodindex, timerinfo->sendmeta);
+	cout << "timer wakes up" << endl;
+	delete timerinfo;
+	timerinfo = NULL;
 	return NULL;
 }
