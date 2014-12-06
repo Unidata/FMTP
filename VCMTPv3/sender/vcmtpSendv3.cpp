@@ -326,15 +326,13 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
 void vcmtpSendv3::RunRetxThread(int retxsockfd,
 								map<uint32_t, void*>& retxIndexProdptrMap)
 {
-	cout << "RunRetxThread() new tcp socket id: " << retxsockfd << endl;
-	while(1);
 	map<uint32_t, void*>::iterator it;
 
 	//char recvbuf[MAX_VCMTP_PACKET_LEN];
 	//VcmtpHeader* recvheader = (VcmtpHeader*) recvbuf;
 	//char* recvpayload = recvbuf + VCMTP_HEADER_LEN;
-	VcmtpHeader* recvheader;
-	VcmtpHeader* sendheader;
+	VcmtpHeader* recvheader = new VcmtpHeader();
+	VcmtpHeader* sendheader = new VcmtpHeader();
 	char sendpayload[VCMTP_DATA_LEN];
 
 	while(1)
@@ -343,6 +341,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			perror("vcmtpSendv3::RunRetxThread() receive header error");
 
 		RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
+		cout << "prodindex: " << recvheader->prodindex << endl;
 		/** Handle a retransmission request */
 		if (recvheader->flags & VCMTP_RETX_REQ)
 		{
@@ -350,8 +349,10 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			 * send retx_rej msg to receivers if the given condition is
 			 * satisfied: the per-product timer thread has removed the prodindex.
 			 */
+			cout << "entering RETX_REQ" << endl;
 			if (retxMeta == NULL)
 			{
+				cout << "entering RETX_REQ if branch" << endl;
 				sendheader->prodindex  = htonl(recvheader->prodindex);
 				sendheader->seqnum	   = htonl(recvheader->seqnum);
 				sendheader->payloadlen = htons(0);
@@ -360,6 +361,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			}
 			else
 			{
+			    cout << "entering RETX_REQ else branch" << endl;
 				/** get the pointer to the data product in product queue */
 				void* prodptr;
 				if ((it = retxIndexProdptrMap.find(recvheader->prodindex)) !=
@@ -401,6 +403,15 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 									  VCMTP_DATA_LEN : remainedSize;
 					sendheader->seqnum 	   = htonl(startPos);
 					sendheader->payloadlen = htons(payLen);
+
+#ifdef DEBUG
+    char c0, c1;
+    memcpy(&c0, (char*)prodptr+startPos, 1);
+    memcpy(&c1, (char*)prodptr+startPos+1, 1);
+    printf("%X ", c0);
+    printf("%X", c1);
+    printf("\n");
+#endif
 
 					tcpsend->send(retxsockfd, sendheader,
 								  (char*)(prodptr) + startPos, (size_t) payLen);

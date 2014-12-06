@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include "vcmtpRecvv3.h"
+#include <unistd.h>
 
 int main(int argc, char* argv[])
 {
@@ -13,6 +14,8 @@ int main(int argc, char* argv[])
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecvv3.Start();
-    //vcmtpRecvv3.sendRetxEnd();
+    vcmtpRecvv3.sendRetxReq();
+    sleep(2);
+    vcmtpRecvv3.recvRetxData();
     while(1);
 }

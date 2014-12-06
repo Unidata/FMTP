@@ -171,6 +171,7 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 void vcmtpRecvv3::StartReceivingThread()
 {
     pthread_create(&recv_thread, NULL, &vcmtpRecvv3::StartReceivingThread, this);
+    pthread_detach(recv_thread);
 }
 
 
@@ -353,4 +354,58 @@ void vcmtpRecvv3::sendRetxEnd()
     memcpy(pktBuf+10, &flags,     2);
 
     tcprecv->sendData(pktBuf, sizeof(pktBuf), NULL, 0);
+}
+
+
+void vcmtpRecvv3::sendRetxReq()
+{
+    char pktBuf[VCMTP_HEADER_LEN];
+    bzero(pktBuf, sizeof(pktBuf));
+
+    //uint32_t prodindex = htonl(vcmtpHeader.prodindex);
+    uint32_t prodindex = htonl(0);
+    uint32_t seqNum    = htonl(0);
+    uint16_t payLen    = htons(1428);
+    uint16_t flags     = htons(VCMTP_RETX_REQ);
+
+    memcpy(pktBuf,    &prodindex, 4);
+    memcpy(pktBuf+4,  &seqNum,    4);
+    memcpy(pktBuf+8,  &payLen,    2);
+    memcpy(pktBuf+10, &flags,     2);
+
+    tcprecv->sendData(pktBuf, sizeof(pktBuf), NULL, 0);
+}
+
+
+void vcmtpRecvv3::recvRetxData()
+{
+	VcmtpHeader tmpheader;
+    char pktBuf[MAX_VCMTP_PACKET_LEN];
+    bzero(pktBuf, sizeof(pktBuf));
+    char* pktbufhead = pktBuf;
+    char* pktbufpay = pktBuf + VCMTP_HEADER_LEN;
+
+    tcprecv->recvData(pktbufhead, VCMTP_HEADER_LEN, pktbufpay, VCMTP_DATA_LEN);
+    memcpy(&tmpheader.prodindex,  pktbufhead,    4);
+    memcpy(&tmpheader.seqnum, 	   pktbufhead+4,  4);
+    memcpy(&tmpheader.payloadlen, pktbufhead+8,  2);
+    memcpy(&tmpheader.flags,      pktbufhead+10, 2);
+
+#ifdef DEBUG
+    char c0, c1;
+    memcpy(&c0, pktbufpay, 1);
+    memcpy(&c1, pktbufpay+1, 1);
+    printf("%X ", c0);
+    printf("%X", c1);
+    printf("\n");
+#endif
+
+    tmpheader.prodindex  = ntohl(tmpheader.prodindex);
+    tmpheader.seqnum     = ntohl(tmpheader.seqnum);
+    tmpheader.payloadlen = ntohs(tmpheader.payloadlen);
+    tmpheader.flags      = ntohs(tmpheader.flags);
+    cout << "(Retx) prodindex: " << tmpheader.prodindex << endl;
+    cout << "(Retx) seqnum: " << tmpheader.seqnum << endl;
+    cout << "(Retx) payloadlen: " << tmpheader.payloadlen << endl;
+    cout << "(Retx) flags: " << tmpheader.flags << endl;
 }

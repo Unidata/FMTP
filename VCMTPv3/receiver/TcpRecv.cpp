@@ -22,10 +22,12 @@ TcpRecv::TcpRecv(string tcpAddr, unsigned short tcpPort)
         std::cout << "TcpRecv:TcpRecv() error connecting to sender" << std::endl;
 }
 
+
 TcpRecv::~TcpRecv()
 {
     close(sockfd);
 }
+
 
 ssize_t TcpRecv::sendData(char* header, size_t headLen, char* payload, size_t payLen)
 {
@@ -36,5 +38,18 @@ ssize_t TcpRecv::sendData(char* header, size_t headLen, char* payload, size_t pa
     iov[1].iov_len  = payLen;
 
     int retval = writev(sockfd, iov, 2);
+    return retval;
+}
+
+
+ssize_t TcpRecv::recvData(char* header, size_t headLen, char* payload, size_t payLen)
+{
+    struct iovec iov[2];
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headLen;
+    iov[1].iov_base = payload;
+    iov[1].iov_len  = payLen;
+
+    int retval = readv(sockfd, iov, 2);
     return retval;
 }
