@@ -364,8 +364,8 @@ void vcmtpRecvv3::sendRetxReq()
 
     //uint32_t prodindex = htonl(vcmtpHeader.prodindex);
     uint32_t prodindex = htonl(0);
-    uint32_t seqNum    = htonl(0);
-    uint16_t payLen    = htons(1428);
+    uint32_t seqNum    = htonl(1448);
+    uint16_t payLen    = htons(1448);
     uint16_t flags     = htons(VCMTP_RETX_REQ);
 
     memcpy(pktBuf,    &prodindex, 4);
@@ -391,15 +391,6 @@ void vcmtpRecvv3::recvRetxData()
     memcpy(&tmpheader.payloadlen, pktbufhead+8,  2);
     memcpy(&tmpheader.flags,      pktbufhead+10, 2);
 
-#ifdef DEBUG
-    char c0, c1;
-    memcpy(&c0, pktbufpay, 1);
-    memcpy(&c1, pktbufpay+1, 1);
-    printf("%X ", c0);
-    printf("%X", c1);
-    printf("\n");
-#endif
-
     tmpheader.prodindex  = ntohl(tmpheader.prodindex);
     tmpheader.seqnum     = ntohl(tmpheader.seqnum);
     tmpheader.payloadlen = ntohs(tmpheader.payloadlen);
@@ -408,4 +399,13 @@ void vcmtpRecvv3::recvRetxData()
     cout << "(Retx) seqnum: " << tmpheader.seqnum << endl;
     cout << "(Retx) payloadlen: " << tmpheader.payloadlen << endl;
     cout << "(Retx) flags: " << tmpheader.flags << endl;
+
+#ifdef DEBUG
+    char c0, c1;
+    memcpy(&c0, pktbufpay, 1);
+    memcpy(&c1, pktbufpay+1, 1);
+    printf("%X ", c0);
+    printf("%X", c1);
+    printf("\n");
+#endif
 }

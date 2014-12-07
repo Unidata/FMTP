@@ -341,7 +341,6 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			perror("vcmtpSendv3::RunRetxThread() receive header error");
 
 		RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
-		cout << "prodindex: " << recvheader->prodindex << endl;
 		/** Handle a retransmission request */
 		if (recvheader->flags & VCMTP_RETX_REQ)
 		{
@@ -349,19 +348,16 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
 			 * send retx_rej msg to receivers if the given condition is
 			 * satisfied: the per-product timer thread has removed the prodindex.
 			 */
-			cout << "entering RETX_REQ" << endl;
 			if (retxMeta == NULL)
 			{
-				cout << "entering RETX_REQ if branch" << endl;
 				sendheader->prodindex  = htonl(recvheader->prodindex);
 				sendheader->seqnum	   = htonl(recvheader->seqnum);
-				sendheader->payloadlen = htons(0);
+				sendheader->payloadlen = htons(recvheader->payloadlen);
 				sendheader->flags 	   = htons(VCMTP_RETX_REJ);
 				tcpsend->send(retxsockfd, sendheader, NULL, 0);
 			}
 			else
 			{
-			    cout << "entering RETX_REQ else branch" << endl;
 				/** get the pointer to the data product in product queue */
 				void* prodptr;
 				if ((it = retxIndexProdptrMap.find(recvheader->prodindex)) !=
@@ -408,6 +404,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
     char c0, c1;
     memcpy(&c0, (char*)prodptr+startPos, 1);
     memcpy(&c1, (char*)prodptr+startPos+1, 1);
+    cout << "(Retx) data block:" << endl;
     printf("%X ", c0);
     printf("%X", c1);
     printf("\n");
@@ -466,7 +463,7 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
 {
 	StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
 	Timer timer(timerinfo->prodindex, timerinfo->sendmeta);
-	cout << "timer wakes up" << endl;
+	cout << "timer wakes up, prodindex #" << timerinfo->prodindex << " removed" << endl;
 	delete timerinfo;
 	timerinfo = NULL;
 	return NULL;
