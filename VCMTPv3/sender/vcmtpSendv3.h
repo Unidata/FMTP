@@ -56,8 +56,6 @@ struct StartRetxThreadInfo
 	vcmtpSendv3* 	retxmitterptr;
 	/** The particular retx socket this running thread is listening on */
 	int				retxsockfd;
-    /** prodindex to prodptr map.  Format: <prodindex, prodptr> */
-	map<uint32_t, void*>* retxIndexProdptrMap;
 };
 
 
@@ -107,7 +105,7 @@ private:
 	map<int, StartRetxThreadInfo*> retxSockInfoMap;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
-    void RunRetxThread(int retxsockfd, map<uint, void*>& retxIndexProdptrMap);
+    void RunRetxThread(int retxsockfd);
 	void startTimerThread(uint32_t prodindex);
     static void* runTimerThread(void* ptr);
 };

@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     vcmtpRecvv3.sendRetxReq();
     sleep(1);
     vcmtpRecvv3.recvRetxData();
-    sleep(2);
+    sleep(4);
     vcmtpRecvv3.sendRetxReq();
     sleep(1);
     vcmtpRecvv3.recvRetxData();
