@@ -8,5 +8,7 @@
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= TcpSend.cpp TcpSend.h vcmtpSendv3.cpp vcmtpSendv3.h \
-			  UdpSocket.cpp UdpSocket.h
+			  UdpSocket.cpp UdpSocket.h \
+			  senderMetadata.cpp senderMetadata.h \
+			  timer.cpp timer.h
 lib_la_CPPFLAGS		= -I$(srcdir)/..
