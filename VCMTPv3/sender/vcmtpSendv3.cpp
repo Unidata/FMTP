@@ -347,8 +347,6 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
     StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
     retxThreadInfo->retxmitterptr       = this;
     retxThreadInfo->retxsockfd          = newtcpsockfd;
-    /** new prodindex-to-prodptr map */
-    retxThreadInfo->retxIndexProdptrMap = new map<uint32_t, void*>();
 
     retxSockInfoMap[newtcpsockfd] = retxThreadInfo;
 
@@ -372,8 +370,7 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 void* vcmtpSendv3::StartRetxThread(void* ptr)
 {
     StartRetxThreadInfo* newptr = (StartRetxThreadInfo*) ptr;
-    newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd,
-                                         *(newptr->retxIndexProdptrMap));
+    newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
     return NULL;
 }
 
@@ -397,8 +394,7 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
  * @param[in] retxsockfd              retx socket associated with a receiver
  * @param[in] retxIndexProdptrMap     a prodindex to prodptr map
  */
-void vcmtpSendv3::RunRetxThread(int retxsockfd,
-                                map<uint32_t, void*>& retxIndexProdptrMap)
+void vcmtpSendv3::RunRetxThread(int retxsockfd)
 {
     map<uint32_t, void*>::iterator it;
 
@@ -430,28 +426,12 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
             else
             {
                 /** get the pointer to the data product in product queue */
-                void* prodptr;
-                if ((it = retxIndexProdptrMap.find(recvheader->prodindex)) !=
-                    retxIndexProdptrMap.end())
+                void* prodptr = retxMeta->dataprod_p;
+                /** if failed to fetch prodptr, throw an error and skip */
+                if (prodptr == NULL)
                 {
-                    prodptr = it->second;
-                }
-                else
-                {
-                    /**
-                     * The first time requesting for this prodptr associated
-                     * with the given prodindex. Fetch it from the RetxMetaData.
-                     * And add it to the retxIndexProdptrMap.
-                     */
-                    prodptr = retxMeta->dataprod_p;
-                    /** if failed to fetch prodptr, throw an error and skip */
-                    if (prodptr == NULL)
-                    {
-                        perror("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
-                        continue;
-                    }
-                    else
-                        retxIndexProdptrMap[recvheader->prodindex] = prodptr;
+                    perror("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
+                    continue;
                 }
 
                 /** construct the retx data block and send. */
@@ -491,13 +471,6 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd,
         }
         else if (recvheader->flags & VCMTP_RETX_END)
         {
-            map<uint32_t, void*>::iterator it;
-            if ((it = retxIndexProdptrMap.find(recvheader->prodindex)) !=
-                retxIndexProdptrMap.end())
-            {
-                retxIndexProdptrMap.erase(it);
-            }
-
             /** if timer is still sleeping, update metadata. Otherwise, skip */
             if (retxMeta != NULL)
             {
@@ -528,7 +501,8 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
     StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
     timerinfo->prodindex = prodindex;
     timerinfo->sendmeta = sendMeta;
-    int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread, timerinfo);
+    int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread,
+                                  timerinfo);
     if(retval != 0)
     {
         perror("vcmtpSendv3::startTimerThread() pthread_create error");
@@ -537,6 +511,11 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 }
 
 
+/**
+ *
+ *
+ * @param[in] *ptr
+ */
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
     StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
