@@ -3,17 +3,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <strings.h>
-#include <iostream>
 #include <unistd.h>
 #include <stdio.h>
 #include <system_error>
 #include "TcpSend.h"
 #include "vcmtpBase.h"
 #include <sys/uio.h>
+#include <stdexcept>
 
 #define MAX_CONNECTION 5
-
-using namespace std;
 
 
 /**
@@ -28,14 +26,14 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
-        std::cout << "TcpSend::TcpSend() error creating socket" << std::endl;
+        throw std::runtime_error("TcpSend::TcpSend() error creating socket");
     bzero((char *) &servAddr, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
     servAddr.sin_addr.s_addr = inet_addr(tcpAddr.c_str());
     /** If tcpPort = 0, OS will automatically choose an available port number. */
     servAddr.sin_port = htons(tcpPort);
     if(bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
-        std::cout << "TcpSend::TcpSend() error binding socket" << std::endl;
+        throw std::runtime_error("TcpSend::TcpSend() error binding socket");
     /** listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
 }
@@ -52,8 +50,7 @@ int TcpSend::acceptConn()
 {
     int newsockfd = accept(sockfd, NULL, NULL);
     if(newsockfd < 0)
-    	//TODO: should throw an error here and return right away.
-        perror("TcpSend::readSock() error reading from socket");
+        throw std::runtime_error("TcpSend::readSock() error reading from socket");
 
 	pthread_mutex_lock(&sockListMutex);
 	connSockList.push_back(newsockfd);
@@ -127,8 +124,7 @@ unsigned short TcpSend::getPortNum()
     socklen_t          tmpAddrLen = sizeof(tmpAddr);
 
     if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
-        throw std::system_error(errno, system_category(),
-                "TcpSend::getPortNum() error getting port number");
+        throw std::runtime_error("TcpSend::getPortNum() error getting port number");
 
     return ntohs(tmpAddr.sin_port);
 }

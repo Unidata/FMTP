@@ -28,6 +28,7 @@
 
 #include "vcmtpSendv3.h"
 #include <stdio.h>
+#include <stdexcept>
 
 /**
  * Constructs a sender instance and initializes a udpsend object pointer, a
@@ -137,8 +138,8 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
    memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
 
    /** send the BOP message on multicast socket */
-   if (udpsend->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
-       perror("vcmtpSendv3::SendBOPMessage::SendTo error");
+   if (udpsend->SendTo(vcmtp_packet, PACKET_SIZE) < 0)
+       throw std::runtime_error("vcmtpSendv3::SendBOPMessage() SendTo error");
 }
 
 
@@ -173,7 +174,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
     /** creates a new RetxMetadata struct for this product */
 	RetxMetadata* senderProdMeta = new RetxMetadata();
 	if (senderProdMeta == NULL)
-		perror("vcmtpSendv3::sendProduct() error creating RetxMetadata instance");
+	    throw std::runtime_error("vcmtpSendv3::sendProduct() create RetxMetadata error");
 
 	/** update current prodindex in RetxMetadata */
 	senderProdMeta->prodindex 	   = prodIndex;
@@ -222,7 +223,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
         if(udpsend->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size)
            < 0)
         {
-            perror("vcmtpSendv3::sendProduct::SendData() error");
+            throw std::runtime_error("vcmtpSendv3::sendProduct::SendData() error");
         }
 
         remained_size -= data_size;
@@ -272,7 +273,7 @@ void vcmtpSendv3::sendEOPMessage()
 
     /** send the EOP message out */
     if (udpsend->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
-        perror("vcmtpSendv3::sendEOPMessage::SendTo error");
+        throw std::runtime_error("vcmtpSendv3::sendEOPMessage::SendTo error");
 }
 
 
@@ -289,7 +290,7 @@ void vcmtpSendv3::startCoordinator()
     int retval = pthread_create(&new_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0)
     {
-        perror("vcmtpSendv3::startCoordinator() error pthread_create");
+        throw std::runtime_error("vcmtpSendv3::startCoordinator() pthread_create error");
     }
     pthread_detach(new_t);
 }
@@ -352,7 +353,7 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
                                 retxThreadInfo);
     if(retval != 0)
     {
-        perror("vcmtpSendv3::StartNewRetxThread() error pthread_create");
+        throw std::runtime_error("vcmtpSendv3::StartNewRetxThread() error pthread_create");
     }
     pthread_detach(t);
 }
@@ -403,7 +404,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
     while(1)
     {
         if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
-            perror("vcmtpSendv3::RunRetxThread() receive header error");
+            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive header error");
 
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
         /** Handle a retransmission request */
@@ -428,7 +429,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 /** if failed to fetch prodptr, throw an error and skip */
                 if (prodptr == NULL)
                 {
-                    perror("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
+                    throw std::runtime_error("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
                     continue;
                 }
 
@@ -493,7 +494,7 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
                                   timerinfo);
     if(retval != 0)
     {
-        perror("vcmtpSendv3::startTimerThread() pthread_create error");
+        throw std::runtime_error("vcmtpSendv3::startTimerThread() pthread_create error");
     }
     pthread_detach(t);
 }

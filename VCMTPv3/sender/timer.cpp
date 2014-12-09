@@ -1,5 +1,6 @@
 #include "timer.h"
 #include <unistd.h>
+#include <stdexcept>
 
 
 Timer::Timer(uint32_t prodindex, senderMetadata* sendmeta)
@@ -27,5 +28,5 @@ void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta)
 		sendmeta->rmRetxMetadata(prodindex);
 	}
 	else
-		;// throw an error here
+	    throw std::runtime_error("Timer::trigger() get RetxMetadata error");
 }

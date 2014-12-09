@@ -6,6 +6,7 @@
  */
 
 #include "UdpSend.h"
+#include <stdexcept>
 
 /**
  * Set the IP address and port of the receiver and connect to the upd socket.
@@ -16,7 +17,7 @@
 UdpSend::UdpSend(const char* recvAddr, unsigned short port) {
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        cout<<"UdpSend::UdpSend error";
+        throw std::runtime_error("UdpSend::UdpSend() create socket error");
     }
     /** clear struct recv_addr. */
     bzero(&recv_addr, sizeof(recv_addr));
@@ -29,14 +30,17 @@ UdpSend::UdpSend(const char* recvAddr, unsigned short port) {
     connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
 
+
 UdpSend::~UdpSend() {
     // TODO Auto-generated destructor stub
 }
+
 
 ssize_t UdpSend::SendTo(const void* buff, size_t len)
 {
     return send(sock_fd, buff, len, 0);
 }
+
 
 ssize_t UdpSend::SendData(char* header, const size_t headerLen, char* data, const size_t dataLen)
 {
