@@ -4,6 +4,7 @@
 #include <set>
 #include <map>
 #include <pthread.h>
+#include <stdint.h>
 
 using namespace std;
 
