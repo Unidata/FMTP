@@ -238,7 +238,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
 
     // TODO: figure out how to set timeout value
     /** set up timer and trigger */
-    senderProdMeta->timeoutSec = 5;
+    senderProdMeta->timeoutSec = 8;
     senderProdMeta->timeoutuSec = 500000;
 
     /** start a new timer for this product in a separate thread */
@@ -450,20 +450,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                                       VCMTP_DATA_LEN : remainedSize;
                     sendheader->seqnum     = htonl(startPos);
                     sendheader->payloadlen = htons(payLen);
-
-#ifdef DEBUG
-    char c0, c1;
-    memcpy(&c0, (char*)prodptr+startPos, 1);
-    memcpy(&c1, (char*)prodptr+startPos+1, 1);
-    cout << "(Retx) data block:" << endl;
-    printf("%X ", c0);
-    printf("%X", c1);
-    printf("\n");
-#endif
-
                     tcpsend->send(retxsockfd, sendheader,
                                   (char*)(prodptr) + startPos, (size_t) payLen);
-
                     startPos += payLen;
                     remainedSize -= payLen;
                 }
@@ -476,7 +464,6 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             {
                 /** remove the specific receiver out of the unfinished receiver set */
                 sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
-
                 if(sendMeta->isRetxAllFinished(recvheader->prodindex))
                 {
                     //TODO: call LDM callback function to release product.
@@ -485,6 +472,9 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             }
         }
     }
+
+    delete recvheader;
+    delete sendheader;
 }
 
 
@@ -520,7 +510,6 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
 {
     StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
     Timer timer(timerinfo->prodindex, timerinfo->sendmeta);
-    cout << "timer wakes up, prodindex #" << timerinfo->prodindex << " removed" << endl;
     delete timerinfo;
     timerinfo = NULL;
     return NULL;

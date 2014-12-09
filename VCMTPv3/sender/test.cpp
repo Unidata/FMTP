@@ -30,7 +30,7 @@ int main()
 			cout<<"file map failed"<<endl;
 
         sender->startCoordinator();
-        sleep(3);
+        sleep(2);
 		sender->sendProduct(data, 5792, metadata, metaSize);
         while(1);
 

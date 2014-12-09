@@ -14,11 +14,18 @@ int main(int argc, char* argv[])
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecvv3.Start();
-    sleep(4);
+    sleep(3);
+    /* for RETX_REQ test
     vcmtpRecvv3.sendRetxReq();
     sleep(1);
     vcmtpRecvv3.recvRetxData();
     sleep(4);
+    vcmtpRecvv3.sendRetxReq();
+    sleep(1);
+    vcmtpRecvv3.recvRetxData();
+    */
+    vcmtpRecvv3.sendRetxEnd();
+    sleep(3);
     vcmtpRecvv3.sendRetxReq();
     sleep(1);
     vcmtpRecvv3.recvRetxData();
