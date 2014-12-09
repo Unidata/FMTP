@@ -236,10 +236,8 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
     /** get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
 
-    // TODO: figure out how to set timeout value
-    /** set up timer and trigger */
-    senderProdMeta->timeoutSec = 8;
-    senderProdMeta->timeoutuSec = 500000;
+    /** set up timer timeout period */
+    senderProdMeta->retxTimeoutPeriod = 8.5;
 
     /** start a new timer for this product in a separate thread */
     startTimerThread(prodIndex);

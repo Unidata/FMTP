@@ -50,9 +50,6 @@ TcpSend::~TcpSend()
 
 int TcpSend::acceptConn()
 {
-    struct sockaddr_in cliAddr;
-    socklen_t clilen = sizeof(cliAddr);
-    //int newsockfd = accept(sockfd, (struct sockaddr *) &cliAddr, &clilen);
     int newsockfd = accept(sockfd, NULL, NULL);
     if(newsockfd < 0)
     	//TODO: should throw an error here and return right away.
