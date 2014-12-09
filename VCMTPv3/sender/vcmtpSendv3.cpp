@@ -44,7 +44,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
                          const char*          mcastAddr,
                          const unsigned short mcastPort)
 {
-    udpsocket = 0;
+    udpsend = 0;
     tcpsend   = 0;
     sendMeta  = 0;
     prodIndex = 0;
@@ -70,7 +70,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
                          uint32_t             initProdIndex)
 {
     prodIndex = initProdIndex;
-    udpsocket = new UdpSocket(mcastAddr,mcastPort);
+    udpsend   = new UdpSend(mcastAddr,mcastPort);
     tcpsend   = new TcpSend(tcpAddr, tcpPort);
     sendMeta  = new senderMetadata();
 }
@@ -83,7 +83,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
  */
 vcmtpSendv3::~vcmtpSendv3()
 {
-    delete udpsocket;
+    delete udpsend;
     delete tcpsend;
     delete sendMeta;
 }
@@ -137,7 +137,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
    memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
 
    /** send the BOP message on multicast socket */
-   if (udpsocket->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
+   if (udpsend->SendTo(vcmtp_packet,PACKET_SIZE) < 0)
        perror("vcmtpSendv3::SendBOPMessage::SendTo error");
 }
 
@@ -219,7 +219,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
         memcpy(&header->payloadlen, &payLen,    2);
         memcpy(&header->flags,      &flags,     2);
 
-        if(udpsocket->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size)
+        if(udpsend->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size)
            < 0)
         {
             perror("vcmtpSendv3::sendProduct::SendData() error");
@@ -271,7 +271,7 @@ void vcmtpSendv3::sendEOPMessage()
     memcpy(&vcmtp_header->flags,       &flags,     2);
 
     /** send the EOP message out */
-    if (udpsocket->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
+    if (udpsend->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
         perror("vcmtpSendv3::sendEOPMessage::SendTo error");
 }
 

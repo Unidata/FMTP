@@ -31,7 +31,7 @@
 
 
 #include <sys/types.h>
-#include "UdpSocket.h"
+#include "UdpSend.h"
 #include "TcpSend.h"
 #include "vcmtpBase.h"
 #include "senderMetadata.h"
@@ -93,7 +93,7 @@ public:
 
 private:
     uint32_t 	      prodIndex;
-    UdpSocket* 	  udpsocket;
+    UdpSend* 	  udpsend;
     TcpSend*   	  tcpsend;
     senderMetadata* sendMeta; /*!< maintaining metadata for retx use. */
     //TODO: a more precise timeout mechanism should be studied.

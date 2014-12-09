@@ -1,11 +1,11 @@
 /*
-*UdpSocket.cpp
+*UdpSend.cpp
  *
  *  Created on: Oct 16, 2014
  *      Author: fatmaal-ali
  */
 
-#include "UdpSocket.h"
+#include "UdpSend.h"
 
 /**
  * Set the IP address and port of the receiver and connect to the upd socket.
@@ -13,10 +13,10 @@
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
  */
-UdpSocket::UdpSocket(const char* recvAddr, unsigned short port) {
+UdpSend::UdpSend(const char* recvAddr, unsigned short port) {
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        cout<<"UdpSocket::UdpSocket error";
+        cout<<"UdpSend::UdpSend error";
     }
     /** clear struct recv_addr. */
     bzero(&recv_addr, sizeof(recv_addr));
@@ -29,16 +29,16 @@ UdpSocket::UdpSocket(const char* recvAddr, unsigned short port) {
     connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
 
-UdpSocket::~UdpSocket() {
+UdpSend::~UdpSend() {
     // TODO Auto-generated destructor stub
 }
 
-ssize_t UdpSocket::SendTo(const void* buff, size_t len)
+ssize_t UdpSend::SendTo(const void* buff, size_t len)
 {
     return send(sock_fd, buff, len, 0);
 }
 
-ssize_t UdpSocket::SendData(char* header, const size_t headerLen, char* data, const size_t dataLen)
+ssize_t UdpSend::SendData(char* header, const size_t headerLen, char* data, const size_t dataLen)
 {
     int ret;
     /** vector including the two memory locations */

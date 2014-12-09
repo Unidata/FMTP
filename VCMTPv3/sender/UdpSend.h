@@ -1,5 +1,5 @@
 /*
-*UdpSocket.h
+*UdpSend.h
  *
  *  Created on: Oct 16, 2014
  *      Author: fatmaal-ali
@@ -19,10 +19,10 @@
 
 using namespace std;
 
-class UdpSocket {
+class UdpSend {
 public:
-    UdpSocket(const char* recvAddr,unsigned short port);
-    ~UdpSocket();
+    UdpSend(const char* recvAddr,unsigned short port);
+    ~UdpSend();
     ssize_t SendTo(const void* buff, size_t len);
     ssize_t SendData(char* header, const size_t headerLen, char* data, const size_t dataLen);
 
