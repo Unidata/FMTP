@@ -1,0 +1,35 @@
+/**
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
+ *
+ * @file SendingApplicationNotifier.h
+ *
+ * This file declares the API for classes that notify a sending application
+ * about files.
+ *
+ * @author: Shawn Chen <sc7cq@virginia.edu>
+ */
+
+#ifndef SENDINGAPPLICATIONNOTIFIER_H_
+#define SENDINGAPPLICATIONNOTIFIER_H_
+
+#include <stdint.h>
+
+/**
+ * This base class notifies a sending application about events.
+ */
+class SendingApplicationNotifier
+{
+public:
+    SendingApplicationNotifier() {};
+    virtual ~SendingApplicationNotifier() {};        // definition must exist
+
+    /**
+     * Notifies the sending application about the complete reception of the
+     * previous product. This method is thread-safe.
+     */
+    virtual void notify_of_eop(uint32_t prodindex) = 0;
+};
+
+#endif /* SENDINGAPPLICATIONNOTIFIER_H_ */
