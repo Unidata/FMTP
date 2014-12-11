@@ -18,7 +18,7 @@ int main()
 
 	vcmtpSendv3* sender;
 	//sender = new vcmtpSendv3("192.168.0.101", 1234, "128.143.137.117", 5173, 0);
-	sender = new vcmtpSendv3("127.0.0.1", 1234, "233.0.225.123", 5173, 0);
+	sender = new vcmtpSendv3("127.0.0.1", 1234, "233.0.225.123", 5173, 0, 0);
 	char *filename = "RANDDATA";
 	int fd;
 	fd = open(filename,O_RDONLY);

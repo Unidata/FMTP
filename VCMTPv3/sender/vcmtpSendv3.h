@@ -36,6 +36,7 @@
 #include "vcmtpBase.h"
 #include "senderMetadata.h"
 #include "timer.h"
+#include "SendingApplicationNotifier.h"
 #include <map>
 #include <set>
 #include <pthread.h>
@@ -79,7 +80,8 @@ public:
             const unsigned short tcpPort,
             const char*          mcastAddr,
             const unsigned short mcastPort,
-            uint32_t             initProdIndex);
+            uint32_t             initProdIndex,
+            SendingApplicationNotifier* initNotifier);
 
     ~vcmtpSendv3();
     uint32_t sendProduct(char* data, size_t dataSize);
@@ -96,7 +98,7 @@ private:
     UdpSend* 	  udpsend;
     TcpSend*   	  tcpsend;
     senderMetadata* sendMeta; /*!< maintaining metadata for retx use. */
-    //TODO: a more precise timeout mechanism should be studied.
+    SendingApplicationNotifier* notifier;
     /** first: socket fd;  second: pthread_t pointer */
 	map<int, pthread_t*> retxSockThreadMap;
     /** first: socket fd;  second: retransmission finished indicator */

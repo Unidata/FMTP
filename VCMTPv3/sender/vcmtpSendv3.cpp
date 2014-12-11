@@ -49,7 +49,9 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     tcpsend   = 0;
     sendMeta  = 0;
     prodIndex = 0;
-    vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
+    notifier  = 0;
+    //vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
+    vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex, notifier);
 }
 
 
@@ -68,9 +70,11 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
                          const unsigned short tcpPort,
                          const char*          mcastAddr,
                          const unsigned short mcastPort,
-                         uint32_t             initProdIndex)
+                         uint32_t             initProdIndex,
+                         SendingApplicationNotifier* initNotifier)
 {
     prodIndex = initProdIndex;
+    notifier  = initNotifier;
     udpsend   = new UdpSend(mcastAddr,mcastPort);
     tcpsend   = new TcpSend(tcpAddr, tcpPort);
     sendMeta  = new senderMetadata();
