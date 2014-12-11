@@ -469,8 +469,11 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
                 if(sendMeta->isRetxAllFinished(recvheader->prodindex))
                 {
-                    //TODO: call LDM callback function to release product.
                     sendMeta->rmRetxMetadata(recvheader->prodindex);
+                	if(notifier)
+                	{
+                		notifier->notify_of_eop(recvheader->prodindex);
+                	}
                 }
             }
         }
@@ -513,6 +516,10 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
 {
     StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
     Timer timer(timerinfo->prodindex, timerinfo->sendmeta);
+    if(notifier)
+    {
+    	notifier->notify_of_eop(timerinfo->prodindex);
+    }
     delete timerinfo;
     timerinfo = NULL;
     return NULL;
