@@ -64,7 +64,6 @@ struct StartTimerThreadInfo
 {
 	uint32_t	prodindex;
 	vcmtpSendv3*    sender;
-	senderMetadata* sendmeta;
 };
 
 
@@ -93,7 +92,6 @@ public:
     unsigned short getTcpPortNum();
     void StartNewRetxThread(int newtcpsockfd);
     static void* StartRetxThread(void* ptr);
-    void notify_of_eop(uint32_t prodIndex);
 
 private:
     uint32_t 	      prodIndex;
