@@ -7,6 +7,5 @@
 EXTRA_DIST		= vcmtpBase.cpp vcmtpBase.h
 SUBDIRS 		= receiver sender
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h \
-			  ReceivingApplicationNotifier.h
+lib_la_SOURCES		= vcmtpBase.cpp vcmtpBase.h
 lib_la_LIBADD		= receiver/lib.la sender/lib.la

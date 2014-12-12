@@ -496,6 +496,7 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
     pthread_t t;
     StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
     timerinfo->prodindex = prodindex;
+    timerinfo->sender = this;
     timerinfo->sendmeta = sendMeta;
     int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread,
                                   timerinfo);
@@ -514,13 +515,15 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
  */
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
-    StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*) ptr;
+    StartTimerThreadInfo* timerinfo = (StartTimerThreadInfo*)ptr;
     Timer timer(timerinfo->prodindex, timerinfo->sendmeta);
-    if(notifier)
-    {
-    	notifier->notify_of_eop(timerinfo->prodindex);
-    }
+    timerinfo->sender->notify_of_eop(timerinfo->prodindex);
     delete timerinfo;
-    timerinfo = NULL;
     return NULL;
+}
+
+void vcmtpSendv3::notify_of_eop(uint32_t prodIndex)
+{
+    if (notifier)
+        notifier->notify_of_eop(prodIndex);
 }
