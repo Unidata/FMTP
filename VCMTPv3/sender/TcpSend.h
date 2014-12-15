@@ -4,6 +4,7 @@
 #include <string>
 #include <list>
 #include "vcmtpBase.h"
+#include <pthread.h>
 
 using namespace std;
 

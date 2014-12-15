@@ -39,16 +39,23 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 }
 
 
-void senderMetadata::rmRetxMetadata(uint32_t prodindex)
+bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 {
+    bool rmSuccess;
 	map<uint32_t, RetxMetadata*>::iterator it;
 	pthread_rwlock_wrlock(&indexMetaMapLock);
 	if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
 	{
 		delete it->second;
 		indexMetaMap.erase(it);
+        rmSuccess = true;
 	}
+    else
+    {
+        rmSuccess = false;
+    }
 	pthread_rwlock_unlock(&indexMetaMapLock);
+    return rmSuccess;
 }
 
 

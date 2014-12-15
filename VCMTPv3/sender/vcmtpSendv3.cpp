@@ -469,8 +469,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
                 if(sendMeta->isRetxAllFinished(recvheader->prodindex))
                 {
-                    sendMeta->rmRetxMetadata(recvheader->prodindex);
-                	if(notifier)
+                    bool rmStat = sendMeta->rmRetxMetadata(recvheader->prodindex);
+                	if(notifier && rmStat)
                 	{
                 		notifier->notify_of_eop(recvheader->prodindex);
                 	}
@@ -520,7 +520,7 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
     SendingApplicationNotifier* const notifier = sender->notifier;
     Timer                             timer(prodindex, sender->sendMeta);
 
-    if (notifier)
+    if (notifier && timer.getRmState())
         notifier->notify_of_eop(prodindex);
 
     delete timerinfo;

@@ -33,7 +33,7 @@ public:
 	~senderMetadata();
 
 	void addRetxMetadata(RetxMetadata* ptrMeta);
-	void rmRetxMetadata(uint32_t prodindex);
+	bool rmRetxMetadata(uint32_t prodindex);
 	RetxMetadata* getMetadata(uint32_t prodindex);
 	bool isRetxAllFinished(uint32_t prodindex);
 	void removeFinishedReceiver(uint32_t prodindex, int retxsockfd);

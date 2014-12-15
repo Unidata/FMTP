@@ -25,8 +25,14 @@ void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta)
 	                                    timeoutSec) * 1000000;
 		sleep(timeoutSec);
 		usleep(timeoutuSec);
-		sendmeta->rmRetxMetadata(prodindex);
+		rmSuccess = sendmeta->rmRetxMetadata(prodindex);
 	}
 	else
 	    throw std::runtime_error("Timer::trigger() get RetxMetadata error");
+}
+
+
+bool Timer::getRmState()
+{
+    return rmSuccess;
 }
