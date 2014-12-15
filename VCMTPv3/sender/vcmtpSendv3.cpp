@@ -175,6 +175,9 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
                                   unsigned metaSize)
 {
+	// TODO: check data pointer to see if it's NULL, otherwise throw an error
+	// TODO: checl data size to see if it's smaller than 2^32-1
+	// TODO: ignore metasize if metadata is NULL (made explicit in docs)
     /** creates a new RetxMetadata struct for this product */
 	RetxMetadata* senderProdMeta = new RetxMetadata();
 	if (senderProdMeta == NULL)
@@ -194,6 +197,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
 	    senderProdMeta->unfinReceivers.insert(*it);
 	}
 	/** add current RetxMetadata into sendMetadata::indexMetaMap */
+	// TODO: check addRetxMetadata() is successful
 	sendMeta->addRetxMetadata(senderProdMeta);
 	/** update multicast start time in RetxMetadata */
 	senderProdMeta->mcastStartTime = clock();
@@ -421,8 +425,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             if (retxMeta == NULL)
             {
                 sendheader->prodindex  = htonl(recvheader->prodindex);
-                sendheader->seqnum     = htonl(recvheader->seqnum);
-                sendheader->payloadlen = htons(recvheader->payloadlen);
+                sendheader->seqnum     = 0;
+                sendheader->payloadlen = 0;
                 sendheader->flags      = htons(VCMTP_RETX_REJ);
                 tcpsend->send(retxsockfd, sendheader, NULL, 0);
             }
@@ -434,7 +438,6 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 if (prodptr == NULL)
                 {
                     throw std::runtime_error("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
-                    continue;
                 }
 
                 /** construct the retx data block and send. */
@@ -520,6 +523,7 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
     SendingApplicationNotifier* const notifier = sender->notifier;
     Timer                             timer(prodindex, sender->sendMeta);
 
+    // TODO: use 3rd parameter in constructor
     if (notifier && timer.getRmState())
         notifier->notify_of_eop(prodindex);
 

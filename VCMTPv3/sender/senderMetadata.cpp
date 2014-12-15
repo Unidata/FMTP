@@ -71,7 +71,7 @@ void senderMetadata::removeFinishedReceiver(uint32_t prodindex, int retxsockfd)
 
 bool senderMetadata::isRetxAllFinished(uint32_t prodindex)
 {
-	bool isFinished;
+	bool isFinished = false;
 	map<uint32_t, RetxMetadata*>::iterator it;
 	pthread_rwlock_rdlock(&indexMetaMapLock);
 	if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
