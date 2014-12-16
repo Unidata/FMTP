@@ -469,15 +469,16 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             /** if timer is still sleeping, update metadata. Otherwise, skip */
             if (retxMeta != NULL)
             {
-                /** remove the specific receiver out of the unfinished receiver set */
-                sendMeta->removeFinishedReceiver(recvheader->prodindex, retxsockfd);
-                if(sendMeta->isRetxAllFinished(recvheader->prodindex))
+                /**
+                 * remove the specific receiver out of the unfinished receiver
+                 * set. Only if the product is removed by clearUnfinishedSet(),
+                 * it returns a true value.
+                 * */
+                bool prodRemoved = sendMeta->clearUnfinishedSet(
+                                    recvheader->prodindex, retxsockfd);
+                if(notifier && prodRemoved)
                 {
-                    bool rmStat = sendMeta->rmRetxMetadata(recvheader->prodindex);
-                	if(notifier && rmStat)
-                	{
-                		notifier->notify_of_eop(recvheader->prodindex);
-                	}
+                    notifier->notify_of_eop(recvheader->prodindex);
                 }
             }
         }
@@ -525,6 +526,10 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
     SendingApplicationNotifier* const notifier = sender->notifier;
     Timer                             timer(prodindex, sender->sendMeta, rmState);
 
+    /**
+     * rmState will be updated by the Timer instance to indicate the returning
+     * status of rmRetxMetadata().
+     */
     if (notifier && rmState)
         notifier->notify_of_eop(prodindex);
 
