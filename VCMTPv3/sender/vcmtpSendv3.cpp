@@ -175,9 +175,12 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
                                   unsigned metaSize)
 {
-	// TODO: check data pointer to see if it's NULL, otherwise throw an error
-	// TODO: checl data size to see if it's smaller than 2^32-1
-	// TODO: ignore metasize if metadata is NULL (made explicit in docs)
+    if (data == NULL)
+	    throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
+    if (dataSize > UINT32_MAX)
+	    throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize too large");
+    if (metadata == NULL)
+        metaSize = 0;
     /** creates a new RetxMetadata struct for this product */
 	RetxMetadata* senderProdMeta = new RetxMetadata();
 	if (senderProdMeta == NULL)
