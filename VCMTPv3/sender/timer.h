@@ -6,13 +6,11 @@
 class Timer
 {
 public:
-	Timer(uint32_t prodindex, senderMetadata* sendmeta);
+	Timer(uint32_t prodindex, senderMetadata* sendmeta, bool& rmState);
 	~Timer();
-    bool getRmState();
 
 private:
-	void trigger(uint32_t prodindex, senderMetadata* sendmeta);
-    bool rmSuccess;
+	void trigger(uint32_t prodindex, senderMetadata* sendmeta, bool& rmState);
 };
 
 #endif /* TIMER_H_ */

@@ -3,9 +3,9 @@
 #include <stdexcept>
 
 
-Timer::Timer(uint32_t prodindex, senderMetadata* sendmeta)
+Timer::Timer(uint32_t prodindex, senderMetadata* sendmeta, bool& rmState)
 {
-	trigger(prodindex, sendmeta);
+	trigger(prodindex, sendmeta, rmState);
 }
 
 
@@ -14,7 +14,7 @@ Timer::~Timer()
 }
 
 
-void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta)
+void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta, bool& rmState)
 {
     unsigned int timeoutSec, timeoutuSec;
 	RetxMetadata* perProdMeta = sendmeta->getMetadata(prodindex);
@@ -25,14 +25,8 @@ void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta)
 	                                    timeoutSec) * 1000000;
 		sleep(timeoutSec);
 		usleep(timeoutuSec);
-		rmSuccess = sendmeta->rmRetxMetadata(prodindex);
+		rmState = sendmeta->rmRetxMetadata(prodindex);
 	}
 	else
 	    throw std::runtime_error("Timer::trigger() get RetxMetadata error");
-}
-
-
-bool Timer::getRmState()
-{
-    return rmSuccess;
 }

@@ -177,8 +177,8 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
 {
     if (data == NULL)
 	    throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
-    if (dataSize > UINT32_MAX)
-	    throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize too large");
+    if (dataSize > UINT32_MAX && dataSize < 0)
+	    throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata == NULL)
         metaSize = 0;
     /** creates a new RetxMetadata struct for this product */
@@ -200,7 +200,6 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
 	    senderProdMeta->unfinReceivers.insert(*it);
 	}
 	/** add current RetxMetadata into sendMetadata::indexMetaMap */
-	// TODO: check addRetxMetadata() is successful
 	sendMeta->addRetxMetadata(senderProdMeta);
 	/** update multicast start time in RetxMetadata */
 	senderProdMeta->mcastStartTime = clock();
@@ -402,7 +401,6 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
  * send back to the receiver.
  *
  * @param[in] retxsockfd              retx socket associated with a receiver
- * @param[in] retxIndexProdptrMap     a prodindex to prodptr map
  */
 void vcmtpSendv3::RunRetxThread(int retxsockfd)
 {
@@ -520,14 +518,14 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
  */
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
+    bool rmState;
     StartTimerThreadInfo* const       timerinfo = (StartTimerThreadInfo*)ptr;
     const uint32_t                    prodindex = timerinfo->prodindex;
     vcmtpSendv3* const                sender = timerinfo->sender;
     SendingApplicationNotifier* const notifier = sender->notifier;
-    Timer                             timer(prodindex, sender->sendMeta);
+    Timer                             timer(prodindex, sender->sendMeta, rmState);
 
-    // TODO: use 3rd parameter in constructor
-    if (notifier && timer.getRmState())
+    if (notifier && rmState)
         notifier->notify_of_eop(prodindex);
 
     delete timerinfo;
