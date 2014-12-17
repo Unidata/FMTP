@@ -29,6 +29,7 @@
 #include "vcmtpSendv3.h"
 #include <stdio.h>
 #include <stdexcept>
+#include <string.h>
 
 /**
  * Constructs a sender instance and initializes a udpsend object pointer, a
@@ -118,7 +119,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     VcmtpBOPMessage*   vcmtp_data   = (VcmtpBOPMessage*) (vcmtp_packet +
                                                           VCMTP_HEADER_LEN);
 
-    bzero(vcmtp_packet, sizeof(vcmtp_packet));
+    (void)memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
 
     /** convert the variables from native to network binary representation */
     uint32_t prodindex   = htonl(prodIndex);
@@ -177,7 +178,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
 {
     if (data == NULL)
 	    throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
-    if (dataSize > UINT32_MAX && dataSize < 0)
+    if (dataSize > UINT32_MAX)
 	    throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata == NULL)
         metaSize = 0;
@@ -267,7 +268,7 @@ void vcmtpSendv3::sendEOPMessage()
 {
     char vcmtp_packet[VCMTP_HEADER_LEN];
     VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet;
-    bzero(vcmtp_packet, sizeof(vcmtp_packet));
+    (void)memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
 
     uint32_t prodindex = htonl(prodIndex);
     /** seqNum for the EOP should always be zero */
@@ -317,11 +318,10 @@ void vcmtpSendv3::startCoordinator()
  */
 void* vcmtpSendv3::coordinator(void* ptr)
 {
-    vcmtpSendv3* sendptr = (vcmtpSendv3*) ptr;
-    int newtcpsockfd;
+    vcmtpSendv3* sendptr = static_cast<vcmtpSendv3*>(ptr);
     while(1)
     {
-        newtcpsockfd = sendptr->tcpsend->acceptConn();
+        int newtcpsockfd = sendptr->tcpsend->acceptConn();
         sendptr->StartNewRetxThread(newtcpsockfd);
     }
     return NULL;
@@ -378,7 +378,7 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
  */
 void* vcmtpSendv3::StartRetxThread(void* ptr)
 {
-    StartRetxThreadInfo* newptr = (StartRetxThreadInfo*) ptr;
+    StartRetxThreadInfo* newptr = static_cast<StartRetxThreadInfo*>(ptr);
     newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
     return NULL;
 }
@@ -404,11 +404,8 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
  */
 void vcmtpSendv3::RunRetxThread(int retxsockfd)
 {
-    map<uint32_t, void*>::iterator it;
-
     VcmtpHeader* recvheader = new VcmtpHeader();
     VcmtpHeader* sendheader = new VcmtpHeader();
-    char sendpayload[VCMTP_DATA_LEN];
 
     while(1)
     {
@@ -520,7 +517,8 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
     bool rmState;
-    StartTimerThreadInfo* const       timerinfo = (StartTimerThreadInfo*)ptr;
+    StartTimerThreadInfo* const       timerinfo =
+            static_cast<StartTimerThreadInfo*>(ptr);
     const uint32_t                    prodindex = timerinfo->prodindex;
     vcmtpSendv3* const                sender = timerinfo->sender;
     SendingApplicationNotifier* const notifier = sender->notifier;
