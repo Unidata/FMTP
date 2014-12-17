@@ -35,6 +35,7 @@
 #include <memory.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 
 
@@ -59,13 +60,15 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    notifier(notifier)
+    tcprecv(0),
+    prodptr(0),
+    notifier(notifier),
+    max_sock_fd(0),
+    mcast_sock(0),
+    retx_tcp_sock(0),
+    recv_thread(0),
+    retx_thread(0)
 {
-    max_sock_fd = 0;
-    mcast_sock = 0;
-    retx_tcp_sock = 0;
-    recv_thread = 0;
-    retx_thread = 0;
 }
 
 
@@ -87,14 +90,16 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    notifier(0)    /*!< constructor called by independent test program will
+    tcprecv(0),
+    prodptr(0),
+    notifier(0),   /*!< constructor called by independent test program will
                     set notifier to NULL */
+    max_sock_fd(0),
+    mcast_sock(0),
+    retx_tcp_sock(0),
+    recv_thread(0),
+    retx_thread(0)
 {
-    max_sock_fd = 0;
-    mcast_sock = 0;
-    retx_tcp_sock = 0;
-    recv_thread = 0;
-    retx_thread = 0;
 }
 
 
@@ -145,7 +150,7 @@ void vcmtpRecvv3::Stop()
  */
 void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
-    bzero(&mcastgroup, sizeof(mcastgroup));
+    (void)memset(&mcastgroup, 0, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
     mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
     mcastgroup.sin_port = htons(mcastPort);
@@ -182,7 +187,7 @@ void vcmtpRecvv3::StartReceivingThread()
  */
 void* vcmtpRecvv3::StartReceivingThread(void* ptr)
 {
-    ((vcmtpRecvv3*)ptr)->RunReceivingThread();
+    (static_cast<vcmtpRecvv3*>(ptr))->RunReceivingThread();
     return NULL;
 }
 
@@ -227,7 +232,7 @@ void vcmtpRecvv3::RunReceivingThread()
 void vcmtpRecvv3::mcastMonitor()
 {
     static char packet_buffer[MAX_VCMTP_PACKET_LEN];
-    bzero(packet_buffer, sizeof(packet_buffer));
+    (void)memset(packet_buffer, 0, sizeof(packet_buffer));
     VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
 
     if ( recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL,
@@ -294,7 +299,6 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
 void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
 {
     char*        VcmtpPacketHeader = VcmtpPacket;
-    char*        VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
     VcmtpHeader  tmpVcmtpHeader;
 
     memcpy(&tmpVcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
@@ -341,7 +345,7 @@ void vcmtpRecvv3::EOPHandler()
 void vcmtpRecvv3::sendRetxEnd()
 {
     char pktBuf[VCMTP_HEADER_LEN];
-    bzero(pktBuf, sizeof(pktBuf));
+    (void)memset(pktBuf, 0, sizeof(pktBuf));
 
     uint32_t prodindex = htonl(vcmtpHeader.prodindex);
     uint32_t seqNum    = htonl(0);
@@ -360,7 +364,7 @@ void vcmtpRecvv3::sendRetxEnd()
 void vcmtpRecvv3::sendRetxReq()
 {
     char pktBuf[VCMTP_HEADER_LEN];
-    bzero(pktBuf, sizeof(pktBuf));
+    (void)memset(pktBuf, 0, sizeof(pktBuf));
 
     //uint32_t prodindex = htonl(vcmtpHeader.prodindex);
     uint32_t prodindex = htonl(0);
@@ -381,7 +385,7 @@ void vcmtpRecvv3::recvRetxData()
 {
 	VcmtpHeader tmpheader;
     char pktBuf[MAX_VCMTP_PACKET_LEN];
-    bzero(pktBuf, sizeof(pktBuf));
+    (void)memset(pktBuf, 0, sizeof(pktBuf));
     char* pktbufhead = pktBuf;
     char* pktbufpay = pktBuf + VCMTP_HEADER_LEN;
 
