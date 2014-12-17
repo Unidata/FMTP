@@ -62,18 +62,22 @@ bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
 {
     bool prodRemoved;
-	map<uint32_t, RetxMetadata*>::iterator it;
-	pthread_rwlock_wrlock(&indexMetaMapLock);
-	if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
-	{
-		it->second->unfinReceivers.erase(retxsockfd);
-		if (it->second->unfinReceivers.empty())
-		    prodRemoved = rmRetxMetadata(prodindex);
-	}
-	else
-	{
-	    prodRemoved = false;
-	}
-	pthread_rwlock_unlock(&indexMetaMapLock);
-	return prodRemoved;
+    map<uint32_t, RetxMetadata*>::iterator it;
+    pthread_rwlock_wrlock(&indexMetaMapLock);
+    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
+    {
+        it->second->unfinReceivers.erase(retxsockfd);
+        if (it->second->unfinReceivers.empty()) {
+            prodRemoved = rmRetxMetadata(prodindex);
+        }
+        else {
+            prodRemoved = false;
+        }
+    }
+    else
+    {
+        prodRemoved = false;
+    }
+    pthread_rwlock_unlock(&indexMetaMapLock);
+    return prodRemoved;
 }

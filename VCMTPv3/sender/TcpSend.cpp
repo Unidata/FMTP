@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
 #include <strings.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -27,7 +28,7 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         throw std::runtime_error("TcpSend::TcpSend() error creating socket");
-    bzero((char *) &servAddr, sizeof(servAddr));
+    (void)memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
     servAddr.sin_addr.s_addr = inet_addr(tcpAddr.c_str());
     /** If tcpPort = 0, OS will automatically choose an available port number. */
@@ -39,8 +40,7 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 }
 
 
-TcpSend::~TcpSend()
-{
+TcpSend::~TcpSend() {
     // need modified here to close all sockets
     close(sockfd);
 }

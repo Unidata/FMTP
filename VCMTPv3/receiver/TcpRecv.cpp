@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
 #include <strings.h>
 #include <unistd.h>
 #include <sys/uio.h>
@@ -11,7 +12,7 @@ using namespace std;
 
 TcpRecv::TcpRecv(string tcpAddr, unsigned short tcpPort)
 {
-    bzero((char *) &servAddr, sizeof(servAddr));
+    (void)memset((char *) &servAddr, 0, sizeof(servAddr));
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         std::cout << "TcpRecv::TcpRecv() error creating socket" << std::endl;

@@ -1,4 +1,6 @@
+#include "time.h"
 #include "timer.h"
+#include <math.h>
 #include <unistd.h>
 #include <stdexcept>
 
@@ -16,17 +18,17 @@ Timer::~Timer()
 
 void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta, bool& rmState)
 {
-    unsigned int timeoutSec, timeoutuSec;
-	RetxMetadata* perProdMeta = sendmeta->getMetadata(prodindex);
-	if (perProdMeta != NULL)
-	{
-	    timeoutSec = (unsigned int) perProdMeta->retxTimeoutPeriod;
-	    timeoutuSec = (unsigned int) (perProdMeta->retxTimeoutPeriod -
-	                                    timeoutSec) * 1000000;
-		sleep(timeoutSec);
-		usleep(timeoutuSec);
-		rmState = sendmeta->rmRetxMetadata(prodindex);
-	}
-	else
-	    throw std::runtime_error("Timer::trigger() get RetxMetadata error");
+    RetxMetadata* perProdMeta = sendmeta->getMetadata(prodindex);
+    if (perProdMeta != NULL)
+    {
+        struct timespec timespec;
+        float seconds;
+        float fraction = modff(perProdMeta->retxTimeoutPeriod, &seconds);
+        timespec.tv_sec = seconds;
+        timespec.tv_nsec = fraction * 1e9f;
+        (void)nanosleep(&timespec, 0);
+        rmState = sendmeta->rmRetxMetadata(prodindex);
+    }
+    else
+        throw std::runtime_error("Timer::trigger() get RetxMetadata error");
 }
