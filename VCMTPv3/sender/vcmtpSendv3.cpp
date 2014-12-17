@@ -45,14 +45,13 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
                          const unsigned short tcpPort,
                          const char*          mcastAddr,
                          const unsigned short mcastPort)
+:
+    udpsend(new UdpSend(mcastAddr,mcastPort)),
+    tcpsend(new TcpSend(tcpAddr, tcpPort)),
+    sendMeta(new senderMetadata()),
+    prodIndex(0),
+    notifier(0)
 {
-    udpsend = 0;
-    tcpsend   = 0;
-    sendMeta  = 0;
-    prodIndex = 0;
-    notifier  = 0;
-    //vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex);
-    vcmtpSendv3(tcpAddr, tcpPort, mcastAddr, mcastPort, prodIndex, notifier);
 }
 
 
@@ -66,19 +65,21 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
  * @param[in] mcastAddr       Multicast group address.
  * @param[in] mcastPort       Multicast group port.
  * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
+ * @param[in] notifier        Sending application notifier.
  */
-vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
-                         const unsigned short tcpPort,
-                         const char*          mcastAddr,
-                         const unsigned short mcastPort,
-                         uint32_t             initProdIndex,
-                         SendingApplicationNotifier* initNotifier)
+vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
+                         const unsigned short        tcpPort,
+                         const char*                 mcastAddr,
+                         const unsigned short        mcastPort,
+                         uint32_t                    initProdIndex,
+                         SendingApplicationNotifier* notifier)
+:
+    udpsend(new UdpSend(mcastAddr,mcastPort)),
+    tcpsend(new TcpSend(tcpAddr, tcpPort)),
+    sendMeta(new senderMetadata()),
+    prodIndex(initProdIndex),
+    notifier(notifier)
 {
-    prodIndex = initProdIndex;
-    notifier  = initNotifier;
-    udpsend   = new UdpSend(mcastAddr,mcastPort);
-    tcpsend   = new TcpSend(tcpAddr, tcpPort);
-    sendMeta  = new senderMetadata();
 }
 
 

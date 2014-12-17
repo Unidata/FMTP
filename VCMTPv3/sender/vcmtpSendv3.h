@@ -76,12 +76,12 @@ public:
             const char*          mcastAddr,
             const unsigned short mcastPort);
     vcmtpSendv3(
-            const char*          tcpAddr,
-            const unsigned short tcpPort,
-            const char*          mcastAddr,
-            const unsigned short mcastPort,
-            uint32_t             initProdIndex,
-            SendingApplicationNotifier* initNotifier);
+            const char*                 tcpAddr,
+            const unsigned short        tcpPort,
+            const char*                 mcastAddr,
+            const unsigned short        mcastPort,
+            uint32_t                    initProdIndex,
+            SendingApplicationNotifier* notifier);
 
     ~vcmtpSendv3();
     uint32_t sendProduct(char* data, size_t dataSize);
@@ -94,22 +94,26 @@ public:
     static void* StartRetxThread(void* ptr);
 
 private:
-    uint32_t 	      prodIndex;
-    UdpSend* 	  udpsend;
-    TcpSend*   	  tcpsend;
-    senderMetadata* sendMeta; /*!< maintaining metadata for retx use. */
+    uint32_t                    prodIndex;
+    UdpSend*                    udpsend;
+    TcpSend*                    tcpsend;
+    senderMetadata*             sendMeta; /*!< maintaining metadata for retx use. */
     SendingApplicationNotifier* notifier;
     /** first: socket fd;  second: pthread_t pointer */
-	map<int, pthread_t*> retxSockThreadMap;
+    map<int, pthread_t*> retxSockThreadMap;
     /** first: socket fd;  second: retransmission finished indicator */
-	map<int, bool>	retxSockFinishMap;
-	/** first: socket fd;  second: pointer to the corresponding retxThreadInfo struct */
-	map<int, StartRetxThreadInfo*> retxSockInfoMap;
+    map<int, bool>	retxSockFinishMap;
+    /** first: socket fd;  second: pointer to the corresponding retxThreadInfo struct */
+    map<int, StartRetxThreadInfo*> retxSockInfoMap;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
     void RunRetxThread(int retxsockfd);
-	void startTimerThread(uint32_t prodindex);
+    void startTimerThread(uint32_t prodindex);
     static void* runTimerThread(void* ptr);
+
+    /* Prevent copying because it's meaningless */
+    vcmtpSendv3(vcmtpSendv3&);
+    vcmtpSendv3& operator=(const vcmtpSendv3&);
 };
 
 #endif /* VCMTPSENDV3_H_ */

@@ -7,6 +7,7 @@
 
 #include "UdpSend.h"
 #include <stdexcept>
+#include <string.h>
 
 /**
  * Set the IP address and port of the receiver and connect to the upd socket.
@@ -20,7 +21,7 @@ UdpSend::UdpSend(const char* recvAddr, unsigned short port) {
         throw std::runtime_error("UdpSend::UdpSend() create socket error");
     }
     /** clear struct recv_addr. */
-    bzero(&recv_addr, sizeof(recv_addr));
+    (void)memset(&recv_addr, 0, sizeof(recv_addr));
     /** set connection type to IPv4 */
     recv_addr.sin_family = AF_INET;
     /** set the address to the receiver address passed to the constructor */
