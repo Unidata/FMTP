@@ -19,11 +19,14 @@ Timer::~Timer()
 void Timer::trigger(uint32_t prodindex, senderMetadata* sendmeta, bool& rmState)
 {
     RetxMetadata* perProdMeta = sendmeta->getMetadata(prodindex);
+
     if (perProdMeta != NULL)
     {
+        float           seconds;
+        float           fraction = modff(perProdMeta->retxTimeoutPeriod,
+                &seconds);
         struct timespec timespec;
-        float seconds;
-        float fraction = modff(perProdMeta->retxTimeoutPeriod, &seconds);
+
         timespec.tv_sec = seconds;
         timespec.tv_nsec = fraction * 1e9f;
         (void)nanosleep(&timespec, 0);

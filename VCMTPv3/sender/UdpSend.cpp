@@ -10,7 +10,7 @@
 #include <string.h>
 
 /**
- * Set the IP address and port of the receiver and connect to the upd socket.
+ * Set the IP address and port of the receiver and connect to the udp socket.
  *
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
