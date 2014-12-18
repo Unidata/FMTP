@@ -35,7 +35,6 @@
 #include "TcpSend.h"
 #include "vcmtpBase.h"
 #include "senderMetadata.h"
-#include "timer.h"
 #include "SendingApplicationNotifier.h"
 #include <map>
 #include <set>
