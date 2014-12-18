@@ -29,18 +29,19 @@ struct RetxMetadata {
 
 class senderMetadata {
 public:
-	senderMetadata();
-	~senderMetadata();
+    senderMetadata();
+    ~senderMetadata();
 
-	void addRetxMetadata(RetxMetadata* ptrMeta);
-	bool rmRetxMetadata(uint32_t prodindex);
-	RetxMetadata* getMetadata(uint32_t prodindex);
-	bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
+    void addRetxMetadata(RetxMetadata* ptrMeta);
+    bool rmRetxMetadata(uint32_t prodindex);
+    RetxMetadata* getMetadata(uint32_t prodindex);
+    bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
 
 private:
     /** first: prodindex; second: pointer to metadata of the specified prodindex */
-	map<uint32_t, RetxMetadata*> indexMetaMap;
-	pthread_rwlock_t 		     indexMetaMapLock;
+    map<uint32_t, RetxMetadata*> indexMetaMap;
+    pthread_rwlock_t 		     indexMetaMapLock;
+    bool rmRetxMetadataNoLock(uint32_t prodindex);
 };
 
 #endif /* SENDERMETADATA_H_ */

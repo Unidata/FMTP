@@ -27,6 +27,7 @@
 
 
 #include "vcmtpSendv3.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdexcept>
 #include <string.h>
@@ -517,21 +518,32 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
  */
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
-    bool rmState;
-    StartTimerThreadInfo* const       timerinfo =
+    const StartTimerThreadInfo* const timerInfo =
             static_cast<StartTimerThreadInfo*>(ptr);
-    const uint32_t                    prodindex = timerinfo->prodindex;
-    vcmtpSendv3* const                sender = timerinfo->sender;
+    const uint32_t                    prodIndex = timerInfo->prodindex;
+    vcmtpSendv3* const                sender = timerInfo->sender;
     SendingApplicationNotifier* const notifier = sender->notifier;
-    Timer                             timer(prodindex, sender->sendMeta, rmState);
+    senderMetadata* const             sendMeta = sender->sendMeta;
+    const RetxMetadata* const         perProdMeta =
+            sendMeta->getMetadata(prodIndex);
 
-    /**
-     * rmState will be updated by the Timer instance to indicate the returning
-     * status of rmRetxMetadata().
-     */
-    if (notifier && rmState)
-        notifier->notify_of_eop(prodindex);
+    if (perProdMeta != NULL)
+    {
+        float           seconds;
+        const float     fraction = modff(perProdMeta->retxTimeoutPeriod,
+                &seconds);
+        struct timespec timespec;
 
-    delete timerinfo;
+        timespec.tv_sec = seconds;
+        timespec.tv_nsec = fraction * 1e9f;
+        (void)nanosleep(&timespec, 0);
+
+        const bool wasRemoved = sendMeta->rmRetxMetadata(prodIndex);
+
+        if (notifier && wasRemoved)
+            notifier->notify_of_eop(prodIndex);
+    }
+
+    delete timerInfo;
     return NULL;
 }
