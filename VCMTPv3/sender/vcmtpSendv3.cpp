@@ -30,6 +30,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdexcept>
+#include <stdint.h>
 #include <string.h>
 
 /**
