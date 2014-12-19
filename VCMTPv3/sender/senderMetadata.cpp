@@ -1,6 +1,8 @@
 #include "senderMetadata.h"
 #include <iostream>
 
+#define NULL 0
+
 senderMetadata::senderMetadata()
 {
 	pthread_rwlock_init(&indexMetaMapLock, NULL);

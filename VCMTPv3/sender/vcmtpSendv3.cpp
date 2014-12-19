@@ -32,6 +32,8 @@
 #include <stdexcept>
 #include <string.h>
 
+#define NULL 0
+
 /**
  * Constructs a sender instance and initializes a udpsend object pointer, a
  * tcpsend object pointer, a senderMetadata object pointer and set prodIndex to

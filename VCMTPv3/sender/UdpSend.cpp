@@ -9,6 +9,10 @@
 #include <stdexcept>
 #include <string.h>
 
+
+#define NULL 0
+
+
 /**
  * Set the IP address and port of the receiver and connect to the udp socket.
  *

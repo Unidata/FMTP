@@ -12,6 +12,7 @@
 #include <sys/uio.h>
 #include <stdexcept>
 
+#define NULL 0
 #define MAX_CONNECTION 5
 
 
