@@ -30,7 +30,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdexcept>
-#include <stdint.h>
 #include <string.h>
 
 /**
@@ -181,7 +180,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
 {
     if (data == NULL)
 	    throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
-    if (dataSize > UINT32_MAX)
+    if (dataSize > 0xFFFFFFFFu)
 	    throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata == NULL)
         metaSize = 0;
