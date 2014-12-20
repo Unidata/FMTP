@@ -49,23 +49,30 @@ class vcmtpSendv3;
  */
 struct StartRetxThreadInfo
 {
-	/**
-	 * A pointer to the vcmtpSendv3 instance itself which starts the
-	 * StartNewRetxThread().
-	 */
-	vcmtpSendv3* 	retxmitterptr;
-	/** The particular retx socket this running thread is listening on */
-	int				retxsockfd;
+    /**
+     * A pointer to the vcmtpSendv3 instance itself which starts the
+     * StartNewRetxThread().
+     */
+    vcmtpSendv3*    retxmitterptr;
+    /** The particular retx socket this running thread is listening on */
+    int             retxsockfd;
 };
 
 
+/**
+ * To contain multiple types of necessary information and transfer to the
+ * StartTimerThread() as one single parameter.
+ */
 struct StartTimerThreadInfo
 {
-	uint32_t	prodindex;
-	vcmtpSendv3*    sender;
+    uint32_t        prodindex; /*!< product index */
+    vcmtpSendv3*    sender;    /*!< a poniter to the vcmtpSendv3 instance */
 };
 
 
+/**
+ * sender side class handling the multicasting, restransmission and timeout.
+ */
 class vcmtpSendv3
 {
 public:
@@ -96,7 +103,8 @@ private:
     uint32_t                    prodIndex;
     UdpSend*                    udpsend;
     TcpSend*                    tcpsend;
-    senderMetadata*             sendMeta; /*!< maintaining metadata for retx use. */
+    /** maintaining metadata for retx use. */
+    senderMetadata*             sendMeta;
     SendingApplicationNotifier* notifier;
     /** first: socket fd;  second: pthread_t pointer */
     map<int, pthread_t*> retxSockThreadMap;
