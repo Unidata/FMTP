@@ -88,35 +88,41 @@ public:
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
             SendingApplicationNotifier* notifier);
-
     ~vcmtpSendv3();
+
     uint32_t sendProduct(char* data, size_t dataSize);
     uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
                          unsigned metaSize);
     void startCoordinator();
-    static void* coordinator(void* ptr);
     unsigned short getTcpPortNum();
-    void StartNewRetxThread(int newtcpsockfd);
-    static void* StartRetxThread(void* ptr);
 
 private:
     uint32_t                    prodIndex;
+    /** underlying udp layer instance */
     UdpSend*                    udpsend;
+    /** underlying tcp layer instance */
     TcpSend*                    tcpsend;
     /** maintaining metadata for retx use. */
     senderMetadata*             sendMeta;
+    /** sending application callback hook */
     SendingApplicationNotifier* notifier;
     /** first: socket fd;  second: pthread_t pointer */
     map<int, pthread_t*> retxSockThreadMap;
     /** first: socket fd;  second: retransmission finished indicator */
     map<int, bool>	retxSockFinishMap;
-    /** first: socket fd;  second: pointer to the corresponding retxThreadInfo struct */
+    /** first: socket fd;  second: pointer to the retxThreadInfo struct */
     map<int, StartRetxThreadInfo*> retxSockInfoMap;
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     void sendEOPMessage();
-    void RunRetxThread(int retxsockfd);
+    void StartNewRetxThread(int newtcpsockfd);
     void startTimerThread(uint32_t prodindex);
+    /** new coordinator thread */
+    static void* coordinator(void* ptr);
+    /** new retranmission thread */
+    static void* StartRetxThread(void* ptr);
+    /** new timer thread */
     static void* runTimerThread(void* ptr);
+    void RunRetxThread(int retxsockfd);
 
     /* Prevent copying because it's meaningless */
     vcmtpSendv3(vcmtpSendv3&);

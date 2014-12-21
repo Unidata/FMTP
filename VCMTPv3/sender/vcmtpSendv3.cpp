@@ -123,7 +123,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     VcmtpBOPMessage*   vcmtp_data   = (VcmtpBOPMessage*) (vcmtp_packet +
                                                           VCMTP_HEADER_LEN);
 
-    (void)memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
+    (void) memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
 
     /** convert the variables from native to network binary representation */
     uint32_t prodindex   = htonl(prodIndex);
@@ -181,39 +181,39 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
                                   unsigned metaSize)
 {
     if (data == NULL)
-	    throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
+        throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
     if (dataSize > 0xFFFFFFFFu)
-	    throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize out of range");
+        throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata == NULL)
         metaSize = 0;
     /** creates a new RetxMetadata struct for this product */
-	RetxMetadata* senderProdMeta = new RetxMetadata();
-	if (senderProdMeta == NULL)
-	    throw std::runtime_error("vcmtpSendv3::sendProduct() create RetxMetadata error");
+    RetxMetadata* senderProdMeta = new RetxMetadata();
+    if (senderProdMeta == NULL)
+        throw std::runtime_error("vcmtpSendv3::sendProduct() create RetxMetadata error");
 
-	/** update current prodindex in RetxMetadata */
-	senderProdMeta->prodindex 	   = prodIndex;
-	/** update current product length in RetxMetadata */
-	senderProdMeta->prodLength     = dataSize;
-	/** update current product pointer in RetxMetadata */
-	senderProdMeta->dataprod_p     = (void*) data;
-	/** get a full list of current connected sockets and add to unfinished set */
-	list<int> currSockList = tcpsend->getConnSockList();
+    /** update current prodindex in RetxMetadata */
+    senderProdMeta->prodindex 	   = prodIndex;
+    /** update current product length in RetxMetadata */
+    senderProdMeta->prodLength     = dataSize;
+    /** update current product pointer in RetxMetadata */
+    senderProdMeta->dataprod_p     = (void*) data;
+    /** get a full list of current connected sockets and add to unfinished set */
+    list<int> currSockList = tcpsend->getConnSockList();
     list<int>::iterator it;
-	for (it = currSockList.begin(); it != currSockList.end(); ++it)
-	{
-	    senderProdMeta->unfinReceivers.insert(*it);
-	}
-	/** add current RetxMetadata into sendMetadata::indexMetaMap */
-	sendMeta->addRetxMetadata(senderProdMeta);
-	/** update multicast start time in RetxMetadata */
-	senderProdMeta->mcastStartTime = clock();
+    for (it = currSockList.begin(); it != currSockList.end(); ++it)
+    {
+        senderProdMeta->unfinReceivers.insert(*it);
+    }
+    /** add current RetxMetadata into sendMetadata::indexMetaMap */
+    sendMeta->addRetxMetadata(senderProdMeta);
+    /** update multicast start time in RetxMetadata */
+    senderProdMeta->mcastStartTime = clock();
 
     /** send out BOP message */
     SendBOPMessage(dataSize, metadata, metaSize);
 
     char vcmtpHeader[VCMTP_HEADER_LEN];
-    VcmtpPacketHeader* header = (VcmtpPacketHeader*) vcmtpHeader;
+    VcmtpHeader* header = (VcmtpHeader*) vcmtpHeader;
 
     uint32_t prodindex = htonl(prodIndex);
     uint32_t seqNum    = 0;
@@ -272,7 +272,7 @@ void vcmtpSendv3::sendEOPMessage()
 {
     char vcmtp_packet[VCMTP_HEADER_LEN];
     VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet;
-    (void)memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
+    (void) memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
 
     uint32_t prodindex = htonl(prodIndex);
     /** seqNum for the EOP should always be zero */
@@ -413,9 +413,12 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
 
     while(1)
     {
+        /** receive the message from tcp connection and parse the header */
         if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
-            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive header error");
+            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive
+                                     header error");
 
+        /** first try to retrieve the requested product */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
         /** Handle a retransmission request */
         if (recvheader->flags & VCMTP_RETX_REQ)
@@ -476,7 +479,12 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                  * it returns a true value.
                  * */
                 bool prodRemoved = sendMeta->clearUnfinishedSet(
-                                    recvheader->prodindex, retxsockfd);
+                                   recvheader->prodindex, retxsockfd);
+                /**
+                 * Only if the product is removed by clearUnfinishedSet()
+                 * since this receiver is the last one in the unfinished set,
+                 * notify the sending application.
+                 */
                 if(notifier && prodRemoved)
                 {
                     notifier->notify_of_eop(recvheader->prodindex);
@@ -504,19 +512,23 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
     timerinfo->prodindex = prodindex;
     timerinfo->sender = this;
     int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread,
-                                  timerinfo);
+                                timerinfo);
     if(retval != 0)
     {
-        throw std::runtime_error("vcmtpSendv3::startTimerThread() pthread_create error");
+        throw std::runtime_error("vcmtpSendv3::startTimerThread()
+                                 pthread_create error");
     }
     pthread_detach(t);
 }
 
 
 /**
+ * The per-product timer. A timer will be created to sleep for a given period
+ * of time, which is specified in the RetxMetadata structure. When the timer
+ * wakes up from sleeping, it will check and remove the corresponding product
+ * from the prodindex-retxmetadata map.
  *
- *
- * @param[in] *ptr
+ * @param[in] *ptr          pointer to the StartTimerThreadInfo structure
  */
 void* vcmtpSendv3::runTimerThread(void* ptr)
 {
@@ -532,16 +544,22 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
     if (perProdMeta != NULL)
     {
         float           seconds;
+        /** parse the float type timeout value into seconds and fractions */
         const float     fraction = modff(perProdMeta->retxTimeoutPeriod,
-                &seconds);
+                                         &seconds);
         struct timespec timespec;
 
         timespec.tv_sec = seconds;
         timespec.tv_nsec = fraction * 1e9f;
-        (void)nanosleep(&timespec, 0);
+        /** sleep for a given amount of seconds and nanoseconds */
+        (void) nanosleep(&timespec, 0);
 
         const bool wasRemoved = sendMeta->rmRetxMetadata(prodIndex);
 
+        /**
+         * Only if the product is removed by this remove call, notify the
+         * sending application
+         */
         if (notifier && wasRemoved)
             notifier->notify_of_eop(prodIndex);
     }
