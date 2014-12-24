@@ -64,9 +64,11 @@ senderMetadata::~senderMetadata()
 
 
 /**
+ * Fetch the requested RetxMetadata entry identified by a given prodindex. If
+ * found nothing, return NULL pointer. Otherwise return the pointer to that
+ * RetxMetadata struct.
  *
- *
- * @param[in] prodindex
+ * @param[in] prodindex         specific product index
  */
 RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 {
@@ -80,6 +82,11 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 }
 
 
+/**
+ * Add the new RetxMetadata entry into the prodindex-RetxMetadata map.
+ *
+ * @param[in] ptrMeta           A pointer to the new RetxMetadata struct
+ */
 void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 {
     pthread_rwlock_wrlock(&indexMetaMapLock);
