@@ -192,7 +192,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
         throw std::runtime_error("vcmtpSendv3::sendProduct() create RetxMetadata error");
 
     /** update current prodindex in RetxMetadata */
-    senderProdMeta->prodindex 	   = prodIndex;
+    senderProdMeta->prodindex      = prodIndex;
     /** update current product length in RetxMetadata */
     senderProdMeta->prodLength     = dataSize;
     /** update current product pointer in RetxMetadata */

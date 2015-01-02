@@ -1,3 +1,33 @@
+/**
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ *
+ * @file      TcpSend.cpp
+ * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Nov 17, 2014
+ *
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Implement the interfaces and structures of sender side TCP layer
+ *            abstracted funtions.
+ *
+ * The TcpSend class includes a set of transmission functions, which are
+ * basically the encapsulation of tcp system calls themselves. This abstracted
+ * new layer acts as the sender side transmission library.
+ */
+
+
+
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -17,19 +47,23 @@
 
 
 /**
- * Contructor for TcpSend class, accepting tcp address and tcp port.
+ * Contructor for TcpSend class, taking tcp address and tcp port to establish a
+ * tcp connection. When the connection is established, keep listen on it with a
+ * maximum of MAX_CONNECTION allowed to connect.
  *
  * @param[in] tcpAddr     tcp server address
  * @param[in] tcpPort     tcp port number (in host order) specified by sending
- * 						  application. (or 0, meaning system will use random
- * 						  available port)
+ *                        application. (or 0, meaning system will use random
+ *                        available port)
+ * @throws  runtime_error if socket creation fails.
+ * @throws  runtime_error if socket bind() operation fails.
  */
 TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         throw std::runtime_error("TcpSend::TcpSend() error creating socket");
-    (void)memset((char *) &servAddr, 0, sizeof(servAddr));
+    (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
     servAddr.sin_addr.s_addr = inet_addr(tcpAddr.c_str());
     /** If tcpPort = 0, OS will automatically choose an available port number. */
@@ -41,67 +75,130 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 }
 
 
-TcpSend::~TcpSend() {
-    // need modified here to close all sockets
+/**
+ * Destructor for TcpSend class. Release all the allocated resources, including
+ * mutex, socket lists and etc.
+ *
+ * @param[in] none
+ */
+TcpSend::~TcpSend()
+{
+    for (list<int>::iterator it = connSockList.begin();
+         it != currSockList.end(); ++it)
+    {
+        currSockList.erase(*it);
+    }
     close(sockfd);
+    pthread_mutex_destroy(&sockListMutex);
 }
 
 
+/**
+ * Accept incoming tcp connection requests and push them into the socket list.
+ * Then return the current socket file descriptor for further use. The socket
+ * list is a globally shared resource, thus it needs to be protected by a lock.
+ *
+ * @param[in] none
+ * @return    newsockfd         file descriptor of the newly connected socket.
+ * @throws  runtime_error    if accept() system call fails.
+ */
 int TcpSend::acceptConn()
 {
     int newsockfd = accept(sockfd, NULL, NULL);
     if(newsockfd < 0)
         throw std::runtime_error("TcpSend::readSock() error reading from socket");
 
-	pthread_mutex_lock(&sockListMutex);
-	connSockList.push_back(newsockfd);
-	pthread_mutex_unlock(&sockListMutex);
+    pthread_mutex_lock(&sockListMutex);
+    connSockList.push_back(newsockfd);
+    pthread_mutex_unlock(&sockListMutex);
 
     return newsockfd;
 }
 
 
+/**
+ * Accept incoming tcp connection requests and push them into the socket list.
+ * Then return the current socket file descriptor for further use.
+ *
+ * @param[in] none
+ * @return    connSockList          connected socket list (a collection of
+ */
 const list<int>& TcpSend::getConnSockList()
 {
 	return connSockList;
 }
 
 
-/** unnecessary function */
+/**
+ * Read a given amount of bytes from the socket.
+ *
+ * @param[in] retxsockfd    retransmission socket file descriptor.
+ * @param[in] *pktBuf       pointer to the buffer to store the received bytes.
+ * @param[in] bufSize       size of that buffer
+ * @return    int           return the return value of read() system call.
+ */
 int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
 {
     return read(retxsockfd, pktBuf, bufSize);
 }
 
 
+/**
+ * Read an amount of bytes from the socket while the number of bytes equals the
+ * VCMTP header size. Parse the buffer which stores the packet header and fill
+ * each field of VcmtpHeader structure with corresponding information. If the
+ * read() system call fails, return immediately. Otherwise, return when this
+ * function finishes.
+ *
+ * @param[in] retxsockfd    retransmission socket file descriptor.
+ * @param[in] *recvheader   pointer of a VcmtpHeader structure, whose fields
+ *                          are to hold the parsed out information.
+ * @return    retval        return the status value returned by read()
+ */
 int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
 {
-	char recvbuf[VCMTP_HEADER_LEN];
+    char recvbuf[VCMTP_HEADER_LEN];
     int retval = read(retxsockfd, recvbuf, sizeof(recvbuf));
     if(retval < 0)
-    	return retval;
+        return retval;
 
     memcpy(&recvheader->prodindex,  recvbuf,    4);
     memcpy(&recvheader->seqnum,     recvbuf+4,  4);
     memcpy(&recvheader->payloadlen, recvbuf+8,  2);
     memcpy(&recvheader->flags,      recvbuf+10, 2);
     recvheader->prodindex  = ntohl(recvheader->prodindex);
-    recvheader->seqnum	   = ntohl(recvheader->seqnum);
+    recvheader->seqnum     = ntohl(recvheader->seqnum);
     recvheader->payloadlen = ntohs(recvheader->payloadlen);
-    recvheader->flags	   = ntohs(recvheader->flags);
+    recvheader->flags      = ntohs(recvheader->flags);
     return retval;
 }
 
 
-int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload, size_t paylen)
+/**
+ * Send a VCMTP packet through the given retransmission connection identified
+ * by the passed-in socket file descriptor. This function calls the writev()
+ * system call to implement a zero-copy gathering write operation where the
+ * packet header and payload are stored in different places. After the writev()
+ * is finished, return the status value of the writev() system call.
+ *
+ * @param[in] retxsockfd    retransmission socket file descriptor.
+ * @param[in] *sendheader   pointer of a VcmtpHeader structure, whose fields
+ *                          are to hold the ready-to-send information.
+ * @param[in] *payload      pointer to the ready-to-send memory buffer which
+ *                          holds the packet payload.
+ * @param[in] paylen        size to be sent (size of the payload)
+ * @return    retval        return the status value returned by writev()
+ */
+int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
+                  size_t paylen)
 {
-	char headbuf[VCMTP_HEADER_LEN];
+    char headbuf[VCMTP_HEADER_LEN];
     struct iovec iov[2];
 
-    memcpy(headbuf,    &sendheader->prodindex, 	4);
-    memcpy(headbuf+4,  &sendheader->seqnum, 	4);
+    memcpy(headbuf,    &sendheader->prodindex,  4);
+    memcpy(headbuf+4,  &sendheader->seqnum,     4);
     memcpy(headbuf+8,  &sendheader->payloadlen, 2);
-    memcpy(headbuf+10, &sendheader->flags, 		2);
+    memcpy(headbuf+10, &sendheader->flags,      2);
 
     iov[0].iov_base = headbuf;
     iov[0].iov_len  = sizeof(headbuf);
@@ -116,7 +213,7 @@ int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload, size_t
 /**
  * Return the local port number.
  *
- * @return 	              The local port number in host byte-order.
+ * @return                The local port number in host byte-order.
  * @throws std::system_error  The port number cannot be obtained.
  */
 unsigned short TcpSend::getPortNum()
@@ -125,7 +222,8 @@ unsigned short TcpSend::getPortNum()
     socklen_t          tmpAddrLen = sizeof(tmpAddr);
 
     if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
-        throw std::runtime_error("TcpSend::getPortNum() error getting port number");
+        throw std::runtime_error("TcpSend::getPortNum() error getting port \
+                                 number");
 
     return ntohs(tmpAddr.sin_port);
 }

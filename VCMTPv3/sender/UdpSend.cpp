@@ -41,14 +41,13 @@
  *
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
+ * @throws  runtime_error  if socket creation fails.
  */
 UdpSend::UdpSend(const char* recvAddr, unsigned short port)
 {
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-    {
         throw std::runtime_error("UdpSend::UdpSend() create socket error");
-    }
     /** clear struct recv_addr. */
     (void) memset(&recv_addr, 0, sizeof(recv_addr));
     /** set connection type to IPv4 */
