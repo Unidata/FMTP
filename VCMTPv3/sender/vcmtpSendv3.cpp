@@ -415,7 +415,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
     {
         /** receive the message from tcp connection and parse the header */
         if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
-            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive
+            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive \
                                      header error");
 
         /** first try to retrieve the requested product */
@@ -515,7 +515,7 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
                                 timerinfo);
     if(retval != 0)
     {
-        throw std::runtime_error("vcmtpSendv3::startTimerThread()
+        throw std::runtime_error("vcmtpSendv3::startTimerThread() \
                                  pthread_create error");
     }
     pthread_detach(t);

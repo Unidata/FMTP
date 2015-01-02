@@ -1,15 +1,37 @@
-/*
-*UdpSend.h
+/**
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
  *
- *  Created on: Oct 16, 2014
- *      Author: fatmaal-ali
+ * @file      UdpSend.h
+ * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Oct 23, 2014
+ *
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Define the interfaces and structures of sender side UDP layer
+ *            abstracted funtions.
+ *
+ * The UdpSend class includes a set of transmission functions, which are
+ * basically the encapsulation of udp system calls themselves. This abstracted
+ * new layer acts as the sender side transmission library.
  */
+
+
 
 #ifndef UDPSOCKET_H_
 #define UDPSOCKET_H_
 
 
-#include "vcmtpBase.h"
 #include <sys/socket.h>
 #include <iostream>
 #include <netinet/in.h>
@@ -21,10 +43,20 @@ using namespace std;
 
 class UdpSend {
 public:
-    UdpSend(const char* recvAddr,unsigned short port);
+    UdpSend(const char* recvAddr, unsigned short port);
     ~UdpSend();
+    /**
+     * SendTo() sends a piece of message to a destination identified by a
+     * socket file descriptor.
+     */
     ssize_t SendTo(const void* buff, size_t len);
-    ssize_t SendData(char* header, const size_t headerLen, char* data, const size_t dataLen);
+    /**
+     * SendData() sends the packet content separated in two different physical
+     * locations, which is put together into a io vector structure, to the
+     * destination identified by a socket file descriptor.
+     */
+    ssize_t SendData(char* header, const size_t headerLen, char* data,
+                     const size_t dataLen);
 
 private:
     int sock_fd;
