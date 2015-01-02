@@ -92,7 +92,7 @@ public:
 
     uint32_t sendProduct(char* data, size_t dataSize);
     uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
-                         unsigned metaSize);
+                         unsigned metaSize, float perProdTimeoutRatio);
     void startCoordinator();
     unsigned short getTcpPortNum();
 

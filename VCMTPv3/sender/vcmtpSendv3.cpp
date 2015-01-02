@@ -164,7 +164,9 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
  */
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
 {
-    return sendProduct(data, dataSize, 0, 0);
+    // TODO: need an accurate model to give a default timeout ratio.
+    float retxTimeoutRatio = 50.0;
+    return sendProduct(data, dataSize, 0, 0, retxTimeoutRatio);
 }
 
 
@@ -181,6 +183,9 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
  * @param[in] metaSize     Size of the metadata in bytes. Must be less than or
  *                         equal 1442 bytes. May be 0, in which case no metadata
  *                         is sent.
+ * @param[in] perProdTimeoutRatio
+ *                         the per-product timeout ratio to balance performance
+ *                         and robustness (reliability).
  * @return                 Index of the product.
  * @throws  runtime_error  if the passed-in parameter *data is NULL.
  * @throws  runtime_error  if the passed-in parameter dataSize exceeds the
@@ -189,7 +194,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
  * @throws  runtime_error  if UdpSend::SendData() fails.
  */
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
-                                  unsigned metaSize)
+                                  unsigned metaSize, float perProdTimeoutRatio)
 {
     if (data == NULL)
         throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
@@ -203,11 +208,13 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
         throw std::runtime_error("vcmtpSendv3::sendProduct() create RetxMetadata error");
 
     /** update current prodindex in RetxMetadata */
-    senderProdMeta->prodindex      = prodIndex;
+    senderProdMeta->prodindex        = prodIndex;
     /** update current product length in RetxMetadata */
-    senderProdMeta->prodLength     = dataSize;
+    senderProdMeta->prodLength       = dataSize;
     /** update current product pointer in RetxMetadata */
-    senderProdMeta->dataprod_p     = (void*) data;
+    senderProdMeta->dataprod_p       = (void*) data;
+    /** update the per-product timeout ratio */
+    senderProdMeta->retxTimeoutRatio = perProdTimeoutRatio;
     /** get a full list of current connected sockets and add to unfinished set */
     list<int> currSockList = tcpsend->getConnSockList();
     list<int>::iterator it;
@@ -263,8 +270,13 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
     /** get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
 
+    /** cast clock_t type value into float type seconds */
+    float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
+                        senderProdMeta->mcastStartTime)) / CLOCKS_PER_SEC;
+
     /** set up timer timeout period */
-    senderProdMeta->retxTimeoutPeriod = 8.5;
+    senderProdMeta->retxTimeoutPeriod = mcastPeriod *
+                                        senderProdMeta->retxTimeoutRatio;
 
     /** start a new timer for this product in a separate thread */
     startTimerThread(prodIndex);
