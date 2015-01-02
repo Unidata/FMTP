@@ -66,7 +66,8 @@ senderMetadata::~senderMetadata()
 /**
  * Fetch the requested RetxMetadata entry identified by a given prodindex. If
  * found nothing, return NULL pointer. Otherwise return the pointer to that
- * RetxMetadata struct.
+ * RetxMetadata struct. By default, the RetxMetadata pointer should be
+ * initialized to NULL.
  *
  * @param[in] prodindex         specific product index
  */
@@ -83,7 +84,8 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 
 
 /**
- * Add the new RetxMetadata entry into the prodindex-RetxMetadata map.
+ * Add the new RetxMetadata entry into the prodindex-RetxMetadata map. A read/
+ * write lock is added to ensure no conflict happening when adding a new entry.
  *
  * @param[in] ptrMeta           A pointer to the new RetxMetadata struct
  */
@@ -95,6 +97,14 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 }
 
 
+/**
+ * Remove the RetxMetadata identified by a given product index. This function
+ * doesn't have any read/write lock to protect. The caller needs to do all the
+ * protection. It returns a boolean status value to indicate whether the remove
+ * is successful or not. If successful, it's a true, otherwise it's a false.
+ *
+ * @param[in] prodindex         product index of the requested product
+ */
 bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
 {
     bool rmSuccess;
@@ -113,6 +123,12 @@ bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
 }
 
 
+/**
+ * Remove the RetxMetadata identified by a given prodindex. Actually calling
+ * the non-lock remove function and put a read/write lock to the map.
+ *
+ * @param[in] prodindex         product index of the requested product
+ */
 bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 {
     pthread_rwlock_wrlock(&indexMetaMapLock);
@@ -122,6 +138,16 @@ bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 }
 
 
+/**
+ * Remove the particular receiver identified by the retxsockfd from the
+ * finished receiver set. And check if the set is empty after the operation.
+ * If it is, then remove the whole entry from the map. Otherwise, just clear
+ * that receiver.
+ *
+ * @param[in] prodindex         product index of the requested product
+ * @param[in] retxsockfd        sock file descriptor of the retransmission tcp
+ *                              connection.
+ */
 bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
 {
     bool prodRemoved;
