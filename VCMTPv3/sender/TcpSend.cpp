@@ -55,8 +55,8 @@
  * @param[in] tcpPort     tcp port number (in host order) specified by sending
  *                        application. (or 0, meaning system will use random
  *                        available port)
- * @throws  runtime_error if socket creation fails.
- * @throws  runtime_error if socket bind() operation fails.
+ * @throw  runtime_error if socket creation fails.
+ * @throw  runtime_error if socket bind() operation fails.
  */
 TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 {
@@ -100,7 +100,7 @@ TcpSend::~TcpSend()
  *
  * @param[in] none
  * @return    newsockfd         file descriptor of the newly connected socket.
- * @throws  runtime_error    if accept() system call fails.
+ * @throw  runtime_error    if accept() system call fails.
  */
 int TcpSend::acceptConn()
 {
@@ -214,7 +214,7 @@ int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
  * Return the local port number.
  *
  * @return                The local port number in host byte-order.
- * @throws std::system_error  The port number cannot be obtained.
+ * @throw std::system_error  The port number cannot be obtained.
  */
 unsigned short TcpSend::getPortNum()
 {

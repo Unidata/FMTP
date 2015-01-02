@@ -41,7 +41,7 @@
  *
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
- * @throws  runtime_error  if socket creation fails.
+ * @throw  runtime_error  if socket creation fails.
  */
 UdpSend::UdpSend(const char* recvAddr, unsigned short port)
 {

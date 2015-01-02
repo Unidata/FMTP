@@ -100,7 +100,9 @@ vcmtpSendv3::~vcmtpSendv3()
 
 
 /**
- * Sends the BOP message to the receiver.
+ * Sends the BOP message to the receiver. metadata and metaSize must always be
+ * a valid value. These two parameters will be checked by the calling function
+ * before being passed in.
  *
  * @param[in] prodSize       The size of the product.
  * @param[in] metadata       Application-specific metadata to be sent before the
@@ -108,6 +110,7 @@ vcmtpSendv3::~vcmtpSendv3()
  * @param[in] metaSize       Size of the metadata in bytes. Must be less than
  *                           or equals 1442. May be 0, in which case no metadata
  *                           is sent.
+ * @throw   runtime_error    if the UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  unsigned metaSize)
@@ -135,20 +138,20 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     uint32_t prodsize    = htonl(prodSize);
     uint16_t maxmetasize = htons(maxMetaSize);
 
-   /** copy the vcmtp header content into header struct */
-   memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
-   memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
-   memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
-   memcpy(&vcmtp_header->flags,       &flags,     2);
+    /** copy the vcmtp header content into header struct */
+    memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
+    memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
+    memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
+    memcpy(&vcmtp_header->flags,       &flags,     2);
 
-   /** copy the content of BOP into vcmtp packet payload */
-   memcpy(&vcmtp_data->prodsize, &prodsize,             4);
-   memcpy(&vcmtp_data->metasize, &maxmetasize,          2);
-   memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
+    /** copy the content of BOP into vcmtp packet payload */
+    memcpy(&vcmtp_data->prodsize, &prodsize,             4);
+    memcpy(&vcmtp_data->metasize, &maxmetasize,          2);
+    memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
 
-   /** send the BOP message on multicast socket */
-   if (udpsend->SendTo(vcmtp_packet, PACKET_SIZE) < 0)
-       throw std::runtime_error("vcmtpSendv3::SendBOPMessage() SendTo error");
+    /** send the BOP message on multicast socket */
+    if (udpsend->SendTo(vcmtp_packet, PACKET_SIZE) < 0)
+        throw std::runtime_error("vcmtpSendv3::SendBOPMessage() SendTo error");
 }
 
 
@@ -167,15 +170,23 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
 
 /**
  * Transfers Application-specific metadata and a contiguous block of memory.
+ * Construct sender side RetxMetadata and insert the new entry into a global
+ * map. The retransmission timeout period should also be set by considering
+ * the essential properties.
  *
- * @param[in] data      Memory data to be sent.
- * @param[in] dataSize  Size of the memory data in bytes.
- * @param[in] metadata  Application-specific metadata to be sent before the
- *                      data. May be 0, in which case no metadata is sent.
- * @param[in] metaSize  Size of the metadata in bytes. Must be less than or
- *                      equal 1442 bytes. May be 0, in which case no metadata
- *                      is sent.
- * @return              Index of the product.
+ * @param[in] data         Memory data to be sent.
+ * @param[in] dataSize     Size of the memory data in bytes.
+ * @param[in] metadata     Application-specific metadata to be sent before the
+ *                         data. May be 0, in which case no metadata is sent.
+ * @param[in] metaSize     Size of the metadata in bytes. Must be less than or
+ *                         equal 1442 bytes. May be 0, in which case no metadata
+ *                         is sent.
+ * @return                 Index of the product.
+ * @throws  runtime_error  if the passed-in parameter *data is NULL.
+ * @throws  runtime_error  if the passed-in parameter dataSize exceeds the
+ *                         maximum allowed value.
+ * @throws  runtime_error  if retrieving sender side RetxMetadata fails.
+ * @throws  runtime_error  if UdpSend::SendData() fails.
  */
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
                                   unsigned metaSize)
@@ -266,7 +277,8 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
  * Sends the EOP message to the receiver to indicate the end of a product
  * transmission.
  *
- * @param[in] none
+ * @param[in]               none
+ * @throw  runtime_error    if UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::sendEOPMessage()
 {
@@ -297,7 +309,8 @@ void vcmtpSendv3::sendEOPMessage()
  * type pointer to the coordinator thread so that coordinator can have access
  * to all the resources inside this vcmtpSendv3 instance.
  *
- * @param[in] none
+ * @param[in]               none
+ * @throw  runtime_error    if pthread_create() fails.
  */
 void vcmtpSendv3::startCoordinator()
 {
@@ -336,7 +349,6 @@ void* vcmtpSendv3::coordinator(void* ptr)
  * Return the local port number.
  *
  * @return                    The local port number in host byte-order.
- * @throws std::system_error  The port number cannot be obtained.
  */
 unsigned short vcmtpSendv3::getTcpPortNum()
 {
@@ -349,7 +361,8 @@ unsigned short vcmtpSendv3::getTcpPortNum()
  * structure. Pass the pointer of this struture as a set of parameters to the
  * new thread.
  *
- * @param[in] newtcpsockfd
+ * @param[in]               newtcpsockfd
+ * @throw  runtime_error    if pthread_create() fails.
  */
 void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
@@ -404,7 +417,9 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
  * that metadata out of the map. Thus, retx thread will issue a RETX_REJ to
  * send back to the receiver.
  *
- * @param[in] retxsockfd              retx socket associated with a receiver
+ * @param[in] retxsockfd          retx socket associated with a receiver.
+ * @throw  runtime_error          if TcpSend::parseHeader() fails.
+ * @throw  runtime_error          if dataprod_p inside the RetxMetadat is NULL.
  */
 void vcmtpSendv3::RunRetxThread(int retxsockfd)
 {
@@ -504,6 +519,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
  * pointer of this structure to runTimerThread().
  *
  * @param[in] prodindex        product index the timer is supervising on.
+ * @throw  runtime_error       if pthread_create() fails.
  */
 void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 {
