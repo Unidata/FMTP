@@ -84,9 +84,9 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 TcpSend::~TcpSend()
 {
     for (list<int>::iterator it = connSockList.begin();
-         it != currSockList.end(); ++it)
+         it != connSockList.end(); ++it)
     {
-        currSockList.erase(*it);
+        connSockList.erase(it);
     }
     close(sockfd);
     pthread_mutex_destroy(&sockListMutex);
