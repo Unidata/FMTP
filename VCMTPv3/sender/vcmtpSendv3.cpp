@@ -34,10 +34,12 @@
 
 #define NULL 0
 
+
 /**
  * Constructs a sender instance and initializes a udpsend object pointer, a
  * tcpsend object pointer, a senderMetadata object pointer and set prodIndex to
- * 0 and make it maintained by sender itself.
+ * 0 and make it maintained by sender itself. retxTimeoutRatio will be
+ * initialized to 50.0 as a default value.
  *
  * @param[in] tcpAddr       Unicast address of the sender.
  * @param[in] tcpPort       Unicast port of the sender.
@@ -53,6 +55,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     prodIndex(0),
+    retxTimeoutRatio(50.0),
     notifier(0)
 {
 }
@@ -61,6 +64,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
 /**
  * Constructs a sender instance with prodIndex specified and initialized by
  * receiving applications. VCMTP sender will start from this given prodindex.
+ * retxTimeoutRatio will be initialized to 50.0 as a default value.
  *
  * @param[in] tcpAddr         Unicast address of the sender.
  * @param[in] tcpPort         Unicast port of the sender or 0, in which case one
@@ -81,6 +85,39 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     prodIndex(initProdIndex),
+    retxTimeoutRatio(50.0),
+    notifier(notifier)
+{
+}
+
+
+/**
+ * Constructs a sender instance with prodIndex specified and initialized by
+ * receiving applications. VCMTP sender will start from this given prodindex.
+ *
+ * @param[in] tcpAddr         Unicast address of the sender.
+ * @param[in] tcpPort         Unicast port of the sender or 0, in which case one
+ *                            is chosen by the operating-system.
+ * @param[in] mcastAddr       Multicast group address.
+ * @param[in] mcastPort       Multicast group port.
+ * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
+ * @param[in] timeoutRatio    retranmission timeout factor to tradeoff between
+ *                            performance and robustness.
+ * @param[in] notifier        Sending application notifier.
+ */
+vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
+                         const unsigned short        tcpPort,
+                         const char*                 mcastAddr,
+                         const unsigned short        mcastPort,
+                         uint32_t                    initProdIndex,
+                         float                       timeoutRatio,
+                         SendingApplicationNotifier* notifier)
+:
+    udpsend(new UdpSend(mcastAddr,mcastPort)),
+    tcpsend(new TcpSend(tcpAddr, tcpPort)),
+    sendMeta(new senderMetadata()),
+    prodIndex(initProdIndex),
+    retxTimeoutRatio(timeoutRatio),
     notifier(notifier)
 {
 }
@@ -164,9 +201,10 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
  */
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
 {
-    // TODO: need an accurate model to give a default timeout ratio.
-    float retxTimeoutRatio = 50.0;
-    return sendProduct(data, dataSize, 0, 0, retxTimeoutRatio);
+    // TODO: need an accurate model to give a default timeout ratio. Though
+    // default value has been fixed to 50.0. It's still capable to update the
+    // value again here.
+    return sendProduct(data, dataSize, 0, 0);
 }
 
 
@@ -194,7 +232,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
  * @throws  runtime_error  if UdpSend::SendData() fails.
  */
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
-                                  unsigned metaSize, float perProdTimeoutRatio)
+                                  unsigned metaSize)
 {
     if (data == NULL)
         throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
@@ -214,7 +252,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
     /** update current product pointer in RetxMetadata */
     senderProdMeta->dataprod_p       = (void*) data;
     /** update the per-product timeout ratio */
-    senderProdMeta->retxTimeoutRatio = perProdTimeoutRatio;
+    senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
     /** get a full list of current connected sockets and add to unfinished set */
     list<int> currSockList = tcpsend->getConnSockList();
     list<int>::iterator it;

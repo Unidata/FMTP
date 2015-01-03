@@ -88,11 +88,19 @@ public:
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
             SendingApplicationNotifier* notifier);
+    vcmtpSendv3(
+            const char*                 tcpAddr,
+            const unsigned short        tcpPort,
+            const char*                 mcastAddr,
+            const unsigned short        mcastPort,
+            uint32_t                    initProdIndex,
+            float                       timeoutRatio,
+            SendingApplicationNotifier* notifier);
     ~vcmtpSendv3();
 
     uint32_t sendProduct(char* data, size_t dataSize);
     uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
-                         unsigned metaSize, float perProdTimeoutRatio);
+                         unsigned metaSize);
     void startCoordinator();
     unsigned short getTcpPortNum();
 
@@ -106,6 +114,7 @@ private:
     senderMetadata*             sendMeta;
     /** sending application callback hook */
     SendingApplicationNotifier* notifier;
+    float                       retxTimeoutRatio;
     /** first: socket fd;  second: pthread_t pointer */
     map<int, pthread_t*> retxSockThreadMap;
     /** first: socket fd;  second: retransmission finished indicator */
