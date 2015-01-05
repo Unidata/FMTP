@@ -65,9 +65,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     notifier(notifier),
     max_sock_fd(0),
     mcast_sock(0),
-    retx_tcp_sock(0),
-    recv_thread(0),
-    retx_thread(0)
+    retx_tcp_sock(0)
 {
 }
 
@@ -96,9 +94,7 @@ vcmtpRecvv3::vcmtpRecvv3(
                     set notifier to NULL */
     max_sock_fd(0),
     mcast_sock(0),
-    retx_tcp_sock(0),
-    recv_thread(0),
-    retx_thread(0)
+    retx_tcp_sock(0)
 {
 }
 
@@ -125,7 +121,8 @@ void vcmtpRecvv3::Start()
 {
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
-    StartReceivingThread();
+    StartRetxHandler();
+    mcastHandler();
 }
 
 
@@ -136,7 +133,7 @@ void vcmtpRecvv3::Start()
  */
 void vcmtpRecvv3::Stop()
 {
-    // close all the sock_fd
+    // TODO: close all the sock_fd
     // call pthread_join()
     // make sure all resources are released
 }
@@ -156,83 +153,37 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
     mcastgroup.sin_port = htons(mcastPort);
     if((mcast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
-    if( bind(mcast_sock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup)) < 0 )
+    if( bind(mcast_sock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
+        < 0 )
         perror("vcmtpRecvv3::joinGroup() binding socket failed.");
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    if( setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0 )
+    if( setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+                   sizeof(mreq)) < 0 )
         perror("vcmtpRecvv3::joinGroup() setsockopt failed.");
-    /*
-    */
-    FD_SET(mcast_sock, &read_sock_set);
 }
 
 
-/**
- * Create a new thread to run StartReceivingThread().
- *
- * @param[in] none
- */
-void vcmtpRecvv3::StartReceivingThread()
+void vcmtpRecvv3::StartRetxHandler()
 {
-    pthread_create(&recv_thread, NULL, &vcmtpRecvv3::StartReceivingThread, this);
-    pthread_detach(recv_thread);
+    pthread_t retx_t;
+    pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler, this);
+    pthread_detach(retx_t);
 }
 
 
-/**
- * Run receiving thread in a newly created thread.
- *
- * @param[in] ptr        A pointer points to this thread itself.
- */
-void* vcmtpRecvv3::StartReceivingThread(void* ptr)
+void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 {
-    (static_cast<vcmtpRecvv3*>(ptr))->RunReceivingThread();
+    (static_cast<vcmtpRecvv3*>(ptr))->retxHandler();
     return NULL;
 }
 
 
-/**
- * Listen on both multicast thread and unicast thread to handle receiving and
- * retransmission.
- *
- * @param[in] none
- */
-void vcmtpRecvv3::RunReceivingThread()
+void vcmtpRecvv3::mcastHandler()
 {
-    fd_set  read_set;
-    while(true) {
-        read_set = read_sock_set;
-        /*
-        if (select(max_sock_fd + 1, &read_set, NULL, NULL, NULL) == -1) {
-            //SysError("TcpServer::SelectReceive::select() error");
-            break;
-        }
-        */
-
-        // tests to see if multicast_sock is part of the set
-        if (FD_ISSET(mcast_sock, &read_set)) {
-            mcastMonitor();
-        }
-
-        // tests to see if retrans_tcp_sock is part of the set
-        if (FD_ISSET(retx_tcp_sock, &read_set)) {
-        }
-    }
-    pthread_exit(0);
-}
-
-
-/**
- * Listen on both multicast thread and unicast thread to handle receiving and
- * retransmission. Check flag field and can corresponding handler.
- *
- * @param[in] none
- */
-void vcmtpRecvv3::mcastMonitor()
-{
+    /*
     static char packet_buffer[MAX_VCMTP_PACKET_LEN];
-    (void)memset(packet_buffer, 0, sizeof(packet_buffer));
+    (void) memset(packet_buffer, 0, sizeof(packet_buffer));
     VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
 
     if ( recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL,
@@ -247,6 +198,19 @@ void vcmtpRecvv3::mcastMonitor()
     else if ( ntohs(header->flags) & VCMTP_EOP ) {
         EOPHandler();
     }
+    */
+    while(1)
+    {
+        sleep(1);
+        std::cout << "mcastHandler working" << std::endl;
+    }
+}
+
+
+void vcmtpRecvv3::retxHandler()
+{
+    sleep(5);
+    std::cout << "retxHandler wakes up" << std::endl;
 }
 
 

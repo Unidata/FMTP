@@ -66,9 +66,6 @@ private:
     int              max_sock_fd;
     int              mcast_sock;
     int              retx_tcp_sock;
-    pthread_t        recv_thread;
-    pthread_t        retx_thread;
-    fd_set           read_sock_set; /*!< a set of sockets to be read */
     struct sockaddr_in  mcastgroup;
     VcmtpHeader      vcmtpHeader;   /*!< temporary header buffer for each vcmtp packet */
     BOPMsg           BOPmsg;        /*!< begin of product struct */
@@ -77,11 +74,11 @@ private:
     struct ip_mreq   mreq;          /*!< struct of multicast object */
     TcpRecv*         tcprecv;
 
-    static void*  StartReceivingThread(void* ptr);
-    void    StartReceivingThread();
-    void    RunReceivingThread();
     void    joinGroup(string mcastAddr, const unsigned short mcastPort);
-    void    mcastMonitor();
+    static void*  StartRetxHandler(void* ptr);
+    void    StartRetxHandler();
+    void    mcastHandler();
+    void    retxHandler();
     void    BOPHandler(char* VcmtpPacket);
     void    EOPHandler();
     void    recvMemData(char* VcmtpPacket);

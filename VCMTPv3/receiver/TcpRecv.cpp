@@ -12,7 +12,7 @@ using namespace std;
 
 TcpRecv::TcpRecv(string tcpAddr, unsigned short tcpPort)
 {
-    (void)memset((char *) &servAddr, 0, sizeof(servAddr));
+    (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         std::cout << "TcpRecv::TcpRecv() error creating socket" << std::endl;
