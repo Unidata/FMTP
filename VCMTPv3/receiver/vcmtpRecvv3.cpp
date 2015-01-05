@@ -241,8 +241,8 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
     memcpy(BOPmsg.metadata,   VcmtpPacketData+6, BOPmsg.metasize);
 
     vcmtpHeader.prodindex  = ntohl(vcmtpHeader.prodindex);
-    vcmtpHeader.seqnum     = ntohl(vcmtpHeader.seqnum);
-    vcmtpHeader.payloadlen = ntohs(vcmtpHeader.payloadlen);
+    vcmtpHeader.seqnum     = 0;
+    vcmtpHeader.payloadlen = 0;
     vcmtpHeader.flags      = ntohs(vcmtpHeader.flags);
     BOPmsg.prodsize        = ntohl(BOPmsg.prodsize);
 
@@ -278,23 +278,8 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
     tmpVcmtpHeader.payloadlen = ntohs(tmpVcmtpHeader.payloadlen);
     tmpVcmtpHeader.flags      = ntohs(tmpVcmtpHeader.flags);
 
-    /** check if it's the first received mem data packet */
-    if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
-       tmpVcmtpHeader.seqnum == 0)
-    {
-        vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
-        vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
-        vcmtpHeader.flags      = tmpVcmtpHeader.flags;
-        if(prodptr)
-            memcpy((char*)prodptr + vcmtpHeader.seqnum, VcmtpPacketData,
-                   vcmtpHeader.payloadlen);
-        else {
-            std::cout << "seqnum: " << vcmtpHeader.seqnum;
-            std::cout << "    paylen: " << vcmtpHeader.payloadlen << std::endl;
-        }
-    }
     /** check the packet sequence to detect missing packets */
-    else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
+    if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen ==
             tmpVcmtpHeader.seqnum)
     {
@@ -334,6 +319,7 @@ void vcmtpRecvv3::EOPHandler()
 {
     // TODO: better do a integrity check of the received data blocks.
     std::cout << "(EOP) data-product completely received." << std::endl;
+    // notify EOP
 }
 
 
