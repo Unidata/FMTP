@@ -63,9 +63,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcprecv(0),
     prodptr(0),
     notifier(notifier),
-    max_sock_fd(0),
-    mcast_sock(0),
-    retx_tcp_sock(0)
+    mcastSock(0),
+    retxSock(0)
 {
 }
 
@@ -92,9 +91,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     prodptr(0),
     notifier(0),   /*!< constructor called by independent test program will
                     set notifier to NULL */
-    max_sock_fd(0),
-    mcast_sock(0),
-    retx_tcp_sock(0)
+    mcastSock(0),
+    retxSock(0)
 {
 }
 
@@ -147,18 +145,18 @@ void vcmtpRecvv3::Stop()
  */
 void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
-    (void)memset(&mcastgroup, 0, sizeof(mcastgroup));
+    (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
     mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
     mcastgroup.sin_port = htons(mcastPort);
-    if((mcast_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         perror("vcmtpRecvv3::joinGroup() creating socket failed.");
-    if( bind(mcast_sock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
+    if( bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
         < 0 )
         perror("vcmtpRecvv3::joinGroup() binding socket failed.");
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    if( setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+    if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
                    sizeof(mreq)) < 0 )
         perror("vcmtpRecvv3::joinGroup() setsockopt failed.");
 }
@@ -181,36 +179,41 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 
 void vcmtpRecvv3::mcastHandler()
 {
-    /*
-    static char packet_buffer[MAX_VCMTP_PACKET_LEN];
-    (void) memset(packet_buffer, 0, sizeof(packet_buffer));
-    VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
+    char pktBuf[MAX_VCMTP_PACKET_LEN];
+    (void) memset(pktBuf, 0, sizeof(pktBuf));
+    VcmtpHeader* header = (VcmtpHeader*) pktBuf;
 
-    if ( recvfrom(mcast_sock, packet_buffer, MAX_VCMTP_PACKET_LEN, 0, NULL,
-         NULL) < 0 )
-        perror("vcmtpRecvv3::HandleMulticastPacket() recv error");
-    if ( ntohs(header->flags) & VCMTP_BOP ) {
-        BOPHandler(packet_buffer);
-    }
-    else if ( ntohs(header->flags) & VCMTP_MEM_DATA ) {
-        recvMemData(packet_buffer);
-    }
-    else if ( ntohs(header->flags) & VCMTP_EOP ) {
-        EOPHandler();
-    }
-    */
     while(1)
     {
-        sleep(1);
-        std::cout << "mcastHandler working" << std::endl;
+        if (recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0, NULL, NULL)
+            < 0)
+            perror("vcmtpRecvv3::HandleMulticastPacket() recv error");
+
+        if (ntohs(header->flags) & VCMTP_BOP)
+        {
+            BOPHandler(pktBuf);
+        }
+        else if (ntohs(header->flags) & VCMTP_MEM_DATA)
+        {
+            recvMemData(pktBuf);
+        }
+        else if (ntohs(header->flags) & VCMTP_EOP)
+            EOPHandler();
     }
 }
 
 
 void vcmtpRecvv3::retxHandler()
 {
+    /*
     sleep(5);
     std::cout << "retxHandler wakes up" << std::endl;
+    */
+    sendRetxEnd();
+    sleep(3);
+    sendRetxReq();
+    sleep(1);
+    recvRetxData();
 }
 
 
@@ -309,7 +312,7 @@ void vcmtpRecvv3::EOPHandler()
 void vcmtpRecvv3::sendRetxEnd()
 {
     char pktBuf[VCMTP_HEADER_LEN];
-    (void)memset(pktBuf, 0, sizeof(pktBuf));
+    (void) memset(pktBuf, 0, sizeof(pktBuf));
 
     uint32_t prodindex = htonl(vcmtpHeader.prodindex);
     uint32_t seqNum    = htonl(0);
@@ -328,7 +331,7 @@ void vcmtpRecvv3::sendRetxEnd()
 void vcmtpRecvv3::sendRetxReq()
 {
     char pktBuf[VCMTP_HEADER_LEN];
-    (void)memset(pktBuf, 0, sizeof(pktBuf));
+    (void) memset(pktBuf, 0, sizeof(pktBuf));
 
     //uint32_t prodindex = htonl(vcmtpHeader.prodindex);
     uint32_t prodindex = htonl(0);
@@ -349,7 +352,7 @@ void vcmtpRecvv3::recvRetxData()
 {
 	VcmtpHeader tmpheader;
     char pktBuf[MAX_VCMTP_PACKET_LEN];
-    (void)memset(pktBuf, 0, sizeof(pktBuf));
+    (void) memset(pktBuf, 0, sizeof(pktBuf));
     char* pktbufhead = pktBuf;
     char* pktbufpay = pktBuf + VCMTP_HEADER_LEN;
 

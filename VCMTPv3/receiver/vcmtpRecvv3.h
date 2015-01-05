@@ -54,24 +54,20 @@ public:
 
     void    Start();
     void    Stop();
-    void    sendRetxEnd();
-    void    sendRetxReq();
-    void	recvRetxData();
 
 private:
     string           tcpAddr;
     unsigned short   tcpPort;
     string           mcastAddr;
     unsigned short   mcastPort;
-    int              max_sock_fd;
-    int              mcast_sock;
-    int              retx_tcp_sock;
+    int              mcastSock;
+    int              retxSock;
     struct sockaddr_in  mcastgroup;
+    struct ip_mreq   mreq;          /*!< struct of multicast object */
     VcmtpHeader      vcmtpHeader;   /*!< temporary header buffer for each vcmtp packet */
     BOPMsg           BOPmsg;        /*!< begin of product struct */
     ReceivingApplicationNotifier* notifier; /*!< callback function of the receiving application */
     void*            prodptr;       /*!< pointer to a start point in product queue */
-    struct ip_mreq   mreq;          /*!< struct of multicast object */
     TcpRecv*         tcprecv;
 
     void    joinGroup(string mcastAddr, const unsigned short mcastPort);
@@ -82,6 +78,10 @@ private:
     void    BOPHandler(char* VcmtpPacket);
     void    EOPHandler();
     void    recvMemData(char* VcmtpPacket);
+
+    void    sendRetxEnd();
+    void    sendRetxReq();
+    void    recvRetxData();
 };
 
 #endif /* VCMTPRECVV3_H_ */
