@@ -36,6 +36,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <string.h>
+#include <system_error>
 #include <unistd.h>
 
 
@@ -142,8 +143,11 @@ void vcmtpRecvv3::Stop()
 /**
  * Join multicast group specified by mcastAddr:mcastPort.
  *
- * @param[in] mcastAddr     Udp multicast address for receiving data products.
- * @param[in] mcastPort     Udp multicast port for receiving data products.
+ * @param[in] mcastAddr      Udp multicast address for receiving data products.
+ * @param[in] mcastPort      Udp multicast port for receiving data products.
+ * @throw std::system_error  {if the socket couldn't be created.}
+ * @throw std::system_error  {if the socket couldn't be bound.}
+ * @throw std::system_error  {if the socket couldn't join the multicast group.}
  */
 void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
@@ -152,15 +156,18 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
     mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
     mcastgroup.sin_port = htons(mcastPort);
     if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        perror("vcmtpRecvv3::joinGroup() creating socket failed.");
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup() creating socket failed.");
     if( bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
-        < 0 )
-        perror("vcmtpRecvv3::joinGroup() binding socket failed.");
+            < 0 )
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup() binding socket failed.");
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
                    sizeof(mreq)) < 0 )
-        perror("vcmtpRecvv3::joinGroup() setsockopt failed.");
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup() setsockopt() failed.");
 }
 
 
@@ -179,6 +186,9 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 }
 
 
+/**
+ * @throw std::system_error  {if an I/O error occurs.}
+ */
 void vcmtpRecvv3::mcastHandler()
 {
     char pktBuf[MAX_VCMTP_PACKET_LEN];
@@ -188,8 +198,9 @@ void vcmtpRecvv3::mcastHandler()
     while(1)
     {
         if (recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0, NULL, NULL)
-            < 0)
-            perror("vcmtpRecvv3::HandleMulticastPacket() recv error");
+                < 0)
+            throw std::system_error(errno, std::system_category(),
+                    "vcmtpRecvv3::mcastHandler() recvfrom() error.");
 
         if (ntohs(header->flags) & VCMTP_BOP)
         {
