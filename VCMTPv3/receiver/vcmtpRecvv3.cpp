@@ -113,10 +113,11 @@ vcmtpRecvv3::~vcmtpRecvv3()
 /**
  * Join given multicast group (defined by mcastAddr:mcastPort) to receive
  * multicasting products and start receiving thread to listen on the socket.
- * Doesn't return until `vcmtpRecvv3::Stop()` is called or an exception is
- * thrown.
+ * Doesn't return until `vcmtpRecvv3::~vcmtpRecvv3()` or `vcmtpRecvv3::Stop()`
+ * is called or an exception is thrown.
  *
- * @param[in] none
+ * @throw std::system_error  if the multicast group couldn't be joined.
+ * @throw std::system_error  if an I/O error occurs.
  */
 void vcmtpRecvv3::Start()
 {
