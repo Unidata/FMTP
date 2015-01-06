@@ -225,19 +225,19 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
  *                         the per-product timeout ratio to balance performance
  *                         and robustness (reliability).
  * @return                 Index of the product.
- * @throws  runtime_error  if the passed-in parameter *data is NULL.
- * @throws  runtime_error  if the passed-in parameter dataSize exceeds the
- *                         maximum allowed value.
- * @throws  runtime_error  if retrieving sender side RetxMetadata fails.
- * @throws  runtime_error  if UdpSend::SendData() fails.
+ * @throws std::invalid_argument  if `data == NULL`.
+ * @throws std::invalid_argument  if the `dataSize` exceeds the maximum allowed
+ *                                value.
+ * @throws std::runtime_error     if retrieving sender side RetxMetadata fails.
+ * @throws std::runtime_error     if UdpSend::SendData() fails.
  */
 uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
                                   unsigned metaSize)
 {
     if (data == NULL)
-        throw std::runtime_error("vcmtpSendv3::sendProduct() data pointer is NULL");
+        throw std::invalid_argument("vcmtpSendv3::sendProduct() data pointer is NULL");
     if (dataSize > 0xFFFFFFFFu)
-        throw std::runtime_error("vcmtpSendv3::sendProduct() dataSize out of range");
+        throw std::invalid_argument("vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata == NULL)
         metaSize = 0;
     /** creates a new RetxMetadata struct for this product */
