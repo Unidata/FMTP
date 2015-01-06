@@ -145,9 +145,9 @@ void vcmtpRecvv3::Stop()
  *
  * @param[in] mcastAddr      Udp multicast address for receiving data products.
  * @param[in] mcastPort      Udp multicast port for receiving data products.
- * @throw std::system_error  {if the socket couldn't be created.}
- * @throw std::system_error  {if the socket couldn't be bound.}
- * @throw std::system_error  {if the socket couldn't join the multicast group.}
+ * @throw std::system_error  if the socket couldn't be created.
+ * @throw std::system_error  if the socket couldn't be bound.
+ * @throw std::system_error  if the socket couldn't join the multicast group.
  */
 void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 {
@@ -187,7 +187,7 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 
 
 /**
- * @throw std::system_error  {if an I/O error occurs.}
+ * @throw std::system_error  if an I/O error occurs.
  */
 void vcmtpRecvv3::mcastHandler()
 {
