@@ -112,6 +112,8 @@ vcmtpRecvv3::~vcmtpRecvv3()
 /**
  * Join given multicast group (defined by mcastAddr:mcastPort) to receive
  * multicasting products and start receiving thread to listen on the socket.
+ * Doesn't return until `vcmtpRecvv3::Stop()` is called or an exception is
+ * thrown.
  *
  * @param[in] none
  */
