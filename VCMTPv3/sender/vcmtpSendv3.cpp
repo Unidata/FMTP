@@ -31,8 +31,11 @@
 #include <stdio.h>
 #include <stdexcept>
 #include <string.h>
+#include <system_error>
 
-#define NULL 0
+#ifndef NULL
+    #define NULL 0
+#endif
 
 
 /**
@@ -225,8 +228,8 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
  *                         the per-product timeout ratio to balance performance
  *                         and robustness (reliability).
  * @return                 Index of the product.
- * @throws std::invalid_argument  if `data == NULL`.
- * @throws std::invalid_argument  if the `dataSize` exceeds the maximum allowed
+ * @throws std::invalid_argument  if `data == 0`.
+ * @throws std::invalid_argument  if `dataSize` exceeds the maximum allowed
  *                                value.
  * @throws std::runtime_error     if retrieving sender side RetxMetadata fails.
  * @throws std::runtime_error     if UdpSend::SendData() fails.
@@ -359,8 +362,7 @@ void vcmtpSendv3::sendEOPMessage()
  * type pointer to the coordinator thread so that coordinator can have access
  * to all the resources inside this vcmtpSendv3 instance.
  *
- * @param[in]               none
- * @throw  runtime_error    if pthread_create() fails.
+ * @throw  std::system_error  if pthread_create() fails.
  */
 void vcmtpSendv3::startCoordinator()
 {
@@ -368,7 +370,8 @@ void vcmtpSendv3::startCoordinator()
     int retval = pthread_create(&new_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0)
     {
-        throw std::runtime_error("vcmtpSendv3::startCoordinator() pthread_create error");
+        throw std::system_error(retval, std::system_category(),
+                "vcmtpSendv3::startCoordinator() pthread_create() error");
     }
     pthread_detach(new_t);
 }
@@ -411,8 +414,8 @@ unsigned short vcmtpSendv3::getTcpPortNum()
  * structure. Pass the pointer of this struture as a set of parameters to the
  * new thread.
  *
- * @param[in]               newtcpsockfd
- * @throw  runtime_error    if pthread_create() fails.
+ * @param[in] newtcpsockfd
+ * @throw     std::system_error  if pthread_create() fails.
  */
 void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
@@ -430,7 +433,8 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
                                 retxThreadInfo);
     if(retval != 0)
     {
-        throw std::runtime_error("vcmtpSendv3::StartNewRetxThread() error pthread_create");
+        throw std::system_error(retval, std::system_category(),
+                "vcmtpSendv3::StartNewRetxThread() error pthread_create()");
     }
     pthread_detach(t);
 }
@@ -480,8 +484,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
     {
         /** receive the message from tcp connection and parse the header */
         if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
-            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive \
-                                     header error");
+            throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive "
+                                     "header error");
 
         /** first try to retrieve the requested product */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
@@ -568,8 +572,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
  * senderMetadata into the StartTimerThreadInfo structure and passes the
  * pointer of this structure to runTimerThread().
  *
- * @param[in] prodindex        product index the timer is supervising on.
- * @throw  runtime_error       if pthread_create() fails.
+ * @param[in] prodindex          product index the timer is supervising on.
+ * @throw     std::system_error  if pthread_create() fails.
  */
 void vcmtpSendv3::startTimerThread(uint32_t prodindex)
 {
@@ -581,8 +585,8 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
                                 timerinfo);
     if(retval != 0)
     {
-        throw std::runtime_error("vcmtpSendv3::startTimerThread() \
-                                 pthread_create error");
+        throw std::system_error(retval, std::system_category(),
+                "vcmtpSendv3::startTimerThread() pthread_create() error");
     }
     pthread_detach(t);
 }
