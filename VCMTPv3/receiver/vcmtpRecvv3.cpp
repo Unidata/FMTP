@@ -211,30 +211,35 @@ void vcmtpRecvv3::decodeHeader(
 
 
 /**
- * @throw std::system_error  if an I/O error occurs.
+ * @throw std::system_error   if an I/O error occurs.
+ * @throw std::runtime_error  if a packet is too small.
  */
 void vcmtpRecvv3::mcastHandler()
 {
     char pktBuf[MAX_VCMTP_PACKET_LEN];
     (void) memset(pktBuf, 0, sizeof(pktBuf));
-    VcmtpHeader* header = (VcmtpHeader*) pktBuf;
 
     while(1)
     {
-        if (recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0, NULL, NULL)
-                < 0)
+        VcmtpHeader header;
+        ssize_t     nbytes = recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN,
+                0, NULL, NULL);
+
+        if (nbytes < 0)
             throw std::system_error(errno, std::system_category(),
                     "vcmtpRecvv3::mcastHandler() recvfrom() error.");
 
-        if (ntohs(header->flags) & VCMTP_BOP)
+        decodeHeader(header, pktBuf, nbytes);
+
+        if (header.flags & VCMTP_BOP)
         {
             BOPHandler(pktBuf);
         }
-        else if (ntohs(header->flags) & VCMTP_MEM_DATA)
+        else if (header.flags & VCMTP_MEM_DATA)
         {
             recvMemData(pktBuf);
         }
-        else if (ntohs(header->flags) & VCMTP_EOP)
+        else if (header.flags & VCMTP_EOP)
             EOPHandler();
     }
 }
