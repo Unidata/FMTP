@@ -75,6 +75,18 @@ private:
     void    StartRetxHandler();
     void    mcastHandler();
     void    retxHandler();
+    /**
+     * Decodes a VCMTP packet header.
+     *
+     * @param[out] header         The decoded packet header.
+     * @param[in]  packet         The raw packet.
+     * @param[in]  nbytes         The size of the raw packet in bytes.
+     * @throw std::runtime_error  if the packet is too small.
+     */
+    void decodeHeader(
+            VcmtpHeader&      header,
+            const char* const packet,
+            const size_t      nbytes);
     void    BOPHandler(char* VcmtpPacket);
     void    EOPHandler();
     void    recvMemData(char* VcmtpPacket);

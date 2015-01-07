@@ -188,6 +188,29 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 
 
 /**
+ * Decodes a VCMTP packet header.
+ *
+ * @param[out] header         The decoded packet header.
+ * @param[in]  packet         The raw packet.
+ * @param[in]  nbytes         The size of the raw packet in bytes.
+ * @throw std::runtime_error  if the packet is too small.
+ */
+void vcmtpRecvv3::decodeHeader(
+        VcmtpHeader&      header,
+        const char* const packet,
+        const size_t      nbytes)
+{
+    if (nbytes < VCMTP_HEADER_LEN)
+        throw std::runtime_error("vcmtpRecvv3::decodeHeader(): Packet is too small");
+
+    header.prodindex  = ntohl(*(uint32_t*)packet);
+    header.seqnum     = ntohl(*(uint32_t*)packet+4);
+    header.payloadlen = ntohs(*(uint16_t*)packet+8);
+    header.flags      = ntohs(*(uint16_t*)packet+10);
+}
+
+
+/**
  * @throw std::system_error  if an I/O error occurs.
  */
 void vcmtpRecvv3::mcastHandler()
