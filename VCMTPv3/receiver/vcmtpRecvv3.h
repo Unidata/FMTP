@@ -78,18 +78,38 @@ private:
     /**
      * Decodes a VCMTP packet header.
      *
-     * @param[out] header         The decoded packet header.
      * @param[in]  packet         The raw packet.
      * @param[in]  nbytes         The size of the raw packet in bytes.
+     * @param[out] header         The decoded packet header.
+     * @param[out] payload        Payload of the packet.
      * @throw std::runtime_error  if the packet is too small.
+     * @throw std::runtime_error  if the packet has in invalid payload length.
      */
     void decodeHeader(
-            VcmtpHeader&      header,
-            const char* const packet,
-            const size_t      nbytes);
-    void    BOPHandler(char* VcmtpPacket);
+            char* const  packet,
+            const size_t nbytes,
+            VcmtpHeader& header,
+            char** const payload);
+    /**
+     * Parse BOP message and call notifier to notify receiving application.
+     *
+     * @param[in] header           Header associated with the packet.
+     * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
+     * @throw std::runtime_error   if the payload is too small.
+     */
+    void BOPHandler(
+            const VcmtpHeader& header,
+            const char* const  VcmtpPacketData);
     void    EOPHandler();
-    void    recvMemData(char* VcmtpPacket);
+    /**
+     * Parse data blocks, directly store and check for missing blocks.
+     *
+     * @param[in] header             The header associated with the packet.
+     * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+     */
+    void recvMemData(
+            const VcmtpHeader& header,
+            const char* const  VcmtpPacket);
 
     void    sendRetxEnd();
     void    sendRetxReq();

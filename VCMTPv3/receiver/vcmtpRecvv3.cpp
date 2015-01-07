@@ -190,15 +190,18 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 /**
  * Decodes a VCMTP packet header.
  *
- * @param[out] header         The decoded packet header.
  * @param[in]  packet         The raw packet.
  * @param[in]  nbytes         The size of the raw packet in bytes.
+ * @param[out] header         The decoded packet header.
+ * @param[out] payload        Payload of the packet.
  * @throw std::runtime_error  if the packet is too small.
+ * @throw std::runtime_error  if the packet has in invalid payload length.
  */
 void vcmtpRecvv3::decodeHeader(
-        VcmtpHeader&      header,
-        const char* const packet,
-        const size_t      nbytes)
+        char* const  packet,
+        const size_t nbytes,
+        VcmtpHeader& header,
+        char** const payload)
 {
     if (nbytes < VCMTP_HEADER_LEN)
         throw std::runtime_error("vcmtpRecvv3::decodeHeader(): Packet is too small");
@@ -207,12 +210,17 @@ void vcmtpRecvv3::decodeHeader(
     header.seqnum     = ntohl(*(uint32_t*)packet+4);
     header.payloadlen = ntohs(*(uint16_t*)packet+8);
     header.flags      = ntohs(*(uint16_t*)packet+10);
+
+    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
+        throw std::runtime_error("vcmtpRecvv3::decodeHeader(): Invalid payload length");
+
+    *payload = packet + VCMTP_HEADER_LEN;
 }
 
 
 /**
  * @throw std::system_error   if an I/O error occurs.
- * @throw std::runtime_error  if a packet is too small.
+ * @throw std::runtime_error  if a packet is invalid.
  */
 void vcmtpRecvv3::mcastHandler()
 {
@@ -222,6 +230,7 @@ void vcmtpRecvv3::mcastHandler()
     while(1)
     {
         VcmtpHeader header;
+        char*       payload;
         ssize_t     nbytes = recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN,
                 0, NULL, NULL);
 
@@ -229,15 +238,15 @@ void vcmtpRecvv3::mcastHandler()
             throw std::system_error(errno, std::system_category(),
                     "vcmtpRecvv3::mcastHandler() recvfrom() error.");
 
-        decodeHeader(header, pktBuf, nbytes);
+        decodeHeader(pktBuf, nbytes, header, &payload);
 
         if (header.flags & VCMTP_BOP)
         {
-            BOPHandler(pktBuf);
+            BOPHandler(header, payload);
         }
         else if (header.flags & VCMTP_MEM_DATA)
         {
-            recvMemData(pktBuf);
+            recvMemData(header, payload);
         }
         else if (header.flags & VCMTP_EOP)
             EOPHandler();
@@ -262,31 +271,36 @@ void vcmtpRecvv3::retxHandler()
 /**
  * Parse BOP message and call notifier to notify receiving application.
  *
- * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+ * @param[in] header           Header associated with the packet.
+ * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
+ * @throw std::runtime_error   if the payload is too small.
+ * @throw std::runtime_error   if the amount of metadata is invalid.
  */
-void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
+void vcmtpRecvv3::BOPHandler(
+        const VcmtpHeader& header,
+        const char* const  VcmtpPacketData)
 {
-    char*    VcmtpPacketHeader = VcmtpPacket;
-    char*    VcmtpPacketData = VcmtpPacket + VCMTP_HEADER_LEN;
+    /**
+     * Every time a new BOP arrives, save the msg to check following data
+     * packets
+     */
+    if (header.payloadlen < 6)
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
+    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
+    BOPmsg.metasize = ntohs(*(uint16_t*)VcmtpPacketData+4);
+    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
+            ? AVAIL_BOP_LEN : BOPmsg.metasize;
+    if (header.payloadlen - 6 < BOPmsg.metasize)
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
+    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
 
-    /** every time a new BOP arrives, save the header to check following data packets */
-    memcpy(&vcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
-    memcpy(&vcmtpHeader.seqnum,     VcmtpPacketHeader+4,    4);
-    memcpy(&vcmtpHeader.payloadlen, VcmtpPacketHeader+8,    2);
-    memcpy(&vcmtpHeader.flags,      VcmtpPacketHeader+10,   2);
-
-    /** every time a new BOP arrives, save the msg to check following data packets */
-    memcpy(&BOPmsg.prodsize,  VcmtpPacketData,   4);
-    memcpy(&BOPmsg.metasize,  (VcmtpPacketData+4), 2);
-    BOPmsg.metasize = ntohs(BOPmsg.metasize);
-    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN ? AVAIL_BOP_LEN : BOPmsg.metasize;
-    memcpy(BOPmsg.metadata,   VcmtpPacketData+6, BOPmsg.metasize);
-
-    vcmtpHeader.prodindex  = ntohl(vcmtpHeader.prodindex);
+    /**
+     * Every time a new BOP arrives, save the header to check following data
+     * packets.
+     */
+    vcmtpHeader = header;
     vcmtpHeader.seqnum     = 0;
     vcmtpHeader.payloadlen = 0;
-    vcmtpHeader.flags      = ntohs(vcmtpHeader.flags);
-    BOPmsg.prodsize        = ntohl(BOPmsg.prodsize);
 
     #ifdef DEBUG
     std::cout << "(BOP) prodindex: " << vcmtpHeader.prodindex;
@@ -303,31 +317,19 @@ void vcmtpRecvv3::BOPHandler(char* VcmtpPacket)
 /**
  * Parse data blocks, directly store and check for missing blocks.
  *
- * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+ * @param[in] header             The header associated with the packet.
+ * @param[in] VcmtpPacketData    Pointer to payload of VCMTP packet.
  */
-void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
+void vcmtpRecvv3::recvMemData(
+        const VcmtpHeader& header,
+        const char* const  VcmtpPacketData)
 {
-    char*        VcmtpPacketHeader = VcmtpPacket;
-    char*        VcmtpPacketData   = VcmtpPacket + VCMTP_HEADER_LEN;
-    VcmtpHeader  tmpVcmtpHeader;
-
-    memcpy(&tmpVcmtpHeader.prodindex,  VcmtpPacketHeader,      4);
-    memcpy(&tmpVcmtpHeader.seqnum,     (VcmtpPacketHeader+4),  4);
-    memcpy(&tmpVcmtpHeader.payloadlen, (VcmtpPacketHeader+8),  2);
-    memcpy(&tmpVcmtpHeader.flags,      (VcmtpPacketHeader+10), 2);
-    tmpVcmtpHeader.prodindex  = ntohl(tmpVcmtpHeader.prodindex);
-    tmpVcmtpHeader.seqnum     = ntohl(tmpVcmtpHeader.seqnum);
-    tmpVcmtpHeader.payloadlen = ntohs(tmpVcmtpHeader.payloadlen);
-    tmpVcmtpHeader.flags      = ntohs(tmpVcmtpHeader.flags);
-
     /** check the packet sequence to detect missing packets */
-    if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
+    if(header.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen ==
-            tmpVcmtpHeader.seqnum)
+            header.seqnum)
     {
-        vcmtpHeader.seqnum     = tmpVcmtpHeader.seqnum;
-        vcmtpHeader.payloadlen = tmpVcmtpHeader.payloadlen;
-        vcmtpHeader.flags      = tmpVcmtpHeader.flags;
+        vcmtpHeader = header;
         if(prodptr)
             memcpy((char*)prodptr + vcmtpHeader.seqnum, VcmtpPacketData,
                    vcmtpHeader.payloadlen);
@@ -337,14 +339,14 @@ void vcmtpRecvv3::recvMemData(char* VcmtpPacket)
         }
     }
     /** missing BOP */
-    else if(tmpVcmtpHeader.prodindex != vcmtpHeader.prodindex)
+    else if(header.prodindex != vcmtpHeader.prodindex)
     {
         /** handle missing block */
     }
     /** data block out of order */
-    else if(tmpVcmtpHeader.prodindex == vcmtpHeader.prodindex &&
+    else if(header.prodindex == vcmtpHeader.prodindex &&
             vcmtpHeader.seqnum + vcmtpHeader.payloadlen !=
-            tmpVcmtpHeader.seqnum)
+            header.seqnum)
     {
         // TODO: drop duplicate blocks
         /** handle missing block */
