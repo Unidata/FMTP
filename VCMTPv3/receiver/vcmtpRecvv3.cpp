@@ -324,10 +324,13 @@ void vcmtpRecvv3::recvMemData(
         const VcmtpHeader& header,
         const char* const  VcmtpPacketData)
 {
+    /** missing BOP */
+    if (header.prodindex != vcmtpHeader.prodindex)
+    {
+        /** handle missing BOP */
+    }
     /** check the packet sequence to detect missing packets */
-    if(header.prodindex == vcmtpHeader.prodindex &&
-            vcmtpHeader.seqnum + vcmtpHeader.payloadlen ==
-            header.seqnum)
+    else if (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == header.seqnum)
     {
         vcmtpHeader = header;
         if(prodptr)
@@ -338,15 +341,8 @@ void vcmtpRecvv3::recvMemData(
             std::cout << "    paylen: " << vcmtpHeader.payloadlen << std::endl;
         }
     }
-    /** missing BOP */
-    else if(header.prodindex != vcmtpHeader.prodindex)
-    {
-        /** handle missing block */
-    }
     /** data block out of order */
-    else if(header.prodindex == vcmtpHeader.prodindex &&
-            vcmtpHeader.seqnum + vcmtpHeader.payloadlen !=
-            header.seqnum)
+    else
     {
         // TODO: drop duplicate blocks
         /** handle missing block */
