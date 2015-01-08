@@ -112,8 +112,10 @@ private:
             const VcmtpHeader& header,
             const char* const  VcmtpPacket);
 
-    void    sendRetxEnd();
-    void    sendRetxReq();
+    // TODO: interfaces maybe need to be re-defined
+    void    sendBOPRetxReq();
+    void    sendDataRetxEnd();
+    void    sendDataRetxReq();
     void    recvRetxData();
 };
 

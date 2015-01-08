@@ -243,15 +243,21 @@ void vcmtpRecvv3::mcastHandler()
 
 void vcmtpRecvv3::retxHandler()
 {
-    /*
-    sleep(5);
-    std::cout << "retxHandler wakes up" << std::endl;
-    */
-    sendRetxEnd();
-    sleep(3);
-    sendRetxReq();
-    sleep(1);
-    recvRetxData();
+    while(1)
+    {
+        INLReqMsg reqmsg;
+        reqmsg = msgqueue.front();
+        if (reqmsg.reqtype & MISSING_BOP)
+        {
+            // TODO: sendBOPRetxReq();
+        }
+        else if (reqmsg.reqtype & MISSING_DATA)
+        {
+            // TODO: sendDataRetxReq();
+        }
+
+        // TODO: receive unicast retx
+    }
 }
 
 
