@@ -35,6 +35,7 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <queue>
 #include "TcpRecv.h"
 
 using namespace std;
@@ -53,7 +54,6 @@ public:
     ~vcmtpRecvv3();
 
     void    Start();
-    void    Stop();
 
 private:
     string           tcpAddr;
@@ -69,6 +69,7 @@ private:
     ReceivingApplicationNotifier* notifier; /*!< callback function of the receiving application */
     void*            prodptr;       /*!< pointer to a start point in product queue */
     TcpRecv*         tcprecv;
+    queue<INLReqMsg> msgqueue;
 
     void    joinGroup(string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxHandler(void* ptr);

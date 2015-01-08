@@ -105,8 +105,8 @@ vcmtpRecvv3::vcmtpRecvv3(
  */
 vcmtpRecvv3::~vcmtpRecvv3()
 {
-    /** destructor should call Stop() to terminate all processes */
-    Stop();
+    // TODO: close all the sock_fd
+    // make sure all resources are released
 }
 
 
@@ -125,19 +125,6 @@ void vcmtpRecvv3::Start()
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxHandler();
     mcastHandler();
-}
-
-
-/**
- * Stop current running threads, close all sockets and release resources.
- *
- * @param[in] none
- */
-void vcmtpRecvv3::Stop()
-{
-    // TODO: close all the sock_fd
-    // call pthread_join()
-    // make sure all resources are released
 }
 
 
@@ -232,7 +219,7 @@ void vcmtpRecvv3::mcastHandler()
         VcmtpHeader header;
         char*       payload;
         ssize_t     nbytes = recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN,
-                0, NULL, NULL);
+                                      0, NULL, NULL);
 
         if (nbytes < 0)
             throw std::system_error(errno, std::system_category(),
@@ -289,7 +276,7 @@ void vcmtpRecvv3::BOPHandler(
     BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
     BOPmsg.metasize = ntohs(*(uint16_t*)VcmtpPacketData+4);
     BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
-            ? AVAIL_BOP_LEN : BOPmsg.metasize;
+                      ? AVAIL_BOP_LEN : BOPmsg.metasize;
     if (header.payloadlen - 6 < BOPmsg.metasize)
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
     (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
@@ -327,7 +314,10 @@ void vcmtpRecvv3::recvMemData(
     /** missing BOP */
     if (header.prodindex != vcmtpHeader.prodindex)
     {
-        /** handle missing BOP */
+        /** do not need to care about the last 2 fields if it's BOP */
+        INLReqMsg reqmsg = { MISSING_BOP, header.prodindex, 0, 0 };
+        /** send a msg to the retx thread to request for BOP retransmission */
+        msgqueue.push(reqmsg);
     }
     /** check the packet sequence to detect missing packets */
     else if (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == header.seqnum)
@@ -345,7 +335,13 @@ void vcmtpRecvv3::recvMemData(
     else
     {
         // TODO: drop duplicate blocks
-        /** handle missing block */
+        uint32_t reqSeqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
+        // TODO: how to calculate payload length?
+        uint16_t reqPaylen = VCMTP_DATA_LEN;
+        INLReqMsg reqmsg = { MISSING_DATA, header.prodindex, reqSeqnum,
+                             reqPaylen };
+        /** send a msg to the retx thread to request for data retransmission */
+        msgqueue.push(reqmsg);
     }
 }
 
