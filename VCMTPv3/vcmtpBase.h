@@ -77,6 +77,17 @@ const uint16_t VCMTP_RETX_DATA = 0x00000040;
 const uint16_t VCMTP_BOP_REQ   = 0x00000080;
 
 
+/** For communication between mcast thread and retx thread */
+const int MISSING_BOP  = 1;
+const int MISSING_DATA = 2;
+typedef struct recvInternalRetxReqMessage {
+    int reqtype;
+    uint32_t prodindex;
+    uint32_t seqnum;
+    uint16_t payloadlen;
+} INLReqMsg;
+
+
 class vcmtpBase {
 public:
     vcmtpBase();
