@@ -205,6 +205,11 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
  * @param[in] data      Memory data to be sent.
  * @param[in] dataSize  Size of the memory data in bytes.
  * @return              Index of the product.
+ * @throws std::invalid_argument  if `data == 0`.
+ * @throws std::invalid_argument  if `dataSize` exceeds the maximum allowed
+ *                                value.
+ * @throws std::runtime_error     if retrieving sender side RetxMetadata fails.
+ * @throws std::runtime_error     if UdpSend::SendData() fails.
  */
 uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
 {
@@ -214,6 +219,101 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
     return sendProduct(data, dataSize, 0, 0);
 }
 
+/**
+ * Adds and entry for a data-product to the retransmission set.
+ *
+ * @param[in] data      The data-product.
+ * @param[in] dataSize  The size of the data-product in bytes.
+ * @return              The corresponding retransmission entry.
+ * @throw std::runtime_error  if a retransmission entry couldn't be created.
+ */
+RetxMetadata* vcmtpSendv3::addRetxMetadata(
+        void* const data,
+        const size_t dataSize)
+{
+    /* create a new RetxMetadata struct for this product */
+    RetxMetadata* senderProdMeta = new RetxMetadata();
+    if (senderProdMeta == NULL)
+        throw std::runtime_error(
+                "vcmtpSendv3::addRetxMetadata(): create RetxMetadata error");
+
+    /* update current prodindex in RetxMetadata */
+    senderProdMeta->prodindex        = prodIndex;
+    /* update current product length in RetxMetadata */
+    senderProdMeta->prodLength       = dataSize;
+    /* update current product pointer in RetxMetadata */
+    senderProdMeta->dataprod_p       = (void*) data;
+    /* update the per-product timeout ratio */
+    senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
+    /* get a full list of current connected sockets and add to unfinished set */
+    list<int> currSockList = tcpsend->getConnSockList();
+    list<int>::iterator it;
+    for (it = currSockList.begin(); it != currSockList.end(); ++it)
+        senderProdMeta->unfinReceivers.insert(*it);
+    /* add current RetxMetadata into sendMetadata::indexMetaMap */
+    sendMeta->addRetxMetadata(senderProdMeta);
+    /* update multicast start time in RetxMetadata */
+    senderProdMeta->mcastStartTime = clock();
+
+    return senderProdMeta;
+}
+
+/**
+ * Multicasts the data of a data-product.
+ *
+ * @param[in] data      The data-product.
+ * @param[in] dataSize  The size of the data-product in bytes.
+ * @throw std::runtime_error  if an I/O error occurs.
+ */
+void vcmtpSendv3::sendData(
+        void*  data,
+        size_t dataSize)
+{
+    VcmtpHeader header;
+    uint32_t    seqNum = 0;
+    header.prodindex = htonl(prodIndex);
+    header.flags     = htons(VCMTP_MEM_DATA);
+
+    /* check if there is more data to send */
+    while (dataSize > 0)
+    {
+        unsigned int payloadlen = dataSize < VCMTP_DATA_LEN ?
+                                  dataSize : VCMTP_DATA_LEN;
+
+        header.seqnum     = htons(seqNum);
+        header.payloadlen = htons(payloadlen);
+
+        if(udpsend->SendData(&header, sizeof(header), data, payloadlen)
+           < 0)
+        {
+            throw std::runtime_error("vcmtpSendv3::sendProduct::SendData() error");
+        }
+
+        dataSize -= payloadlen;
+        data      = (char*)data + payloadlen;
+        seqNum   += payloadlen;
+    }
+}
+
+/**
+ * Sets the retransmission timeout parameters in a retransmission entry.
+ *
+ * @param[in] senderProdMeta  The retransmission entry.
+ */
+void vcmtpSendv3::setTimerParameters(
+    RetxMetadata* const senderProdMeta)
+{
+    /* get end time of multicasting for measuring product transmit time */
+    senderProdMeta->mcastEndTime = clock();
+
+    /* cast clock_t type value into float type seconds */
+    float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
+                        senderProdMeta->mcastStartTime)) / CLOCKS_PER_SEC;
+
+    /* set up timer timeout period */
+    senderProdMeta->retxTimeoutPeriod = mcastPeriod *
+                                        senderProdMeta->retxTimeoutRatio;
+}
 
 /**
  * Transfers Application-specific metadata and a contiguous block of memory.
@@ -235,7 +335,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
  * @throws std::invalid_argument  if `data == 0`.
  * @throws std::invalid_argument  if `dataSize` exceeds the maximum allowed
  *                                value.
- * @throws std::runtime_error     if retrieving sender side RetxMetadata fails.
+ * @throw std::runtime_error      if a retransmission entry couldn't be created.
  * @throws std::runtime_error     if UdpSend::SendData() fails.
  */
 uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
@@ -247,73 +347,23 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
         throw std::invalid_argument("vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata == NULL)
         metaSize = 0;
-    /** creates a new RetxMetadata struct for this product */
-    RetxMetadata* senderProdMeta = new RetxMetadata();
-    if (senderProdMeta == NULL)
-        throw std::runtime_error("vcmtpSendv3::sendProduct() create RetxMetadata error");
 
-    /** update current prodindex in RetxMetadata */
-    senderProdMeta->prodindex        = prodIndex;
-    /** update current product length in RetxMetadata */
-    senderProdMeta->prodLength       = dataSize;
-    /** update current product pointer in RetxMetadata */
-    senderProdMeta->dataprod_p       = (void*) data;
-    /** update the per-product timeout ratio */
-    senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
-    /** get a full list of current connected sockets and add to unfinished set */
-    list<int> currSockList = tcpsend->getConnSockList();
-    list<int>::iterator it;
-    for (it = currSockList.begin(); it != currSockList.end(); ++it)
-    {
-        senderProdMeta->unfinReceivers.insert(*it);
-    }
-    /** add current RetxMetadata into sendMetadata::indexMetaMap */
-    sendMeta->addRetxMetadata(senderProdMeta);
-    /** update multicast start time in RetxMetadata */
-    senderProdMeta->mcastStartTime = clock();
+    /* Add a retransmission entry */
+    RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize);
 
-    /** send out BOP message */
+    /* send out BOP message */
     SendBOPMessage(dataSize, metadata, metaSize);
 
-    VcmtpHeader header;
-    uint32_t    seqNum = 0;
-    header.prodindex = htonl(prodIndex);
-    header.flags     = htons(VCMTP_MEM_DATA);
+    /* Send the data */
+    sendData(data, dataSize);
 
-    /** check if there is more data to send */
-    while (dataSize > 0)
-    {
-        unsigned int payloadlen = dataSize < VCMTP_DATA_LEN ?
-                                    dataSize : VCMTP_DATA_LEN;
-
-        header.seqnum     = htons(seqNum);
-        header.payloadlen = htons(payloadlen);
-
-        if(udpsend->SendData(&header, sizeof(header), data, payloadlen)
-           < 0)
-        {
-            throw std::runtime_error("vcmtpSendv3::sendProduct::SendData() error");
-        }
-
-        dataSize -= payloadlen;
-        data      = (char*)data + payloadlen;
-        seqNum   += payloadlen;
-    }
-    /** send out EOP message */
+    /* send out EOP message */
     sendEOPMessage();
 
-    /** get end time of multicasting for measuring product transmit time */
-    senderProdMeta->mcastEndTime = clock();
+    /* Set the retransmission timeout parameters */
+    setTimerParameters(senderProdMeta);
 
-    /** cast clock_t type value into float type seconds */
-    float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
-                        senderProdMeta->mcastStartTime)) / CLOCKS_PER_SEC;
-
-    /** set up timer timeout period */
-    senderProdMeta->retxTimeoutPeriod = mcastPeriod *
-                                        senderProdMeta->retxTimeoutRatio;
-
-    /** start a new timer for this product in a separate thread */
+    /* start a new timer for this product in a separate thread */
     startTimerThread(prodIndex);
 
     return prodIndex++;

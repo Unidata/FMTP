@@ -121,7 +121,35 @@ private:
     map<int, bool>	retxSockFinishMap;
     /** first: socket fd;  second: pointer to the retxThreadInfo struct */
     map<int, StartRetxThreadInfo*> retxSockInfoMap;
+    /**
+     * Adds and entry for a data-product to the retransmission set.
+     *
+     * @param[in] data      The data-product.
+     * @param[in] dataSize  The size of the data-product in bytes.
+     * @return              The corresponding retransmission entry.
+     * @throw std::runtime_error  if a retransmission entry couldn't be created.
+     */
+    RetxMetadata* addRetxMetadata(
+            void* const data,
+            const size_t dataSize);
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
+    /**
+     * Multicasts the data of a data-product.
+     *
+     * @param[in] data      The data-product.
+     * @param[in] dataSize  The size of the data-product in bytes.
+     * @throw std::runtime_error  if an I/O error occurs.
+     */
+    void sendData(
+            void* const  data,
+            const size_t dataSize);
+    /**
+     * Sets the retransmission timeout parameters in a retransmission entry.
+     *
+     * @param[in] senderProdMeta  The retransmission entry.
+     */
+    void setTimerParameters(
+        RetxMetadata* const senderProdMeta);
     void sendEOPMessage();
     void StartNewRetxThread(int newtcpsockfd);
     void startTimerThread(uint32_t prodindex);
