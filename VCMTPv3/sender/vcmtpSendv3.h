@@ -160,7 +160,27 @@ private:
     /** new timer thread */
     static void* runTimerThread(void* ptr);
     void RunRetxThread(int retxsockfd);
-
+    /**
+     * Handles a retransmission request.
+     *
+     * @param[in] recvheader  VCMTP header of the retransmission request.
+     * @param[in] retxMeta    Associated retransmission entry.
+     */
+    void handleRetxReq(
+            VcmtpHeader* const  recvheader,
+            RetxMetadata* const retxMeta,
+            const int           sock);
+    /**
+     * Handles a notice from a receiver that a data-product has been completely
+     * received.
+     *
+     * @param[in] recvheader  The VCMTP header of the notice.
+     * @param[in] sock        The receiver's socket.
+     */
+    void handleRetxEnd(
+        VcmtpHeader* const recvheader,
+        RetxMetadata* const retxMeta,
+        const int          sock);
     /* Prevent copying because it's meaningless */
     vcmtpSendv3(vcmtpSendv3&);
     vcmtpSendv3& operator=(const vcmtpSendv3&);

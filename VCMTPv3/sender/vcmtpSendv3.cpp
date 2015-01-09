@@ -488,6 +488,87 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
     return NULL;
 }
 
+/**
+ * Handles a retransmission request from a receiver.
+ *
+ * @param[in] recvheader  VCMTP header of the retransmission request.
+ * @param[in] retxMeta    Associated retransmission entry.
+ * @param[in] sock        The receiver's socket.
+ */
+void vcmtpSendv3::handleRetxReq(
+        VcmtpHeader* const  recvheader,
+        RetxMetadata* const retxMeta,
+        const int           sock)
+{
+    VcmtpHeader sendheader;
+
+    if (retxMeta == NULL) {
+        /*
+         * Reject the request because the per-product timer thread has removed
+         * the retransmission entry.
+         */
+        sendheader.prodindex  = htonl(recvheader->prodindex);
+        sendheader.seqnum     = 0;
+        sendheader.payloadlen = 0;
+        sendheader.flags      = htons(VCMTP_RETX_REJ);
+        tcpsend->send(sock, &sendheader, NULL, 0);
+    }
+    else
+    {
+        /* Construct the retx data block and send. */
+        uint16_t remainedSize = recvheader->payloadlen;
+        uint32_t startPos     = recvheader->seqnum;
+        sendheader.prodindex  = htonl(recvheader->prodindex);
+        sendheader.flags      = htons(VCMTP_RETX_DATA);
+
+        /*
+         * Support for future requirement of sending multiple blocks in
+         * one single shot.
+         */
+        while (remainedSize > 0)
+        {
+            uint16_t payLen = remainedSize > VCMTP_DATA_LEN ?
+                              VCMTP_DATA_LEN : remainedSize;
+            sendheader.seqnum     = htonl(startPos);
+            sendheader.payloadlen = htons(payLen);
+            tcpsend->send(sock, &sendheader,
+                    (char*)retxMeta->dataprod_p + startPos, (size_t) payLen);
+            startPos     += payLen;
+            remainedSize -= payLen;
+        }
+    }
+}
+
+/**
+ * Handles a notice from a receiver that a data-product has been completely
+ * received.
+ *
+ * @param[in] recvheader  The VCMTP header of the notice.
+ * @param[in] retxMeta    Associated retransmission entry.
+ * @param[in] sock        The receiver's socket.
+ */
+void vcmtpSendv3::handleRetxEnd(
+        VcmtpHeader* const  recvheader,
+        RetxMetadata* const retxMeta,
+        const int           sock)
+{
+    if (retxMeta) {
+        /*
+         * Remove the specific receiver out of the unfinished receiver
+         * set. Only if the product is removed by clearUnfinishedSet(),
+         * it returns a true value.
+         */
+        if (sendMeta->clearUnfinishedSet(recvheader->prodindex, sock)) {
+            /*
+             * Only if the product is removed by clearUnfinishedSet()
+             * since this receiver is the last one in the unfinished set,
+             * notify the sending application.
+             */
+            if (notifier)
+                notifier->notify_of_eop(recvheader->prodindex);
+        }
+    }
+}
 
 /**
  * The actual retransmission handling thread. Each thread listens on a receiver
@@ -507,97 +588,27 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
  *
  * @param[in] retxsockfd          retx socket associated with a receiver.
  * @throw  runtime_error          if TcpSend::parseHeader() fails.
- * @throw  runtime_error          if dataprod_p inside the RetxMetadat is NULL.
  */
 void vcmtpSendv3::RunRetxThread(int retxsockfd)
 {
-    VcmtpHeader* recvheader = new VcmtpHeader();
-    VcmtpHeader* sendheader = new VcmtpHeader();
+    VcmtpHeader recvheader;
 
-    while(1)
-    {
-        /** receive the message from tcp connection and parse the header */
-        if (tcpsend->parseHeader(retxsockfd, recvheader) < 0)
+    while(1) {
+        /* Receive the message from tcp connection and parse the header */
+        if (tcpsend->parseHeader(retxsockfd, &recvheader) < 0)
             throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive "
                                      "header error");
 
-        /** first try to retrieve the requested product */
-        RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader->prodindex);
-        /** Handle a retransmission request */
-        if (recvheader->flags & VCMTP_RETX_REQ)
-        {
-            /**
-             * send retx_rej msg to receivers if the given condition is
-             * satisfied: the per-product timer thread has removed the prodindex.
-             */
-            if (retxMeta == NULL)
-            {
-                sendheader->prodindex  = htonl(recvheader->prodindex);
-                sendheader->seqnum     = 0;
-                sendheader->payloadlen = 0;
-                sendheader->flags      = htons(VCMTP_RETX_REJ);
-                tcpsend->send(retxsockfd, sendheader, NULL, 0);
-            }
-            else
-            {
-                /** get the pointer to the data product in product queue */
-                void* prodptr = retxMeta->dataprod_p;
-                /** if failed to fetch prodptr, throw an error and skip */
-                if (prodptr == NULL)
-                {
-                    throw std::runtime_error("vcmtpSendv3::RunRetxThread() error retrieving prodptr");
-                }
+        /* Retrieve the retransmission entry of the requested product */
+        RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
-                /** construct the retx data block and send. */
-                uint16_t remainedSize  = recvheader->payloadlen;
-                uint32_t startPos      = recvheader->seqnum;
-                sendheader->prodindex  = htonl(recvheader->prodindex);
-                sendheader->flags      = htons(VCMTP_RETX_DATA);
-
-                /**
-                 * support for future requirement of sending multiple blocks in
-                 * one single shot.
-                 */
-                while (remainedSize > 0)
-                {
-                    uint16_t payLen = remainedSize > VCMTP_DATA_LEN ?
-                                      VCMTP_DATA_LEN : remainedSize;
-                    sendheader->seqnum     = htonl(startPos);
-                    sendheader->payloadlen = htons(payLen);
-                    tcpsend->send(retxsockfd, sendheader,
-                                  (char*)(prodptr) + startPos, (size_t) payLen);
-                    startPos += payLen;
-                    remainedSize -= payLen;
-                }
-            }
+        if (recvheader.flags & VCMTP_RETX_REQ) {
+            handleRetxReq(&recvheader, retxMeta, retxsockfd);
         }
-        else if (recvheader->flags & VCMTP_RETX_END)
-        {
-            /** if timer is still sleeping, update metadata. Otherwise, skip */
-            if (retxMeta != NULL)
-            {
-                /**
-                 * remove the specific receiver out of the unfinished receiver
-                 * set. Only if the product is removed by clearUnfinishedSet(),
-                 * it returns a true value.
-                 * */
-                bool prodRemoved = sendMeta->clearUnfinishedSet(
-                                   recvheader->prodindex, retxsockfd);
-                /**
-                 * Only if the product is removed by clearUnfinishedSet()
-                 * since this receiver is the last one in the unfinished set,
-                 * notify the sending application.
-                 */
-                if(notifier && prodRemoved)
-                {
-                    notifier->notify_of_eop(recvheader->prodindex);
-                }
-            }
+        else if ((recvheader.flags & VCMTP_RETX_END)) {
+            handleRetxEnd(&recvheader, retxMeta, retxsockfd);
         }
     }
-
-    delete recvheader;
-    delete sendheader;
 }
 
 
