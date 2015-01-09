@@ -34,7 +34,9 @@
 #include <sys/uio.h>
 
 
-#define NULL 0
+#ifndef NULL
+    #define NULL 0
+#endif
 
 
 /**
@@ -112,7 +114,7 @@ int UdpSend::SendTo(
  *                          the piece of memory data to be sent lies.
  * @param[in] datalen       length of that piece of memory data.
  */
-ssize_t UdpSend::SendData(char* header, const size_t headerLen, char* data,
+ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
                           const size_t dataLen)
 {
     int ret;

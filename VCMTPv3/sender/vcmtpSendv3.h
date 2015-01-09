@@ -98,8 +98,8 @@ public:
             SendingApplicationNotifier* notifier);
     ~vcmtpSendv3();
 
-    uint32_t sendProduct(char* data, size_t dataSize);
-    uint32_t sendProduct(char* data, size_t dataSize, char* metadata,
+    uint32_t sendProduct(void* data, size_t dataSize);
+    uint32_t sendProduct(void* data, size_t dataSize, void* metadata,
                          unsigned metaSize);
     void startCoordinator();
     unsigned short getTcpPortNum();

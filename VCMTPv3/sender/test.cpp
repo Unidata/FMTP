@@ -24,7 +24,7 @@ int main()
 	fd = open(filename,O_RDONLY);
 	if(fd>0)
 	{
-		char* data;
+		void* data;
 		data = (char*) mmap(0, 5792, PROT_READ, MAP_FILE | MAP_SHARED, fd,0);
 		if (data == MAP_FAILED)
 			cout<<"file map failed"<<endl;

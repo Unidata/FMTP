@@ -64,7 +64,7 @@ public:
      * locations, which is put together into a io vector structure, to the
      * destination identified by a socket file descriptor.
      */
-    ssize_t SendData(char* header, const size_t headerLen, char* data,
+    ssize_t SendData(void* header, const size_t headerLen, void* data,
                      const size_t dataLen);
 
 private:

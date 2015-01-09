@@ -114,6 +114,8 @@ private:
 
     // TODO: interfaces maybe need to be re-defined
     void    sendBOPRetxReq();
+    void    sendRetxEnd();
+    void    sendRetxReq();
     void    sendDataRetxEnd();
     void    sendDataRetxReq();
     void    recvRetxData();

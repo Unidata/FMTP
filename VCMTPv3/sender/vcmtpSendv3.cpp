@@ -206,7 +206,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
  * @param[in] dataSize  Size of the memory data in bytes.
  * @return              Index of the product.
  */
-uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
+uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
 {
     // TODO: need an accurate model to give a default timeout ratio. Though
     // default value has been fixed to 50.0. It's still capable to update the
@@ -238,7 +238,7 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize)
  * @throws std::runtime_error     if retrieving sender side RetxMetadata fails.
  * @throws std::runtime_error     if UdpSend::SendData() fails.
  */
-uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
+uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
                                   unsigned metaSize)
 {
     if (data == NULL)
@@ -275,39 +275,29 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
     /** send out BOP message */
     SendBOPMessage(dataSize, metadata, metaSize);
 
-    char vcmtpHeader[VCMTP_HEADER_LEN];
-    VcmtpHeader* header = (VcmtpHeader*) vcmtpHeader;
+    VcmtpHeader header;
+    uint32_t    seqNum = 0;
+    header.prodindex = htonl(prodIndex);
+    header.flags     = htons(VCMTP_MEM_DATA);
 
-    uint32_t prodindex = htonl(prodIndex);
-    uint32_t seqNum    = 0;
-    uint16_t payLen;
-    uint16_t flags     = htons(VCMTP_MEM_DATA);
-
-    size_t remained_size = dataSize;
     /** check if there is more data to send */
-    while (remained_size > 0)
+    while (dataSize > 0)
     {
-        unsigned int data_size = remained_size < VCMTP_DATA_LEN ?
-                                 remained_size : VCMTP_DATA_LEN;
+        unsigned int payloadlen = dataSize < VCMTP_DATA_LEN ?
+                                    dataSize : VCMTP_DATA_LEN;
 
-        payLen = htons(data_size);
-        seqNum = htonl(seqNum);
+        header.seqnum     = htons(seqNum);
+        header.payloadlen = htons(payloadlen);
 
-        memcpy(&header->prodindex,  &prodindex, 4);
-        memcpy(&header->seqnum,     &seqNum,    4);
-        memcpy(&header->payloadlen, &payLen,    2);
-        memcpy(&header->flags,      &flags,     2);
-
-        if(udpsend->SendData(vcmtpHeader, VCMTP_HEADER_LEN, data, data_size)
+        if(udpsend->SendData(&header, sizeof(header), data, payloadlen)
            < 0)
         {
             throw std::runtime_error("vcmtpSendv3::sendProduct::SendData() error");
         }
 
-        remained_size -= data_size;
-        /** move the data pointer to the beginning of the next block */
-        data = (char*) data + data_size;
-        seqNum += data_size;
+        dataSize -= payloadlen;
+        data      = (char*)data + payloadlen;
+        seqNum   += payloadlen;
     }
     /** send out EOP message */
     sendEOPMessage();
@@ -339,24 +329,14 @@ uint32_t vcmtpSendv3::sendProduct(char* data, size_t dataSize, char* metadata,
  */
 void vcmtpSendv3::sendEOPMessage()
 {
-    char vcmtp_packet[VCMTP_HEADER_LEN];
-    VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet;
-    (void) memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
+    VcmtpHeader header;
 
-    uint32_t prodindex = htonl(prodIndex);
-    /** seqNum for the EOP should always be zero */
-    uint32_t seqNum    = htonl(0);
-    /** payload for the EOP should always be zero */
-    uint16_t payLen    = htons(0);
-    uint16_t flags     = htons(VCMTP_EOP);
-    /** copy the content of the vcmtp header into vcmtp struct */
-    memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
-    memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
-    memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
-    memcpy(&vcmtp_header->flags,       &flags,     2);
+    header.prodindex  = htonl(prodIndex);
+    header.seqnum     = 0;
+    header.payloadlen = 0;
+    header.flags      = htons(VCMTP_EOP);
 
-    /** send the EOP message out */
-    if (udpsend->SendTo(vcmtp_packet, VCMTP_HEADER_LEN) < 0)
+    if (udpsend->SendTo((char*)&header, sizeof(header)) < 0)
         throw std::runtime_error("vcmtpSendv3::sendEOPMessage::SendTo error");
 }
 
