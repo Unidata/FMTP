@@ -231,28 +231,34 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(
         void* const data,
         const size_t dataSize)
 {
-    /* create a new RetxMetadata struct for this product */
+    /* Create a new RetxMetadata struct for this product */
     RetxMetadata* senderProdMeta = new RetxMetadata();
     if (senderProdMeta == NULL)
         throw std::runtime_error(
                 "vcmtpSendv3::addRetxMetadata(): create RetxMetadata error");
 
-    /* update current prodindex in RetxMetadata */
+    /* Update current prodindex in RetxMetadata */
     senderProdMeta->prodindex        = prodIndex;
-    /* update current product length in RetxMetadata */
+
+    /* Update current product length in RetxMetadata */
     senderProdMeta->prodLength       = dataSize;
-    /* update current product pointer in RetxMetadata */
+
+    /* Update current product pointer in RetxMetadata */
     senderProdMeta->dataprod_p       = (void*) data;
-    /* update the per-product timeout ratio */
+
+    /* Update the per-product timeout ratio */
     senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
-    /* get a full list of current connected sockets and add to unfinished set */
+
+    /* Get a full list of current connected sockets and add to unfinished set */
     list<int> currSockList = tcpsend->getConnSockList();
     list<int>::iterator it;
     for (it = currSockList.begin(); it != currSockList.end(); ++it)
         senderProdMeta->unfinReceivers.insert(*it);
-    /* add current RetxMetadata into sendMetadata::indexMetaMap */
+
+    /* Add current RetxMetadata into sendMetadata::indexMetaMap */
     sendMeta->addRetxMetadata(senderProdMeta);
-    /* update multicast start time in RetxMetadata */
+
+    /* Update multicast start time in RetxMetadata */
     senderProdMeta->mcastStartTime = clock();
 
     return senderProdMeta;
@@ -283,11 +289,8 @@ void vcmtpSendv3::sendData(
         header.seqnum     = htons(seqNum);
         header.payloadlen = htons(payloadlen);
 
-        if(udpsend->SendData(&header, sizeof(header), data, payloadlen)
-           < 0)
-        {
+        if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
             throw std::runtime_error("vcmtpSendv3::sendProduct::SendData() error");
-        }
 
         dataSize -= payloadlen;
         data      = (char*)data + payloadlen;
@@ -303,14 +306,14 @@ void vcmtpSendv3::sendData(
 void vcmtpSendv3::setTimerParameters(
     RetxMetadata* const senderProdMeta)
 {
-    /* get end time of multicasting for measuring product transmit time */
+    /* Get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
 
-    /* cast clock_t type value into float type seconds */
+    /* Cast clock_t type value into float type seconds */
     float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
                         senderProdMeta->mcastStartTime)) / CLOCKS_PER_SEC;
 
-    /* set up timer timeout period */
+    /* Set up timer timeout period */
     senderProdMeta->retxTimeoutPeriod = mcastPeriod *
                                         senderProdMeta->retxTimeoutRatio;
 }
@@ -357,7 +360,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
     /* Send the data */
     sendData(data, dataSize);
 
-    /* send out EOP message */
+    /* Send out EOP message */
     sendEOPMessage();
 
     /* Set the retransmission timeout parameters */
@@ -489,6 +492,62 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
 }
 
 /**
+ * Rejects a retransmission request from a receiver.
+ *
+ * @param[in] prodindex  Product-index of the request.
+ * @param[in] sock       The receiver's socket.
+ */
+void vcmtpSendv3::rejRetxReq(
+        const uint32_t prodindex,
+        const int      sock)
+{
+    VcmtpHeader sendheader;
+
+    sendheader.prodindex  = htonl(prodindex);
+    sendheader.seqnum     = 0;
+    sendheader.payloadlen = 0;
+    sendheader.flags      = htons(VCMTP_RETX_REJ);
+    tcpsend->send(sock, &sendheader, NULL, 0);
+}
+
+/**
+ * Retransmits data to a receiver.
+ *
+ * @param[in] recvheader  The VCMTP header of the retransmission request.
+ * @param[in] retxMeta    The associated retransmission entry.
+ * @param[in] sock        The receiver's socket.
+ */
+void vcmtpSendv3::retransmit(
+        VcmtpHeader* const  recvheader,
+        RetxMetadata* const retxMeta,
+        const int           sock)
+{
+    VcmtpHeader sendheader;
+
+    /* Construct the retx data block and send. */
+    uint16_t remainedSize = recvheader->payloadlen;
+    uint32_t startPos     = recvheader->seqnum;
+    sendheader.prodindex  = htonl(recvheader->prodindex);
+    sendheader.flags      = htons(VCMTP_RETX_DATA);
+
+    /*
+     * Support for future requirement of sending multiple blocks in
+     * one single shot.
+     */
+    while (remainedSize > 0)
+    {
+        uint16_t payLen = remainedSize > VCMTP_DATA_LEN ?
+                          VCMTP_DATA_LEN : remainedSize;
+        sendheader.seqnum     = htonl(startPos);
+        sendheader.payloadlen = htons(payLen);
+        tcpsend->send(sock, &sendheader, (char*)retxMeta->dataprod_p + startPos,
+                payLen);
+        startPos     += payLen;
+        remainedSize -= payLen;
+    }
+}
+
+/**
  * Handles a retransmission request from a receiver.
  *
  * @param[in] recvheader  VCMTP header of the retransmission request.
@@ -500,42 +559,15 @@ void vcmtpSendv3::handleRetxReq(
         RetxMetadata* const retxMeta,
         const int           sock)
 {
-    VcmtpHeader sendheader;
-
-    if (retxMeta == NULL) {
+    if (retxMeta) {
+        retransmit(recvheader, retxMeta, sock);
+    }
+    else {
         /*
          * Reject the request because the per-product timer thread has removed
          * the retransmission entry.
          */
-        sendheader.prodindex  = htonl(recvheader->prodindex);
-        sendheader.seqnum     = 0;
-        sendheader.payloadlen = 0;
-        sendheader.flags      = htons(VCMTP_RETX_REJ);
-        tcpsend->send(sock, &sendheader, NULL, 0);
-    }
-    else
-    {
-        /* Construct the retx data block and send. */
-        uint16_t remainedSize = recvheader->payloadlen;
-        uint32_t startPos     = recvheader->seqnum;
-        sendheader.prodindex  = htonl(recvheader->prodindex);
-        sendheader.flags      = htons(VCMTP_RETX_DATA);
-
-        /*
-         * Support for future requirement of sending multiple blocks in
-         * one single shot.
-         */
-        while (remainedSize > 0)
-        {
-            uint16_t payLen = remainedSize > VCMTP_DATA_LEN ?
-                              VCMTP_DATA_LEN : remainedSize;
-            sendheader.seqnum     = htonl(startPos);
-            sendheader.payloadlen = htons(payLen);
-            tcpsend->send(sock, &sendheader,
-                    (char*)retxMeta->dataprod_p + startPos, (size_t) payLen);
-            startPos     += payLen;
-            remainedSize -= payLen;
-        }
+        rejRetxReq(recvheader->prodindex, sock);
     }
 }
 

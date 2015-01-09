@@ -181,6 +181,26 @@ private:
         VcmtpHeader* const recvheader,
         RetxMetadata* const retxMeta,
         const int          sock);
+    /**
+     * Rejects a retransmission request from a receiver.
+     *
+     * @param[in] prodindex  Product-index of the request.
+     * @param[in] sock       The receiver's socket.
+     */
+    void rejRetxReq(
+            const uint32_t prodindex,
+            const int      sock);
+    /**
+     * Retransmits data to a receiver.
+     *
+     * @param[in] recvheader  The VCMTP header of the retransmission request.
+     * @param[in] retxMeta    The associated retransmission entry.
+     * @param[in] sock        The receiver's socket.
+     */
+    void retransmit(
+            VcmtpHeader* const  recvheader,
+            RetxMetadata* const retxMeta,
+            const int           sock);
     /* Prevent copying because it's meaningless */
     vcmtpSendv3(vcmtpSendv3&);
     vcmtpSendv3& operator=(const vcmtpSendv3&);
