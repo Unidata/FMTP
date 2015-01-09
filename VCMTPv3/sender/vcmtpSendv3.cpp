@@ -147,51 +147,55 @@ vcmtpSendv3::~vcmtpSendv3()
  * @param[in] prodSize       The size of the product.
  * @param[in] metadata       Application-specific metadata to be sent before the
  *                           data. May be 0, in which case no metadata is sent.
- * @param[in] metaSize       Size of the metadata in bytes. Must be less than
- *                           or equals 1442. May be 0, in which case no metadata
- *                           is sent.
- * @throw   runtime_error    if the UdpSend::SendTo() fails.
+ * @param[in] metaSize       Size of the metadata in bytes. May be 0, in which
+ *                           case no metadata is sent. The actual number of
+ *                           metadata bytes sent is the smaller of `metaSize`
+ *                           and 1442.
+ * @throw std::invalid_argument  if `metadata == 0 && metaSize != 0`
+ * @throw std::invalid_argument  if `metaSize > 1442`
+ * @throw std::runtime_error     if the UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
-                                 unsigned metaSize)
+                                 const unsigned metaSize)
 {
-    uint16_t maxMetaSize = metaSize > AVAIL_BOP_LEN ? AVAIL_BOP_LEN : metaSize;
+    if (metadata) {
+        if (AVAIL_BOP_LEN < metaSize)
+            throw std::invalid_argument(
+                    "vcmtpSendv3::SendBOPMessage(): metaSize too large");
+    }
+    else {
+        if (metaSize)
+            throw std::invalid_argument(
+                    "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
+    }
 
-    const int PACKET_SIZE = VCMTP_HEADER_LEN + maxMetaSize +
-                            (VCMTP_DATA_LEN - AVAIL_BOP_LEN);
-    unsigned char vcmtp_packet[PACKET_SIZE];
-    /** points to the beginning of the vcmtp packet header */
-    VcmtpPacketHeader* vcmtp_header = (VcmtpPacketHeader*) vcmtp_packet;
-    /** points to the beginning of the vcmtp packet payload */
-    VcmtpBOPMessage*   vcmtp_data   = (VcmtpBOPMessage*) (vcmtp_packet +
-                                                          VCMTP_HEADER_LEN);
+    VcmtpHeader   header;   // in network byte order
+    BOPMsg        bopMsg;   // in network byte order
+    struct iovec  ioVec[3]; // gather-send used to eliminate copying
 
-    (void) memset(vcmtp_packet, 0, sizeof(vcmtp_packet));
+    /* Set the VCMTP packet header. */
+    header.prodindex  = htonl(prodIndex);
+    header.seqnum     = 0;
+    header.payloadlen = htons(metaSize + (VCMTP_DATA_LEN - AVAIL_BOP_LEN));
+    header.flags      = htons(VCMTP_BOP);
+    ioVec[0].iov_base = &header;
+    ioVec[0].iov_len  = sizeof(VcmtpHeader);
 
-    /** convert the variables from native to network binary representation */
-    uint32_t prodindex   = htonl(prodIndex);
-    /** for BOP sequence number is always zero */
-    uint32_t seqNum      = htonl(0);
-    uint16_t payLen      = htons(maxMetaSize + (VCMTP_DATA_LEN -
-                                 AVAIL_BOP_LEN));
-    uint16_t flags       = htons(VCMTP_BOP);
-    uint32_t prodsize    = htonl(prodSize);
-    uint16_t maxmetasize = htons(maxMetaSize);
+    /* Set the VCMTP BOP message. */
+    bopMsg.prodsize = htonl(prodSize);
+    bopMsg.metasize = htons(metaSize);
+    ioVec[1].iov_base = &bopMsg;
+    /* The metadata is referenced in a separate I/O vector. */
+    ioVec[1].iov_len  = sizeof(bopMsg) - sizeof(bopMsg.metadata);
 
-    /** copy the vcmtp header content into header struct */
-    memcpy(&vcmtp_header->prodindex,   &prodindex, 4);
-    memcpy(&vcmtp_header->seqnum,      &seqNum,    4);
-    memcpy(&vcmtp_header->payloadlen,  &payLen,    2);
-    memcpy(&vcmtp_header->flags,       &flags,     2);
+    /* Reference the metadata for the gather send. */
+    ioVec[2].iov_base = metadata; // might be 0
+    ioVec[2].iov_len  = metaSize; // will be 0 if `metadata == 0`
 
-    /** copy the content of BOP into vcmtp packet payload */
-    memcpy(&vcmtp_data->prodsize, &prodsize,             4);
-    memcpy(&vcmtp_data->metasize, &maxmetasize,          2);
-    memcpy(&vcmtp_data->metadata, metadata,        maxMetaSize);
-
-    /** send the BOP message on multicast socket */
-    if (udpsend->SendTo(vcmtp_packet, PACKET_SIZE) < 0)
-        throw std::runtime_error("vcmtpSendv3::SendBOPMessage() SendTo error");
+    /* Send the BOP message on multicast socket */
+    if (udpsend->SendTo(ioVec, 3) < 0)
+        throw std::runtime_error(
+                "vcmtpSendv3::SendBOPMessage(): SendTo() error");
 }
 
 

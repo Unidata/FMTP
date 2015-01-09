@@ -51,6 +51,15 @@ public:
      */
     ssize_t SendTo(const void* buff, size_t len);
     /**
+     * Gather send a VCMTP packet.
+     *
+     * @param[in] iovec  First I/O vector.
+     * @param[in] nvec   Number of I/O vectors.
+     */
+    int SendTo(
+            const struct iovec* const iovec,
+            const int                 nvec);
+    /**
      * SendData() sends the packet content separated in two different physical
      * locations, which is put together into a io vector structure, to the
      * destination identified by a socket file descriptor.

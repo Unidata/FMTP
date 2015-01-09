@@ -31,6 +31,7 @@
 #include "UdpSend.h"
 #include <stdexcept>
 #include <string.h>
+#include <sys/uio.h>
 
 
 #define NULL 0
@@ -82,6 +83,20 @@ UdpSend::~UdpSend()
 ssize_t UdpSend::SendTo(const void* buff, size_t len)
 {
     return send(sock_fd, buff, len, 0);
+}
+
+
+/**
+ * Gather-send a VCMTP packet.
+ *
+ * @param[in] iovec  First I/O vector.
+ * @param[in] nvec   Number of I/O vectors.
+ */
+int UdpSend::SendTo(
+        const struct iovec* const iovec,
+        const int                 nvec)
+{
+    return writev(sock_fd, iovec, nvec);
 }
 
 
