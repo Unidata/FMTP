@@ -577,7 +577,8 @@ void vcmtpSendv3::handleRetxReq(
  * received.
  *
  * @param[in] recvheader  The VCMTP header of the notice.
- * @param[in] retxMeta    Associated retransmission entry.
+ * @param[in] retxMeta    Associated retransmission entry or `0`, in which case
+ *                        nothing is done.
  * @param[in] sock        The receiver's socket.
  */
 void vcmtpSendv3::handleRetxEnd(
