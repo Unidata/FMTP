@@ -551,7 +551,8 @@ void vcmtpSendv3::retransmit(
  * Handles a retransmission request from a receiver.
  *
  * @param[in] recvheader  VCMTP header of the retransmission request.
- * @param[in] retxMeta    Associated retransmission entry.
+ * @param[in] retxMeta    Associated retransmission entry or `0`, in which case
+ *                        the request will be rejected.
  * @param[in] sock        The receiver's socket.
  */
 void vcmtpSendv3::handleRetxReq(
@@ -564,8 +565,8 @@ void vcmtpSendv3::handleRetxReq(
     }
     else {
         /*
-         * Reject the request because the per-product timer thread has removed
-         * the retransmission entry.
+         * Reject the request because the retransmission entry was removed by
+         * the per-product timer thread.
          */
         rejRetxReq(recvheader->prodindex, sock);
     }
