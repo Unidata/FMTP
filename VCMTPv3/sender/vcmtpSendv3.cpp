@@ -148,27 +148,12 @@ vcmtpSendv3::~vcmtpSendv3()
  * @param[in] metadata       Application-specific metadata to be sent before the
  *                           data. May be 0, in which case no metadata is sent.
  * @param[in] metaSize       Size of the metadata in bytes. May be 0, in which
- *                           case no metadata is sent. The actual number of
- *                           metadata bytes sent is the smaller of `metaSize`
- *                           and 1442.
- * @throw std::invalid_argument  if `metadata == 0 && metaSize != 0`
- * @throw std::invalid_argument  if `metaSize > 1442`
- * @throw std::runtime_error     if the UdpSend::SendTo() fails.
+ *                           case no metadata is sent.
+ * @throw std::runtime_error if the UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const unsigned metaSize)
 {
-    if (metadata) {
-        if (AVAIL_BOP_LEN < metaSize)
-            throw std::invalid_argument(
-                    "vcmtpSendv3::SendBOPMessage(): metaSize too large");
-    }
-    else {
-        if (metaSize)
-            throw std::invalid_argument(
-                    "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
-    }
-
     VcmtpHeader   header;   // in network byte order
     BOPMsg        bopMsg;   // in network byte order
     struct iovec  ioVec[3]; // gather-send used to eliminate copying
@@ -327,10 +312,11 @@ void vcmtpSendv3::setTimerParameters(
  * @param[in] data         Memory data to be sent.
  * @param[in] dataSize     Size of the memory data in bytes.
  * @param[in] metadata     Application-specific metadata to be sent before the
- *                         data. May be 0, in which case no metadata is sent.
+ *                         data. May be 0, in which case `metaSize` must be 0
+ *                         and no metadata is sent.
  * @param[in] metaSize     Size of the metadata in bytes. Must be less than or
- *                         equal 1442 bytes. May be 0, in which case no metadata
- *                         is sent.
+ *                         equal 1442 bytes. May be 0, in which case no
+ *                         metadata is sent.
  * @param[in] perProdTimeoutRatio
  *                         the per-product timeout ratio to balance performance
  *                         and robustness (reliability).
@@ -348,8 +334,16 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
         throw std::invalid_argument("vcmtpSendv3::sendProduct() data pointer is NULL");
     if (dataSize > 0xFFFFFFFFu)
         throw std::invalid_argument("vcmtpSendv3::sendProduct() dataSize out of range");
-    if (metadata == NULL)
-        metaSize = 0;
+    if (metadata) {
+        if (AVAIL_BOP_LEN < metaSize)
+            throw std::invalid_argument(
+                    "vcmtpSendv3::SendBOPMessage(): metaSize too large");
+    }
+    else {
+        if (metaSize)
+            throw std::invalid_argument(
+                    "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
+    }
 
     /* Add a retransmission entry */
     RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize);
