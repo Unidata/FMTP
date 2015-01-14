@@ -76,19 +76,19 @@ struct StartTimerThreadInfo
 class vcmtpSendv3
 {
 public:
-    vcmtpSendv3(
+    explicit vcmtpSendv3(
             const char*          tcpAddr,
             const unsigned short tcpPort,
             const char*          mcastAddr,
             const unsigned short mcastPort);
-    vcmtpSendv3(
+    explicit vcmtpSendv3(
             const char*                 tcpAddr,
             const unsigned short        tcpPort,
             const char*                 mcastAddr,
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
             SendingApplicationNotifier* notifier);
-    vcmtpSendv3(
+    explicit vcmtpSendv3(
             const char*                 tcpAddr,
             const unsigned short        tcpPort,
             const char*                 mcastAddr,
