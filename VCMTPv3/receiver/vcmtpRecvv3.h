@@ -81,6 +81,13 @@ private:
     void    retxHandler();
     void    retxRequester();
     /**
+     * Decodes the header of a VCMTP packet in-place.
+     *
+     * @param[in,out] header  The VCMTP header to be decoded.
+     */
+    void decodeHeader(
+            VcmtpHeader& header);
+    /**
      * Decodes a VCMTP packet header.
      *
      * @param[in]  packet         The raw packet.
@@ -108,14 +115,76 @@ private:
             const char* const  VcmtpPacketData);
     void    EOPHandler();
     /**
-     * Parse data blocks, directly store and check for missing blocks.
+     * Handles a multicast BOP message given a peeked-at VCMTP header.
      *
-     * @param[in] header             The header associated with the packet.
-     * @param[in] VcmtpPacket        Pointer to received vcmtp packet in buffer.
+     * @pre                           The multicast socket contains a VCMTP BOP
+     *                                packet.
+     * @param[in] header              The associated, already-decoded VCMTP header.
+     * @throw     std::system_error   if an error occurs while reading the socket.
+     * @throw     std::runtime_error  if the packet is invalid.
+     */
+    void BOPHandler(
+            const VcmtpHeader& header);
+    /**
+     * Reads the data portion of a VCMTP data-packet into the location specified
+     * by the receiving application.
+     *
+     * @pre                       The socket contains a VCMTP data-packet.
+     * @param[in] header          The associated, peeked-at and decoded header.
+     * @throw std::system_error   if an error occurs while reading the multicast
+     *                            socket.
+     * @throw std::runtime_error  if the packet is invalid.
+     */
+    void readMcastData(
+            const VcmtpHeader& header);
+    /**
+     * Pushes a request for a data-packet onto the retransmission-request queue.
+     *
+     * @param[in] prodindex  Index of the associated data-product.
+     * @param[in] seqnum     Sequence number of the data-packet.
+     * @param[in] datalen    Amount of data in bytes.
+     */
+    void pushMissingDataReq(
+            const uint32_t prodindex,
+            const uint32_t seqnum,
+            const uint16_t datalen);
+    /**
+     * Pushes a request for a BOP-packet onto the retransmission-request queue.
+     *
+     * @param[in] prodindex  Index of the associated data-product.
+     */
+    void pushMissingBopReq(
+            const uint32_t prodindex);
+    /**
+     * Requests data-packets that lie between the last previously-received
+     * data-packet of the current data-product and its most recently-received
+     * data-packet.
+     *
+     * @param[in] seqnum  The most recently-received data-packet of the current
+     *                    data-product.
+     */
+    void requestAnyMissingData(
+            uint32_t mostRecent);
+    /**
+     * Requests BOP packets for data-products that come after the current
+     * data-product up to and including a given data-product.
+     *
+     * @param[in] prodindex  Index of the last data-product whose BOP packet was
+     *                       missed.
+     */
+    void requestMissingBops(
+            const uint32_t prodindex);
+    /**
+     * Handles a multicast VCMTP data-packet given the associated peeked-at and
+     * decoded VCMTP header. Directly store and check for missing blocks.
+     *
+     * @pre                       The socket contains a VCMTP data-packet.
+     * @param[in] header          The associated, peeked-at and decoded header.
+     * @throw std::system_error   if an error occurs while reading the socket.
+     * @throw std::runtime_error  if the packet is invalid.
      */
     void recvMemData(
-            const VcmtpHeader& header,
-            const char* const  VcmtpPacket);
+            const VcmtpHeader& header);
 
     // TODO: interfaces maybe need to be re-defined
     bool  sendBOPRetxReq(uint32_t prodindex);

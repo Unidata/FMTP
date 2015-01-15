@@ -189,6 +189,21 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
 
 
 /**
+ * Decodes the header of a VCMTP packet in-place.
+ *
+ * @param[in,out] header  The VCMTP header to be decoded.
+ */
+void vcmtpRecvv3::decodeHeader(
+        VcmtpHeader& header)
+{
+    header.prodindex  = ntohl(header.prodindex);
+    header.seqnum     = ntohl(header.seqnum);
+    header.payloadlen = ntohs(header.payloadlen);
+    header.flags      = ntohs(header.flags);
+}
+
+
+/**
  * Decodes a VCMTP packet header.
  *
  * @param[in]  packet         The raw packet.
@@ -215,45 +230,53 @@ void vcmtpRecvv3::decodeHeader(
 }
 
 
+/**
+ * Checks the length of the payload of a VCMTP packet -- as stated in the VCMTP
+ * header -- against the actual length of a VCMTP packet.
+ *
+ * @param[in] header              The decoded VCMTP header.
+ * @param[in] nbytes              The size of the VCMTP packet in bytes.
+ * @throw     std::runtime_error  if the packet is invalid.
+ */
 void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes)
 {
     if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
-        throw std::runtime_error("vcmtpRecvv3::decodeHeader(): Invalid payload length");
+        throw std::runtime_error("vcmtpRecvv3::checkPayloadLen(): "
+                "Invalid payload length");
 }
 
 
 /**
+ * Handles multicast packets.
+ *
  * @throw std::system_error   if an I/O error occurs.
  * @throw std::runtime_error  if a packet is invalid.
  */
 void vcmtpRecvv3::mcastHandler()
 {
-    char pktBuf[MAX_VCMTP_PACKET_LEN];
-    (void) memset(pktBuf, 0, sizeof(pktBuf));
-
     while(1)
     {
-        VcmtpHeader header;
-        char*       payload;
-        ssize_t     nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
+        VcmtpHeader   header;
+        const ssize_t nbytes = recv(mcastSock, &header, sizeof(header),
+                MSG_PEEK);
 
         if (nbytes < 0)
             throw std::system_error(errno, std::system_category(),
-                    "vcmtpRecvv3::mcastHandler() recvfrom() error.");
+                    "vcmtpRecvv3::mcastHandler() recv() error.");
+        if (nbytes != sizeof(header))
+            throw std::runtime_error("Invalid packet length");
 
-        decodeHeader(pktBuf, nbytes, header, &payload);
-        checkPayloadLen(header, nbytes);
+        decodeHeader(header);
 
-        if (header.flags & VCMTP_BOP)
-        {
-            BOPHandler(header, payload);
+        if (header.flags & VCMTP_BOP) {
+            BOPHandler(header);
         }
-        else if (header.flags & VCMTP_MEM_DATA)
-        {
-            recvMemData(header, payload);
+        else if (header.flags & VCMTP_MEM_DATA) {
+            recvMemData(header);
         }
-        else if (header.flags & VCMTP_EOP)
+        else if (header.flags & VCMTP_EOP) {
             EOPHandler();
+        }
     }
 }
 
@@ -363,55 +386,183 @@ void vcmtpRecvv3::BOPHandler(
 
 
 /**
- * Parse data blocks, directly store and check for missing blocks.
+ * Handles a multicast BOP message given its peeked-at and decoded VCMTP header.
  *
- * @param[in] header             The header associated with the packet.
- * @param[in] VcmtpPacketData    Pointer to payload of VCMTP packet.
+ * @pre                       The multicast socket contains a VCMTP BOP packet.
+ * @param[in] header          The associated, peeked-at and already-decoded
+ *                            VCMTP header.
+ * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  if the packet is invalid.
  */
-void vcmtpRecvv3::recvMemData(
-        const VcmtpHeader& header,
-        const char* const  VcmtpPacketData)
+void vcmtpRecvv3::BOPHandler(
+        const VcmtpHeader& header)
 {
-    /** missing BOP */
-    if (header.prodindex != vcmtpHeader.prodindex)
-    {
-        /** do not need to care about the last 2 fields if it's BOP */
-        INLReqMsg reqmsg = { MISSING_BOP, header.prodindex, 0, 0 };
-        /** send a msg to the retx requester and signal it */
-        pthread_mutex_lock(&msgQmutex);
-        msgqueue.push(reqmsg);
-        pthread_cond_signal(&msgQfilled);
-        pthread_mutex_unlock(&msgQmutex);
+    char          pktBuf[MAX_VCMTP_PACKET_LEN];
+    const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
+
+    if (nbytes < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::BOPHandler() recv() error.");
+
+    checkPayloadLen(header, nbytes);
+    BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
+}
+
+
+/**
+ * Reads the data portion of a VCMTP data-packet into the location specified
+ * by the receiving application given the associated, peeked-at, and decoded
+ * VCMTP header.
+ *
+ * @pre                       The socket contains a VCMTP data-packet.
+ * @param[in] header          The associated, peeked-at, and decoded header.
+ * @throw std::system_error   if an error occurs while reading the multicast
+ *                            socket.
+ * @throw std::runtime_error  if the packet is invalid.
+ */
+void vcmtpRecvv3::readMcastData(
+        const VcmtpHeader& header)
+{
+    ssize_t nbytes;
+
+    if (0 == prodptr) {
+        char pktbuf[MAX_VCMTP_PACKET_LEN];
+        nbytes = read(mcastSock, &pktbuf, sizeof(pktbuf));
     }
-    /**
-     * check the packet sequence to detect missing packets. If seqnum is
-     * continuous, write the packet directly into product queue. Otherwise,
-     * the packet is out of order.
-     * */
-    else if (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == header.seqnum)
-    {
-        vcmtpHeader = header;
-        if(prodptr)
-            memcpy((char*)prodptr + vcmtpHeader.seqnum, VcmtpPacketData,
-                   vcmtpHeader.payloadlen);
-        else {
-            std::cout << "seqnum: " << vcmtpHeader.seqnum;
-            std::cout << "    paylen: " << vcmtpHeader.payloadlen << std::endl;
+    else {
+        struct iovec iovec[2];
+        VcmtpHeader  headBuf; // ignored because already have peeked-at header
+
+        iovec[0].iov_base = &headBuf;
+        iovec[0].iov_len  = sizeof(headBuf);
+        iovec[1].iov_base = (char*)prodptr + header.seqnum;
+        iovec[1].iov_len  = header.payloadlen;
+
+        nbytes = readv(mcastSock, iovec, 2);
+    }
+
+    if (nbytes == -1) {
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::readMcastData(): read() failure.");
+    }
+    else {
+        checkPayloadLen(header, nbytes);
+
+        if (0 == prodptr) {
+            std::cout << "seqnum: " << header.seqnum;
+            std::cout << "    paylen: " << header.payloadlen << std::endl;
         }
     }
-    /** data block out of order */
-    else
-    {
-        uint32_t reqSeqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
-        // TODO: how to calculate payload length? what if 2 packets are missing?
-        uint16_t reqPaylen = VCMTP_DATA_LEN;
-        INLReqMsg reqmsg = { MISSING_DATA, header.prodindex, reqSeqnum,
-                             reqPaylen };
-        /** send a msg to the retx thread to request for data retransmission */
+}
+
+
+/**
+ * Pushes a request for a BOP-packet onto the retransmission-request queue.
+ *
+ * @pre                  The retransmission-request queue is locked.
+ * @param[in] prodindex  Index of the associated data-product.
+ */
+void vcmtpRecvv3::pushMissingBopReq(
+        const uint32_t prodindex)
+{
+    INLReqMsg reqmsg = {MISSING_BOP, prodindex, 0, 0};
+    msgqueue.push(reqmsg);
+}
+
+
+/**
+ * Pushes a request for a data-packet onto the retransmission-request queue.
+ *
+ * @pre                  The retransmission-request queue is locked.
+ * @param[in] prodindex  Index of the associated data-product.
+ * @param[in] seqnum     Sequence number of the data-packet.
+ * @param[in] datalen    Amount of data in bytes.
+ */
+void vcmtpRecvv3::pushMissingDataReq(
+        const uint32_t prodindex,
+        const uint32_t seqnum,
+        const uint16_t datalen)
+{
+    INLReqMsg reqmsg = {MISSING_DATA, prodindex, seqnum, datalen};
+    msgqueue.push(reqmsg);
+}
+
+
+/**
+ * Requests data-packets that lie between the last previously-received
+ * data-packet of the current data-product and its most recently-received
+ * data-packet.
+ *
+ * @param[in] seqnum  The most recently-received data-packet of the current
+ *                    data-product.
+ */
+void vcmtpRecvv3::requestAnyMissingData(
+        const uint32_t mostRecent)
+{
+    uint32_t seqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
+
+    if (seqnum != mostRecent) {
+        /*
+         * The data-packet associated with the VCMTP header is out-of-order.
+         */
         pthread_mutex_lock(&msgQmutex);
-        msgqueue.push(reqmsg);
+
+        for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
+            pushMissingDataReq(vcmtpHeader.prodindex, seqnum, VCMTP_DATA_LEN);
+
         pthread_cond_signal(&msgQfilled);
         pthread_mutex_unlock(&msgQmutex);
+    }
+}
+
+
+/**
+ * Requests BOP packets for data-products that come after the current
+ * data-product up to and including a given data-product.
+ *
+ * @param[in] prodindex  Index of the last data-product whose BOP packet was
+ *                       missed.
+ */
+void vcmtpRecvv3::requestMissingBops(
+        const uint32_t prodindex)
+{
+    pthread_mutex_lock(&msgQmutex);
+
+    // Careful! product-indexes wrap around!
+    for (uint32_t i = vcmtpHeader.prodindex; i != prodindex;)
+        pushMissingBopReq(++i);
+
+    pthread_cond_signal(&msgQfilled);
+    pthread_mutex_unlock(&msgQmutex);
+}
+
+
+/**
+ * Handles a multicast VCMTP data-packet given the associated peeked-at and
+ * decoded VCMTP header. Directly store and check for missing blocks.
+ *
+ * @pre                       The socket contains a VCMTP data-packet.
+ * @param[in] header          The associated, peeked-at and decoded header.
+ * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  if the packet is invalid.
+ */
+void vcmtpRecvv3::recvMemData(
+        const VcmtpHeader& header)
+{
+    if (header.prodindex != vcmtpHeader.prodindex) {
+        /*
+         * Some BOP packets were missed.
+         */
+        char buf[1];
+        (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
+
+        requestAnyMissingData(BOPmsg.prodsize);
+        requestMissingBops(header.prodindex);
+    }
+    else {
+        readMcastData(header);
+        requestAnyMissingData(header.seqnum);
+        vcmtpHeader = header;
     }
 }
 
