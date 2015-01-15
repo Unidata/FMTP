@@ -36,6 +36,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <queue>
+#include <list>
 #include "TcpRecv.h"
 
 using namespace std;
@@ -72,6 +73,8 @@ private:
     queue<INLReqMsg> msgqueue;
     pthread_cond_t   msgQfilled;
     pthread_mutex_t  msgQmutex;
+    list<uint32_t>   misBOPlist; /*!< track all the missing BOP until received */
+    pthread_mutex_t  BOPListMutex;
 
     void    joinGroup(string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
@@ -106,7 +109,10 @@ private:
     void BOPHandler(
             const VcmtpHeader& header,
             const char* const  VcmtpPacketData);
-    void    EOPHandler();
+    bool isBOPrequested(uint32_t prodindex);
+    bool rmMissingBOP(uint32_t prodindex);
+    bool addMissingBOP(uint32_t prodindex);
+    void EOPHandler();
     /**
      * Parse data blocks, directly store and check for missing blocks.
      *

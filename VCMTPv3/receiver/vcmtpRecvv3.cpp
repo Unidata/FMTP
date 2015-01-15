@@ -39,7 +39,6 @@
 #include <system_error>
 #include <unistd.h>
 
-using namespace std;
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -111,6 +110,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     pthread_cond_destroy(&msgQfilled);
     pthread_mutex_destroy(&msgQmutex);
     delete tcprecv;
+    // TODO: clear the misBOPlist
 }
 
 
@@ -127,6 +127,7 @@ void vcmtpRecvv3::Start()
 {
     pthread_cond_init(&msgQfilled, NULL);
     pthread_mutex_init(&msgQmutex, NULL);
+    pthread_mutex_init(&BOPListMutex, NULL);
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
@@ -305,6 +306,9 @@ void vcmtpRecvv3::retxHandler()
         {
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             BOPHandler(header, paytmp);
+
+            /** remove the BOP from missing list */
+            (void)rmMissingBOP(header.prodindex);
         }
         else if (header.flags & VCMTP_RETX_DATA)
         {
@@ -363,6 +367,64 @@ void vcmtpRecvv3::BOPHandler(
 }
 
 
+bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
+{
+    bool BOPrqed;
+    list<uint32_t>::iterator it;
+    pthread_mutex_lock(&BOPListMutex);
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
+    {
+        if (*it == prodindex)
+        {
+            BOPrqed = true;
+            break;
+        }
+        else
+            BOPrqed = false;
+    }
+    pthread_mutex_unlock(&BOPListMutex);
+    return BOPrqed;
+}
+
+
+bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
+{
+    bool rmsuccess;
+    list<uint32_t>::iterator it;
+    pthread_mutex_lock(&BOPListMutex);
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
+    {
+        if (*it == prodindex)
+        {
+            misBOPlist.erase(it);
+            rmsuccess = true;
+            break;
+        }
+        else
+            rmsuccess = false;
+    }
+    pthread_mutex_unlock(&BOPListMutex);
+    return rmsuccess;
+}
+
+
+bool vcmtpRecvv3::addMissingBOP(uint32_t prodindex)
+{
+    bool addsuccess;
+    list<uint32_t>::iterator it;
+    if (!isBOPrequested(prodindex))
+    {
+        pthread_mutex_lock(&BOPListMutex);
+        misBOPlist.push_back(prodindex);
+        pthread_mutex_unlock(&BOPListMutex);
+        addsuccess = true;
+    }
+    else
+        addsuccess = false;
+    return addsuccess;
+}
+
+
 /**
  * Parse data blocks, directly store and check for missing blocks.
  *
@@ -376,13 +438,19 @@ void vcmtpRecvv3::recvMemData(
     /** missing BOP */
     if (header.prodindex != vcmtpHeader.prodindex)
     {
-        /** do not need to care about the last 2 fields if it's BOP */
-        INLReqMsg reqmsg = { MISSING_BOP, header.prodindex, 0, 0 };
-        /** send a msg to the retx requester and signal it */
-        pthread_mutex_lock(&msgQmutex);
-        msgqueue.push(reqmsg);
-        pthread_cond_signal(&msgQfilled);
-        pthread_mutex_unlock(&msgQmutex);
+        /** avoid sending duplicated BOP */
+        if (!isBOPrequested(header.prodindex))
+        {
+            /** do not need to care about the last 2 fields if it's BOP */
+            INLReqMsg reqmsg = { MISSING_BOP, header.prodindex, 0, 0 };
+            /** send a msg to the retx requester and signal it */
+            pthread_mutex_lock(&msgQmutex);
+            msgqueue.push(reqmsg);
+            pthread_cond_signal(&msgQfilled);
+            pthread_mutex_unlock(&msgQmutex);
+
+            addMissingBOP(header.prodindex);
+        }
     }
     /**
      * check the packet sequence to detect missing packets. If seqnum is
