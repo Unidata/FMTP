@@ -39,6 +39,7 @@
 #include <system_error>
 #include <unistd.h>
 
+using namespace std;
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
