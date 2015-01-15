@@ -107,6 +107,9 @@ vcmtpRecvv3::~vcmtpRecvv3()
 {
     // TODO: close all the sock_fd
     // make sure all resources are released
+    pthread_cond_destroy(&msgQfilled);
+    pthread_mutex_destroy(&msgQmutex);
+    delete tcprecv;
 }
 
 
@@ -121,9 +124,11 @@ vcmtpRecvv3::~vcmtpRecvv3()
  */
 void vcmtpRecvv3::Start()
 {
+    pthread_cond_init(&msgQfilled, NULL);
+    pthread_mutex_init(&msgQmutex, NULL);
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
-    StartRetxHandler();
+    StartRetxProcedure();
     mcastHandler();
 }
 
@@ -159,17 +164,26 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
 }
 
 
-void vcmtpRecvv3::StartRetxHandler()
+void vcmtpRecvv3::StartRetxProcedure()
 {
-    pthread_t retx_t;
+    pthread_t retx_t, retx_rq;
     pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler, this);
     pthread_detach(retx_t);
+    pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester, this);
+    pthread_detach(retx_rq);
 }
 
 
 void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 {
     (static_cast<vcmtpRecvv3*>(ptr))->retxHandler();
+    return NULL;
+}
+
+
+void* vcmtpRecvv3::StartRetxRequester(void* ptr)
+{
+    (static_cast<vcmtpRecvv3*>(ptr))->retxRequester();
     return NULL;
 }
 
@@ -182,7 +196,6 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
  * @param[out] header         The decoded packet header.
  * @param[out] payload        Payload of the packet.
  * @throw std::runtime_error  if the packet is too small.
- * @throw std::runtime_error  if the packet has in invalid payload length.
  */
 void vcmtpRecvv3::decodeHeader(
         char* const  packet,
@@ -198,10 +211,14 @@ void vcmtpRecvv3::decodeHeader(
     header.payloadlen = ntohs(*(uint16_t*)packet+8);
     header.flags      = ntohs(*(uint16_t*)packet+10);
 
+    *payload = packet + VCMTP_HEADER_LEN;
+}
+
+
+void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes)
+{
     if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
         throw std::runtime_error("vcmtpRecvv3::decodeHeader(): Invalid payload length");
-
-    *payload = packet + VCMTP_HEADER_LEN;
 }
 
 
@@ -218,14 +235,14 @@ void vcmtpRecvv3::mcastHandler()
     {
         VcmtpHeader header;
         char*       payload;
-        ssize_t     nbytes = recvfrom(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN,
-                                      0, NULL, NULL);
+        ssize_t     nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
 
         if (nbytes < 0)
             throw std::system_error(errno, std::system_category(),
                     "vcmtpRecvv3::mcastHandler() recvfrom() error.");
 
         decodeHeader(pktBuf, nbytes, header, &payload);
+        checkPayloadLen(header, nbytes);
 
         if (header.flags & VCMTP_BOP)
         {
@@ -241,22 +258,60 @@ void vcmtpRecvv3::mcastHandler()
 }
 
 
-void vcmtpRecvv3::retxHandler()
+void vcmtpRecvv3::retxRequester()
 {
     while(1)
     {
+        bool sendsuccess;
+        pthread_mutex_lock(&msgQmutex);
+        while (msgqueue.empty())
+            pthread_cond_wait(&msgQfilled, &msgQmutex);
         INLReqMsg reqmsg;
         reqmsg = msgqueue.front();
+        pthread_mutex_unlock(&msgQmutex);
         if (reqmsg.reqtype & MISSING_BOP)
         {
-            // TODO: sendBOPRetxReq();
+            sendsuccess = sendBOPRetxReq(reqmsg.prodindex);
         }
         else if (reqmsg.reqtype & MISSING_DATA)
         {
-            // TODO: sendDataRetxReq();
+            sendsuccess = sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
+                                          reqmsg.payloadlen);
         }
+        pthread_mutex_lock(&msgQmutex);
+        if (sendsuccess)
+            msgqueue.pop();
+        pthread_mutex_unlock(&msgQmutex);
+    }
+}
 
-        // TODO: receive unicast retx
+
+void vcmtpRecvv3::retxHandler()
+{
+    char pktHead[VCMTP_HEADER_LEN];
+    (void) memset(pktHead, 0, sizeof(pktHead));
+    VcmtpHeader header;
+
+    while(1)
+    {
+        /** temp buffer, do not access in case of out of bound issues */
+        char* paytmp;
+        ssize_t nbytes = recv(retxSock, pktHead, VCMTP_HEADER_LEN, 0);
+
+        decodeHeader(pktHead, nbytes, header, &paytmp);
+
+        if (header.flags & VCMTP_BOP)
+        {
+            tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
+            BOPHandler(header, paytmp);
+        }
+        else if (header.flags & VCMTP_RETX_DATA)
+        {
+            if(prodptr)
+                tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
+                                  header.payloadlen);
+                // TODO: handle recv failure.
+        }
     }
 }
 
@@ -322,10 +377,17 @@ void vcmtpRecvv3::recvMemData(
     {
         /** do not need to care about the last 2 fields if it's BOP */
         INLReqMsg reqmsg = { MISSING_BOP, header.prodindex, 0, 0 };
-        /** send a msg to the retx thread to request for BOP retransmission */
+        /** send a msg to the retx requester and signal it */
+        pthread_mutex_lock(&msgQmutex);
         msgqueue.push(reqmsg);
+        pthread_cond_signal(&msgQfilled);
+        pthread_mutex_unlock(&msgQmutex);
     }
-    /** check the packet sequence to detect missing packets */
+    /**
+     * check the packet sequence to detect missing packets. If seqnum is
+     * continuous, write the packet directly into product queue. Otherwise,
+     * the packet is out of order.
+     * */
     else if (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == header.seqnum)
     {
         vcmtpHeader = header;
@@ -340,14 +402,16 @@ void vcmtpRecvv3::recvMemData(
     /** data block out of order */
     else
     {
-        // TODO: drop duplicate blocks
         uint32_t reqSeqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
-        // TODO: how to calculate payload length?
+        // TODO: how to calculate payload length? what if 2 packets are missing?
         uint16_t reqPaylen = VCMTP_DATA_LEN;
         INLReqMsg reqmsg = { MISSING_DATA, header.prodindex, reqSeqnum,
                              reqPaylen };
         /** send a msg to the retx thread to request for data retransmission */
+        pthread_mutex_lock(&msgQmutex);
         msgqueue.push(reqmsg);
+        pthread_cond_signal(&msgQfilled);
+        pthread_mutex_unlock(&msgQmutex);
     }
 }
 
@@ -362,6 +426,31 @@ void vcmtpRecvv3::EOPHandler()
     // TODO: better do a integrity check of the received data blocks.
     std::cout << "(EOP) data-product completely received." << std::endl;
     // notify EOP
+}
+
+
+bool vcmtpRecvv3::sendBOPRetxReq(uint32_t prodindex)
+{
+    VcmtpHeader header;
+    header.prodindex  = htonl(prodindex);
+    header.seqnum     = 0;
+    header.payloadlen = 0;
+    header.flags      = htons(VCMTP_BOP_REQ);
+
+    return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
+}
+
+
+bool vcmtpRecvv3::sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
+                                  uint16_t payloadlen)
+{
+    VcmtpHeader header;
+    header.prodindex  = htonl(prodindex);
+    header.seqnum     = htonl(seqnum);
+    header.payloadlen = htons(payloadlen);
+    header.flags      = htons(VCMTP_RETX_REQ);
+
+    return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
 }
 
 
@@ -381,58 +470,4 @@ void vcmtpRecvv3::sendRetxEnd()
     memcpy(pktBuf+10, &flags,     2);
 
     tcprecv->sendData(pktBuf, sizeof(pktBuf), NULL, 0);
-}
-
-
-void vcmtpRecvv3::sendRetxReq()
-{
-    char pktBuf[VCMTP_HEADER_LEN];
-    (void) memset(pktBuf, 0, sizeof(pktBuf));
-
-    //uint32_t prodindex = htonl(vcmtpHeader.prodindex);
-    uint32_t prodindex = htonl(0);
-    uint32_t seqNum    = htonl(1448);
-    uint16_t payLen    = htons(1448);
-    uint16_t flags     = htons(VCMTP_RETX_REQ);
-
-    memcpy(pktBuf,    &prodindex, 4);
-    memcpy(pktBuf+4,  &seqNum,    4);
-    memcpy(pktBuf+8,  &payLen,    2);
-    memcpy(pktBuf+10, &flags,     2);
-
-    tcprecv->sendData(pktBuf, sizeof(pktBuf), NULL, 0);
-}
-
-
-void vcmtpRecvv3::recvRetxData()
-{
-	VcmtpHeader tmpheader;
-    char pktBuf[MAX_VCMTP_PACKET_LEN];
-    (void) memset(pktBuf, 0, sizeof(pktBuf));
-    char* pktbufhead = pktBuf;
-    char* pktbufpay = pktBuf + VCMTP_HEADER_LEN;
-
-    tcprecv->recvData(pktbufhead, VCMTP_HEADER_LEN, pktbufpay, VCMTP_DATA_LEN);
-    memcpy(&tmpheader.prodindex,  pktbufhead,    4);
-    memcpy(&tmpheader.seqnum, 	   pktbufhead+4,  4);
-    memcpy(&tmpheader.payloadlen, pktbufhead+8,  2);
-    memcpy(&tmpheader.flags,      pktbufhead+10, 2);
-
-    tmpheader.prodindex  = ntohl(tmpheader.prodindex);
-    tmpheader.seqnum     = ntohl(tmpheader.seqnum);
-    tmpheader.payloadlen = ntohs(tmpheader.payloadlen);
-    tmpheader.flags      = ntohs(tmpheader.flags);
-    cout << "(Retx) prodindex: " << tmpheader.prodindex << endl;
-    cout << "(Retx) seqnum: " << tmpheader.seqnum << endl;
-    cout << "(Retx) payloadlen: " << tmpheader.payloadlen << endl;
-    cout << "(Retx) flags: " << tmpheader.flags << endl;
-
-#ifdef DEBUG
-    char c0, c1;
-    memcpy(&c0, pktbufpay, 1);
-    memcpy(&c1, pktbufpay+1, 1);
-    printf("%X ", c0);
-    printf("%X", c1);
-    printf("\n");
-#endif
 }

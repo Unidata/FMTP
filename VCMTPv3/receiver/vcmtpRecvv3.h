@@ -70,12 +70,16 @@ private:
     void*            prodptr;       /*!< pointer to a start point in product queue */
     TcpRecv*         tcprecv;
     queue<INLReqMsg> msgqueue;
+    pthread_cond_t   msgQfilled;
+    pthread_mutex_t  msgQmutex;
 
     void    joinGroup(string mcastAddr, const unsigned short mcastPort);
+    static void*  StartRetxRequester(void* ptr);
     static void*  StartRetxHandler(void* ptr);
-    void    StartRetxHandler();
+    void    StartRetxProcedure();
     void    mcastHandler();
     void    retxHandler();
+    void    retxRequester();
     /**
      * Decodes a VCMTP packet header.
      *
@@ -91,6 +95,7 @@ private:
             const size_t nbytes,
             VcmtpHeader& header,
             char** const payload);
+    void checkPayloadLen(const VcmtpHeader& header, const size_t nbytes);
     /**
      * Parse BOP message and call notifier to notify receiving application.
      *
@@ -113,12 +118,10 @@ private:
             const char* const  VcmtpPacket);
 
     // TODO: interfaces maybe need to be re-defined
-    void    sendBOPRetxReq();
-    void    sendRetxEnd();
-    void    sendRetxReq();
-    void    sendDataRetxEnd();
-    void    sendDataRetxReq();
-    void    recvRetxData();
+    bool  sendBOPRetxReq(uint32_t prodindex);
+    bool  sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
+                          uint16_t payloadlen);
+    void  sendRetxEnd();
 };
 
 #endif /* VCMTPRECVV3_H_ */

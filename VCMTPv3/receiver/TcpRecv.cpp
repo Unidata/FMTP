@@ -30,7 +30,8 @@ TcpRecv::~TcpRecv()
 }
 
 
-ssize_t TcpRecv::sendData(char* header, size_t headLen, char* payload, size_t payLen)
+ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
+                          size_t payLen)
 {
     struct iovec iov[2];
     iov[0].iov_base = header;
@@ -43,7 +44,8 @@ ssize_t TcpRecv::sendData(char* header, size_t headLen, char* payload, size_t pa
 }
 
 
-ssize_t TcpRecv::recvData(char* header, size_t headLen, char* payload, size_t payLen)
+ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
+                          size_t payLen)
 {
     struct iovec iov[2];
     iov[0].iov_base = header;

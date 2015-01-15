@@ -10,8 +10,10 @@ class TcpRecv
     public:
         TcpRecv(string tcpAddr, unsigned short tcpPort);
         ~TcpRecv();
-        ssize_t sendData(char* header, size_t headLen, char* payload, size_t payLen);
-        ssize_t recvData(char* header, size_t headLen, char* payload, size_t payLen);
+        ssize_t sendData(void* header, size_t headLen, char* payload,
+                         size_t payLen);
+        ssize_t recvData(void* header, size_t headLen, char* payload,
+                         size_t payLen);
     private:
         int sockfd;
         struct sockaddr_in servAddr;
