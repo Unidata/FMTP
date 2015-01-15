@@ -39,6 +39,7 @@
 #include <system_error>
 #include <unistd.h>
 
+using namespace std;
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -394,24 +395,24 @@ void vcmtpRecvv3::recvMemData(
         if(prodptr)
             memcpy((char*)prodptr + vcmtpHeader.seqnum, VcmtpPacketData,
                    vcmtpHeader.payloadlen);
-        else {
-            std::cout << "seqnum: " << vcmtpHeader.seqnum;
-            std::cout << "    paylen: " << vcmtpHeader.payloadlen << std::endl;
-        }
     }
     /** data block out of order */
     else
     {
-        uint32_t reqSeqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
         // TODO: how to calculate payload length? what if 2 packets are missing?
-        uint16_t reqPaylen = VCMTP_DATA_LEN;
-        INLReqMsg reqmsg = { MISSING_DATA, header.prodindex, reqSeqnum,
-                             reqPaylen };
+        INLReqMsg reqmsg = {MISSING_DATA, header.prodindex,
+            (uint32_t)(vcmtpHeader.seqnum + vcmtpHeader.payloadlen),
+            (uint16_t)VCMTP_DATA_LEN};
         /** send a msg to the retx thread to request for data retransmission */
         pthread_mutex_lock(&msgQmutex);
         msgqueue.push(reqmsg);
         pthread_cond_signal(&msgQfilled);
         pthread_mutex_unlock(&msgQmutex);
+
+        vcmtpHeader = header;
+        if(prodptr)
+            memcpy((char*)prodptr + header.seqnum, VcmtpPacketData,
+                   header.payloadlen);
     }
 }
 
