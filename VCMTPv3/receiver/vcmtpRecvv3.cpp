@@ -39,7 +39,6 @@
 #include <system_error>
 #include <unistd.h>
 
-using namespace std;
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -111,6 +110,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     pthread_cond_destroy(&msgQfilled);
     pthread_mutex_destroy(&msgQmutex);
     delete tcprecv;
+    // TODO: clear the misBOPlist
 }
 
 
@@ -127,6 +127,7 @@ void vcmtpRecvv3::Start()
 {
     pthread_cond_init(&msgQfilled, NULL);
     pthread_mutex_init(&msgQmutex, NULL);
+    pthread_mutex_init(&BOPListMutex, NULL);
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
@@ -328,6 +329,9 @@ void vcmtpRecvv3::retxHandler()
         {
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             BOPHandler(header, paytmp);
+
+            /** remove the BOP from missing list */
+            (void)rmMissingBOP(header.prodindex);
         }
         else if (header.flags & VCMTP_RETX_DATA)
         {
@@ -383,6 +387,64 @@ void vcmtpRecvv3::BOPHandler(
     if(notifier)
         notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
                                 BOPmsg.metasize, &prodptr);
+}
+
+
+bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
+{
+    bool BOPrqed;
+    list<uint32_t>::iterator it;
+    pthread_mutex_lock(&BOPListMutex);
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
+    {
+        if (*it == prodindex)
+        {
+            BOPrqed = true;
+            break;
+        }
+        else
+            BOPrqed = false;
+    }
+    pthread_mutex_unlock(&BOPListMutex);
+    return BOPrqed;
+}
+
+
+bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
+{
+    bool rmsuccess;
+    list<uint32_t>::iterator it;
+    pthread_mutex_lock(&BOPListMutex);
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
+    {
+        if (*it == prodindex)
+        {
+            misBOPlist.erase(it);
+            rmsuccess = true;
+            break;
+        }
+        else
+            rmsuccess = false;
+    }
+    pthread_mutex_unlock(&BOPListMutex);
+    return rmsuccess;
+}
+
+
+bool vcmtpRecvv3::addMissingBOP(uint32_t prodindex)
+{
+    bool addsuccess;
+    list<uint32_t>::iterator it;
+    if (!isBOPrequested(prodindex))
+    {
+        pthread_mutex_lock(&BOPListMutex);
+        misBOPlist.push_back(prodindex);
+        pthread_mutex_unlock(&BOPListMutex);
+        addsuccess = true;
+    }
+    else
+        addsuccess = false;
+    return addsuccess;
 }
 
 
@@ -460,14 +522,16 @@ void vcmtpRecvv3::readMcastData(
 /**
  * Pushes a request for a BOP-packet onto the retransmission-request queue.
  *
- * @pre                  The retransmission-request queue is locked.
  * @param[in] prodindex  Index of the associated data-product.
  */
 void vcmtpRecvv3::pushMissingBopReq(
         const uint32_t prodindex)
 {
+    pthread_mutex_lock(&msgQmutex);
     INLReqMsg reqmsg = {MISSING_BOP, prodindex, 0, 0};
     msgqueue.push(reqmsg);
+    pthread_cond_signal(&msgQfilled);
+    pthread_mutex_unlock(&msgQmutex);
 }
 
 
@@ -527,14 +591,13 @@ void vcmtpRecvv3::requestAnyMissingData(
 void vcmtpRecvv3::requestMissingBops(
         const uint32_t prodindex)
 {
-    pthread_mutex_lock(&msgQmutex);
-
     // Careful! product-indexes wrap around!
-    for (uint32_t i = vcmtpHeader.prodindex; i != prodindex;)
-        pushMissingBopReq(++i);
-
-    pthread_cond_signal(&msgQfilled);
-    pthread_mutex_unlock(&msgQmutex);
+    for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
+        if (!isBOPrequested(i)) {
+            pushMissingBopReq(i);
+            addMissingBOP(i);
+        }
+    }
 }
 
 
