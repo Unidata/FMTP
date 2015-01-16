@@ -67,7 +67,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcastSock(0),
     retxSock(0),
     msgQfilled(),
-    msgQmutex()
+    msgQmutex(),
+    BOPListMutex()
 {
 }
 
@@ -97,7 +98,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcastSock(0),
     retxSock(0),
     msgQfilled(),
-    msgQmutex()
+    msgQmutex(),
+    BOPListMutex()
 {
 }
 
@@ -127,7 +129,6 @@ vcmtpRecvv3::~vcmtpRecvv3()
  */
 void vcmtpRecvv3::Start()
 {
-    pthread_mutex_init(&BOPListMutex, NULL);
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
@@ -287,27 +288,22 @@ void vcmtpRecvv3::retxRequester()
 {
     while(1)
     {
-        bool      sendsuccess;
         INLReqMsg reqmsg;
+
         {
             std::unique_lock<std::mutex> lock(msgQmutex);
             while (msgqueue.empty())
                 msgQfilled.wait(lock);
             reqmsg = msgqueue.front();
         }
-        if (reqmsg.reqtype & MISSING_BOP)
-        {
-            sendsuccess = sendBOPRetxReq(reqmsg.prodindex);
-        }
-        else if (reqmsg.reqtype & MISSING_DATA)
-        {
-            sendsuccess = sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
-                                          reqmsg.payloadlen);
-        }
-        {
+
+        if (((reqmsg.reqtype & MISSING_BOP) &&
+                sendBOPRetxReq(reqmsg.prodindex)) ||
+            ((reqmsg.reqtype & MISSING_DATA) &&
+                    sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
+                            reqmsg.payloadlen))) {
             std::unique_lock<std::mutex> lock(msgQmutex);
-            if (sendsuccess)
-                msgqueue.pop();
+            msgqueue.pop();
         }
     }
 }
@@ -394,9 +390,10 @@ void vcmtpRecvv3::BOPHandler(
 
 bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
 {
-    bool BOPrqed;
-    list<uint32_t>::iterator it;
-    pthread_mutex_lock(&BOPListMutex);
+    bool                         BOPrqed;
+    list<uint32_t>::iterator     it;
+    std::unique_lock<std::mutex> lock(BOPListMutex);
+
     for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
     {
         if (*it == prodindex)
@@ -407,16 +404,16 @@ bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
         else
             BOPrqed = false;
     }
-    pthread_mutex_unlock(&BOPListMutex);
     return BOPrqed;
 }
 
 
 bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
 {
-    bool rmsuccess;
-    list<uint32_t>::iterator it;
-    pthread_mutex_lock(&BOPListMutex);
+    bool                         rmsuccess;
+    list<uint32_t>::iterator     it;
+    std::unique_lock<std::mutex> lock(BOPListMutex);
+
     for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
     {
         if (*it == prodindex)
@@ -428,7 +425,6 @@ bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
         else
             rmsuccess = false;
     }
-    pthread_mutex_unlock(&BOPListMutex);
     return rmsuccess;
 }
 
@@ -436,12 +432,10 @@ bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
 bool vcmtpRecvv3::addMissingBOP(uint32_t prodindex)
 {
     bool addsuccess;
-    list<uint32_t>::iterator it;
     if (!isBOPrequested(prodindex))
     {
-        pthread_mutex_lock(&BOPListMutex);
+        std::unique_lock<std::mutex> lock(BOPListMutex);
         misBOPlist.push_back(prodindex);
-        pthread_mutex_unlock(&BOPListMutex);
         addsuccess = true;
     }
     else

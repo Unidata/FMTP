@@ -76,7 +76,7 @@ private:
     std::condition_variable   msgQfilled;
     std::mutex       msgQmutex;
     list<uint32_t>   misBOPlist; /*!< track all the missing BOP until received */
-    pthread_mutex_t  BOPListMutex;
+    std::mutex       BOPListMutex;
 
     void    joinGroup(string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
