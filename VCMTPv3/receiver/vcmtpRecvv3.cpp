@@ -329,7 +329,7 @@ void vcmtpRecvv3::retxHandler()
             BOPHandler(header, paytmp);
 
             /** remove the BOP from missing list */
-            (void)rmMissingBOP(header.prodindex);
+            (void)rmMisBOPinList(header.prodindex);
         }
         else if (header.flags & VCMTP_RETX_DATA)
         {
@@ -408,7 +408,7 @@ bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
 }
 
 
-bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
+bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
 {
     bool                         rmsuccess;
     list<uint32_t>::iterator     it;
@@ -429,7 +429,7 @@ bool vcmtpRecvv3::rmMissingBOP(uint32_t prodindex)
 }
 
 
-bool vcmtpRecvv3::addMissingBOP(uint32_t prodindex)
+bool vcmtpRecvv3::addMisBOPinList(uint32_t prodindex)
 {
     bool addsuccess;
     if (!isBOPrequested(prodindex))
@@ -589,7 +589,7 @@ void vcmtpRecvv3::requestMissingBops(
     for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
         if (!isBOPrequested(i)) {
             pushMissingBopReq(i);
-            addMissingBOP(i);
+            addMisBOPinList(i);
         }
     }
 }
