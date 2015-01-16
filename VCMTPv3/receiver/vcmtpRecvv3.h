@@ -36,7 +36,6 @@
 #include <string>
 #include <sys/select.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <queue>
 #include <list>
 #include "TcpRecv.h"

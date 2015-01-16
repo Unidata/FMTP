@@ -372,9 +372,12 @@ void vcmtpRecvv3::BOPHandler(
      * Every time a new BOP arrives, save the header to check following data
      * packets.
      */
-    vcmtpHeader = header;
-    vcmtpHeader.seqnum     = 0;
-    vcmtpHeader.payloadlen = 0;
+    {
+        // TODO: add lock
+        vcmtpHeader = header;
+        vcmtpHeader.seqnum     = 0;
+        vcmtpHeader.payloadlen = 0;
+    }
 
     #ifdef DEBUG
     std::cout << "(BOP) prodindex: " << vcmtpHeader.prodindex;
@@ -553,6 +556,8 @@ void vcmtpRecvv3::pushMissingDataReq(
  * data-packet of the current data-product and its most recently-received
  * data-packet.
  *
+ * @pre               The most recently-received data-packet is for the
+ *                    current data-product.
  * @param[in] seqnum  The most recently-received data-packet of the current
  *                    data-product.
  */
@@ -577,7 +582,8 @@ void vcmtpRecvv3::requestAnyMissingData(
 
 /**
  * Requests BOP packets for data-products that come after the current
- * data-product up to and including a given data-product.
+ * data-product up to and including a given data-product but only if the BOP
+ * hasn't already been requested (i.e., each missed BOP is requested only once).
  *
  * @param[in] prodindex  Index of the last data-product whose BOP packet was
  *                       missed.
@@ -588,8 +594,8 @@ void vcmtpRecvv3::requestMissingBops(
     // Careful! Product-indexes wrap around!
     for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
         if (!isBOPrequested(i)) {
-            pushMissingBopReq(i);
             addMissingBOP(i);
+            pushMissingBopReq(i);
         }
     }
 }
@@ -607,20 +613,22 @@ void vcmtpRecvv3::requestMissingBops(
 void vcmtpRecvv3::recvMemData(
         const VcmtpHeader& header)
 {
-    if (header.prodindex != vcmtpHeader.prodindex) {
+    if (header.prodindex == vcmtpHeader.prodindex) {
         /*
-         * Some BOP packets were missed.
+         * The data-packet is for the current data-product.
          */
-        char buf[1];
-        (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
-
-        requestAnyMissingData(BOPmsg.prodsize);
-        requestMissingBops(header.prodindex);
-    }
-    else {
         readMcastData(header);
         requestAnyMissingData(header.seqnum);
         vcmtpHeader = header;
+    }
+    else {
+        /*
+         * The data-packet is not for the current data-product. At least one BOP
+         * packet was missed.
+         */
+        char buf[1];
+        (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
+        requestMissingBops(header.prodindex);
     }
 }
 
