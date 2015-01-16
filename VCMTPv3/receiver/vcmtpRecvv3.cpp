@@ -65,7 +65,9 @@ vcmtpRecvv3::vcmtpRecvv3(
     prodptr(0),
     notifier(notifier),
     mcastSock(0),
-    retxSock(0)
+    retxSock(0),
+    msgQfilled(),
+    msgQmutex()
 {
 }
 
@@ -93,7 +95,9 @@ vcmtpRecvv3::vcmtpRecvv3(
     notifier(0),   /*!< constructor called by independent test program will
                     set notifier to NULL */
     mcastSock(0),
-    retxSock(0)
+    retxSock(0),
+    msgQfilled(),
+    msgQmutex()
 {
 }
 
@@ -107,8 +111,6 @@ vcmtpRecvv3::~vcmtpRecvv3()
 {
     // TODO: close all the sock_fd
     // make sure all resources are released
-    pthread_cond_destroy(&msgQfilled);
-    pthread_mutex_destroy(&msgQmutex);
     delete tcprecv;
     // TODO: clear the misBOPlist
 }
@@ -125,8 +127,6 @@ vcmtpRecvv3::~vcmtpRecvv3()
  */
 void vcmtpRecvv3::Start()
 {
-    pthread_cond_init(&msgQfilled, NULL);
-    pthread_mutex_init(&msgQmutex, NULL);
     pthread_mutex_init(&BOPListMutex, NULL);
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
@@ -287,13 +287,14 @@ void vcmtpRecvv3::retxRequester()
 {
     while(1)
     {
-        bool sendsuccess;
-        pthread_mutex_lock(&msgQmutex);
-        while (msgqueue.empty())
-            pthread_cond_wait(&msgQfilled, &msgQmutex);
+        bool      sendsuccess;
         INLReqMsg reqmsg;
-        reqmsg = msgqueue.front();
-        pthread_mutex_unlock(&msgQmutex);
+        {
+            std::unique_lock<std::mutex> lock(msgQmutex);
+            while (msgqueue.empty())
+                msgQfilled.wait(lock);
+            reqmsg = msgqueue.front();
+        }
         if (reqmsg.reqtype & MISSING_BOP)
         {
             sendsuccess = sendBOPRetxReq(reqmsg.prodindex);
@@ -303,10 +304,11 @@ void vcmtpRecvv3::retxRequester()
             sendsuccess = sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
                                           reqmsg.payloadlen);
         }
-        pthread_mutex_lock(&msgQmutex);
-        if (sendsuccess)
-            msgqueue.pop();
-        pthread_mutex_unlock(&msgQmutex);
+        {
+            std::unique_lock<std::mutex> lock(msgQmutex);
+            if (sendsuccess)
+                msgqueue.pop();
+        }
     }
 }
 
@@ -527,11 +529,10 @@ void vcmtpRecvv3::readMcastData(
 void vcmtpRecvv3::pushMissingBopReq(
         const uint32_t prodindex)
 {
-    pthread_mutex_lock(&msgQmutex);
-    INLReqMsg reqmsg = {MISSING_BOP, prodindex, 0, 0};
+    std::unique_lock<std::mutex> lock(msgQmutex);
+    INLReqMsg                    reqmsg = {MISSING_BOP, prodindex, 0, 0};
     msgqueue.push(reqmsg);
-    pthread_cond_signal(&msgQfilled);
-    pthread_mutex_unlock(&msgQmutex);
+    msgQfilled.notify_one();
 }
 
 
@@ -570,13 +571,12 @@ void vcmtpRecvv3::requestAnyMissingData(
         /*
          * The data-packet associated with the VCMTP header is out-of-order.
          */
-        pthread_mutex_lock(&msgQmutex);
+        std::unique_lock<std::mutex> lock(msgQmutex);
 
         for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
             pushMissingDataReq(vcmtpHeader.prodindex, seqnum, VCMTP_DATA_LEN);
 
-        pthread_cond_signal(&msgQfilled);
-        pthread_mutex_unlock(&msgQmutex);
+        msgQfilled.notify_one();
     }
 }
 
@@ -591,7 +591,7 @@ void vcmtpRecvv3::requestAnyMissingData(
 void vcmtpRecvv3::requestMissingBops(
         const uint32_t prodindex)
 {
-    // Careful! product-indexes wrap around!
+    // Careful! Product-indexes wrap around!
     for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
         if (!isBOPrequested(i)) {
             pushMissingBopReq(i);

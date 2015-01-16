@@ -28,6 +28,8 @@
 #ifndef VCMTPRECVV3_H_
 #define VCMTPRECVV3_H_
 
+#include <condition_variable>
+#include <mutex>
 #include "vcmtpBase.h"
 #include "ReceivingApplicationNotifier.h"
 #include <stdint.h>
@@ -71,8 +73,8 @@ private:
     void*            prodptr;       /*!< pointer to a start point in product queue */
     TcpRecv*         tcprecv;
     queue<INLReqMsg> msgqueue;
-    pthread_cond_t   msgQfilled;
-    pthread_mutex_t  msgQmutex;
+    std::condition_variable   msgQfilled;
+    std::mutex       msgQmutex;
     list<uint32_t>   misBOPlist; /*!< track all the missing BOP until received */
     pthread_mutex_t  BOPListMutex;
 
