@@ -10,5 +10,5 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= TcpSend.cpp TcpSend.h vcmtpSendv3.cpp vcmtpSendv3.h \
 			  UdpSend.cpp UdpSend.h \
 			  senderMetadata.cpp senderMetadata.h \
-			  SendingApplicationNotifier.h
+			  SendAppNotifier.h
 lib_la_CPPFLAGS		= -I$(srcdir)/..

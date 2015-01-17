@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file SendingApplicationNotifier.h
+ * @file SendAppNotifier.h
  *
  * This file declares the API for classes that notify a sending application
  * about files.
@@ -11,8 +11,8 @@
  * @author: Shawn Chen <sc7cq@virginia.edu>
  */
 
-#ifndef SENDINGAPPLICATIONNOTIFIER_H_
-#define SENDINGAPPLICATIONNOTIFIER_H_
+#ifndef SEND_APP_NOTIFIER_H_
+#define SEND_APP_NOTIFIER_H_
 
 #include <stdint.h>
 
@@ -32,4 +32,4 @@ public:
     virtual void notify_of_eop(uint32_t prodindex) = 0;
 };
 
-#endif /* SENDINGAPPLICATIONNOTIFIER_H_ */
+#endif
