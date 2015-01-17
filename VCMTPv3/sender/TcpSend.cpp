@@ -42,9 +42,12 @@
 #include <sys/uio.h>
 #include <stdexcept>
 
-#define NULL 0
+#ifndef NULL
+    #define NULL 0
+#endif
 #define MAX_CONNECTION 5
 
+using namespace std;
 
 /**
  * Contructor for TcpSend class, taking tcp address and tcp port to establish a

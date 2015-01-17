@@ -73,7 +73,7 @@ VCMTPReceiver::VCMTPReceiver(
 VCMTPReceiver::VCMTPReceiver(
     std::string&                          tcpAddr,
     const unsigned short                  tcpPort,
-    const ReceivingApplicationNotifier&   notifier)
+    const RecvAppNotifier&   notifier)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),

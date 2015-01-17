@@ -3,12 +3,10 @@
 
 #include <string>
 
-using namespace std;
-
 class TcpRecv
 {
     public:
-        TcpRecv(string tcpAddr, unsigned short tcpPort);
+        TcpRecv(std::string tcpAddr, unsigned short tcpPort);
         ~TcpRecv();
         ssize_t sendData(void* header, size_t headLen, char* payload,
                          size_t payLen);

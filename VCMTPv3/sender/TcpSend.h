@@ -36,17 +36,15 @@
 #include "vcmtpBase.h"
 #include <pthread.h>
 
-using namespace std;
-
 class TcpSend
 {
     public:
         /** source port would be initialized to 0 if not being specified. */
-        TcpSend(string tcpAddr, unsigned short tcpPort = 0);
+        TcpSend(std::string tcpAddr, unsigned short tcpPort = 0);
         ~TcpSend();
         int acceptConn();
         /** return the reference of a socket list */
-        const list<int>& getConnSockList();
+        const std::list<int>& getConnSockList();
         unsigned short getPortNum();
         /** read any data coming into this given socket */
         int readSock(int retxsockfd, char* pktBuf, int bufSize);
@@ -57,7 +55,7 @@ class TcpSend
     private:
         int sockfd;
         struct sockaddr_in servAddr;
-        list<int> connSockList;
+        std::list<int> connSockList;
         pthread_mutex_t sockListMutex; /*!< protect operation on shared sockList */
 };
 

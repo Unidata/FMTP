@@ -116,11 +116,11 @@ private:
     SendingApplicationNotifier* notifier;
     float                       retxTimeoutRatio;
     /** first: socket fd;  second: pthread_t pointer */
-    map<int, pthread_t*> retxSockThreadMap;
+    std::map<int, pthread_t*> retxSockThreadMap;
     /** first: socket fd;  second: retransmission finished indicator */
-    map<int, bool>	retxSockFinishMap;
+    std::map<int, bool>	retxSockFinishMap;
     /** first: socket fd;  second: pointer to the retxThreadInfo struct */
-    map<int, StartRetxThreadInfo*> retxSockInfoMap;
+    std::map<int, StartRetxThreadInfo*> retxSockInfoMap;
     /**
      * Adds and entry for a data-product to the retransmission set.
      *

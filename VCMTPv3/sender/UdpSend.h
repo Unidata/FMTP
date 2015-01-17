@@ -39,8 +39,6 @@
 #include <sys/uio.h>
 
 
-using namespace std;
-
 class UdpSend {
 public:
     UdpSend(const char* recvAddr, unsigned short port);

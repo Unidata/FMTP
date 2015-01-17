@@ -37,6 +37,7 @@
     #define NULL 0
 #endif
 
+using namespace std;
 
 /**
  * Constructs a sender instance and initializes a udpsend object pointer, a

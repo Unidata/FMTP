@@ -87,7 +87,7 @@ public:
 	VCMTPReceiver(
 	        std::string&                  tcpAddr,
 	        const unsigned short          tcpPort,
-	        ReceivingApplicationNotifier* notifier);
+	        RecvAppNotifier* notifier);
 	~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
@@ -171,14 +171,14 @@ private:
 	/**
 	 * Notifies the receiving application about file events.
 	 */
-	ReceivingApplicationNotifier* const notifier;
+	RecvAppNotifier* const notifier;
 
 	/**
 	 * This class implements the default method for notifying the receiving
 	 * application about file events by using the notification queue within
 	 * the VCMTPReceiver.
 	 */
-	class BatchedNotifier : public ReceivingApplicationNotifier {
+	class BatchedNotifier : public RecvAppNotifier {
 	public:
 	    BatchedNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
             void notify_of_bof(VcmtpMessageInfo& info);
@@ -197,7 +197,7 @@ private:
      * to user application (e.g. LDM) and then waits for a response from user
      * application about how to proceed.
      ***********************************************************************/
-	class PerFileNotifier : public ReceivingApplicationNotifier {
+	class PerFileNotifier : public RecvAppNotifier {
 	public:
 	    PerFileNotifier(VCMTPReceiver& receiver) : receiver(receiver) {};
             bool notify_of_bof(VcmtpSenderMessage& msg);

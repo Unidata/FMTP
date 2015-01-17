@@ -40,44 +40,42 @@
 #include <list>
 #include "TcpRecv.h"
 
-using namespace std;
-
 class vcmtpRecvv3 {
 public:
-    vcmtpRecvv3(string tcpAddr,
+    vcmtpRecvv3(std::string tcpAddr,
                 const unsigned short tcpPort,
-                string mcastAddr,
+                std::string mcastAddr,
                 const unsigned short mcastPort,
-                ReceivingApplicationNotifier* notifier);
-    vcmtpRecvv3(string tcpAddr,
+                RecvAppNotifier* notifier);
+    vcmtpRecvv3(std::string tcpAddr,
                 const unsigned short tcpPort,
-                string mcastAddr,
+                std::string mcastAddr,
                 const unsigned short mcastPort);
     ~vcmtpRecvv3();
 
     void    Start();
 
 private:
-    string           tcpAddr;
-    unsigned short   tcpPort;
-    string           mcastAddr;
-    unsigned short   mcastPort;
-    int              mcastSock;
-    int              retxSock;
-    struct sockaddr_in  mcastgroup;
-    struct ip_mreq   mreq;          /*!< struct of multicast object */
-    VcmtpHeader      vcmtpHeader;   /*!< temporary header buffer for each vcmtp packet */
-    BOPMsg           BOPmsg;        /*!< begin of product struct */
-    ReceivingApplicationNotifier* notifier; /*!< callback function of the receiving application */
-    void*            prodptr;       /*!< pointer to a start point in product queue */
-    TcpRecv*         tcprecv;
-    queue<INLReqMsg> msgqueue;
-    std::condition_variable   msgQfilled;
-    std::mutex       msgQmutex;
-    list<uint32_t>   misBOPlist; /*!< track all the missing BOP until received */
-    std::mutex       BOPListMutex;
+    std::string             tcpAddr;
+    unsigned short          tcpPort;
+    std::string             mcastAddr;
+    unsigned short          mcastPort;
+    int                     mcastSock;
+    int                     retxSock;
+    struct sockaddr_in      mcastgroup;
+    struct ip_mreq          mreq;        /*!< struct of multicast object */
+    VcmtpHeader             vcmtpHeader; /*!< temporary header buffer for each vcmtp packet */
+    BOPMsg                  BOPmsg;      /*!< begin of product struct */
+    RecvAppNotifier*        notifier;    /*!< callback function of the receiving application */
+    void*                   prodptr;     /*!< pointer to a start point in product queue */
+    TcpRecv*                tcprecv;
+    std::queue<INLReqMsg>   msgqueue;
+    std::condition_variable msgQfilled;
+    std::mutex              msgQmutex;
+    std::list<uint32_t>     misBOPlist;  /*!< track all the missing BOP until received */
+    std::mutex              BOPListMutex;
 
-    void    joinGroup(string mcastAddr, const unsigned short mcastPort);
+    void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
     static void*  StartRetxHandler(void* ptr);
     void    StartRetxProcedure();

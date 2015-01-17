@@ -39,6 +39,7 @@
 #include <system_error>
 #include <unistd.h>
 
+using namespace std;
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -51,11 +52,11 @@
  *                          of incoming Begin-Of-Product messages.
  */
 vcmtpRecvv3::vcmtpRecvv3(
-    string                        tcpAddr,
-    const unsigned short          tcpPort,
-    string                        mcastAddr,
-    const unsigned short          mcastPort,
-    ReceivingApplicationNotifier* notifier)
+    string               tcpAddr,
+    const unsigned short tcpPort,
+    string               mcastAddr,
+    const unsigned short mcastPort,
+    RecvAppNotifier*     notifier)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
@@ -82,10 +83,10 @@ vcmtpRecvv3::vcmtpRecvv3(
  * @param[in] mcastPort     Udp multicast port for receiving data products.
  */
 vcmtpRecvv3::vcmtpRecvv3(
-    string                  tcpAddr,
-    const unsigned short    tcpPort,
-    string                  mcastAddr,
-    const unsigned short    mcastPort)
+    string               tcpAddr,
+    const unsigned short tcpPort,
+    string               mcastAddr,
+    const unsigned short mcastPort)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
@@ -145,7 +146,9 @@ void vcmtpRecvv3::Start()
  * @throw std::system_error  if the socket couldn't be bound.
  * @throw std::system_error  if the socket couldn't join the multicast group.
  */
-void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
+void vcmtpRecvv3::joinGroup(
+        string               mcastAddr,
+        const unsigned short mcastPort)
 {
     (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
@@ -154,8 +157,8 @@ void vcmtpRecvv3::joinGroup(string mcastAddr, const unsigned short mcastPort)
     if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::joinGroup() creating socket failed.");
-    if( bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
-            < 0 )
+    if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
+            < 0)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::joinGroup() binding socket failed.");
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
@@ -393,9 +396,9 @@ void vcmtpRecvv3::BOPHandler(
 
 bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
 {
-    bool                         BOPrqed;
-    list<uint32_t>::iterator     it;
-    std::unique_lock<std::mutex> lock(BOPListMutex);
+    bool                          BOPrqed;
+    list<uint32_t>::iterator it;
+    unique_lock<std::mutex>  lock(BOPListMutex);
 
     for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
     {
@@ -413,9 +416,9 @@ bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
 
 bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
 {
-    bool                         rmsuccess;
-    list<uint32_t>::iterator     it;
-    std::unique_lock<std::mutex> lock(BOPListMutex);
+    bool                          rmsuccess;
+    list<uint32_t>::iterator it;
+    unique_lock<std::mutex>  lock(BOPListMutex);
 
     for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
     {

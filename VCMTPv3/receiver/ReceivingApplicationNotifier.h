@@ -20,9 +20,9 @@
 /**
  * This base class notifies a receiving application about events.
  */
-class ReceivingApplicationNotifier {
+class RecvAppNotifier {
 public:
-    virtual ~ReceivingApplicationNotifier() {};        // definition must exist
+    virtual ~RecvAppNotifier() {};        // definition must exist
 
     /**
      * Notifies the receiving application about the beginning of a product. This

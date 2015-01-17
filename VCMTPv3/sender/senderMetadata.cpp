@@ -30,7 +30,11 @@
 #include "senderMetadata.h"
 #include <iostream>
 
-#define NULL 0
+using namespace std;
+
+#ifndef NULL
+    #define NULL 0
+#endif
 
 
 /**
