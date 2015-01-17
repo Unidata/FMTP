@@ -35,7 +35,7 @@
 #include "TcpSend.h"
 #include "vcmtpBase.h"
 #include "senderMetadata.h"
-#include "SendingApplicationNotifier.h"
+#include "SendAppNotifier.h"
 #include <map>
 #include <set>
 #include <pthread.h>
@@ -87,7 +87,7 @@ public:
             const char*                 mcastAddr,
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
-            SendingApplicationNotifier* notifier);
+            SendAppNotifier* notifier);
     explicit vcmtpSendv3(
             const char*                 tcpAddr,
             const unsigned short        tcpPort,
@@ -95,7 +95,7 @@ public:
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
             float                       timeoutRatio,
-            SendingApplicationNotifier* notifier);
+            SendAppNotifier* notifier);
     ~vcmtpSendv3();
 
     uint32_t sendProduct(void* data, size_t dataSize);
@@ -113,7 +113,7 @@ private:
     /** maintaining metadata for retx use. */
     senderMetadata*             sendMeta;
     /** sending application callback hook */
-    SendingApplicationNotifier* notifier;
+    SendAppNotifier* notifier;
     float                       retxTimeoutRatio;
     /** first: socket fd;  second: pthread_t pointer */
     std::map<int, pthread_t*> retxSockThreadMap;

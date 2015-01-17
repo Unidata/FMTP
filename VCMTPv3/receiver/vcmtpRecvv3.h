@@ -31,7 +31,7 @@
 #include <condition_variable>
 #include <mutex>
 #include "vcmtpBase.h"
-#include "ReceivingApplicationNotifier.h"
+#include "RecvAppNotifier.h"
 #include <stdint.h>
 #include <string>
 #include <sys/select.h>

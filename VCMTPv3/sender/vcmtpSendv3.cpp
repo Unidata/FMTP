@@ -83,7 +83,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const char*                 mcastAddr,
                          const unsigned short        mcastPort,
                          uint32_t                    initProdIndex,
-                         SendingApplicationNotifier* notifier)
+                         SendAppNotifier* notifier)
 :
     udpsend(new UdpSend(mcastAddr,mcastPort)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
@@ -115,7 +115,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const unsigned short        mcastPort,
                          uint32_t                    initProdIndex,
                          float                       timeoutRatio,
-                         SendingApplicationNotifier* notifier)
+                         SendAppNotifier* notifier)
 :
     udpsend(new UdpSend(mcastAddr,mcastPort)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
@@ -680,7 +680,7 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
             static_cast<StartTimerThreadInfo*>(ptr);
     const uint32_t                    prodIndex = timerInfo->prodindex;
     vcmtpSendv3* const                sender = timerInfo->sender;
-    SendingApplicationNotifier* const notifier = sender->notifier;
+    SendAppNotifier* const notifier = sender->notifier;
     senderMetadata* const             sendMeta = sender->sendMeta;
     const RetxMetadata* const         perProdMeta =
             sendMeta->getMetadata(prodIndex);

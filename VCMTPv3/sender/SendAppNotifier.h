@@ -19,11 +19,11 @@
 /**
  * This base class notifies a sending application about events.
  */
-class SendingApplicationNotifier
+class SendAppNotifier
 {
 public:
-    SendingApplicationNotifier() {};
-    virtual ~SendingApplicationNotifier() {};        // definition must exist
+    SendAppNotifier() {};
+    virtual ~SendAppNotifier() {};        // definition must exist
 
     /**
      * Notifies the sending application about the complete reception of the

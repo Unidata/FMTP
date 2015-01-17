@@ -9,5 +9,5 @@
 EXTRA_DIST		= main.cpp Makefile_recv
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= TcpRecv.cpp TcpRecv.h vcmtpRecvv3.cpp vcmtpRecvv3.h \
-			  ReceivingApplicationNotifier.h
+			  RecvAppNotifier.h
 lib_la_CPPFLAGS		= -I$(srcdir)/..
