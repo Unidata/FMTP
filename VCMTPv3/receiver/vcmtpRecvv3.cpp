@@ -554,6 +554,7 @@ void vcmtpRecvv3::requestAnyMissingData(
 {
     unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     uint32_t seqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
+    uint32_t prodindex = vcmtpHeader.prodindex;
     lock.unlock();
 
     if (seqnum != mostRecent) {
@@ -562,10 +563,8 @@ void vcmtpRecvv3::requestAnyMissingData(
          */
         std::unique_lock<std::mutex> lock(msgQmutex);
 
-        lock.lock();
         for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
-            pushMissingDataReq(vcmtpHeader.prodindex, seqnum, VCMTP_DATA_LEN);
-        lock.unlock();
+            pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
 
         msgQfilled.notify_one();
     }
