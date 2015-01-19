@@ -377,7 +377,7 @@ void vcmtpRecvv3::BOPHandler(
      * packets.
      */
     {
-        // TODO: add lock
+        unique_lock<std::mutex> lock(vcmtpHeaderMutex);
         vcmtpHeader = header;
         vcmtpHeader.seqnum     = 0;
         vcmtpHeader.payloadlen = 0;
@@ -552,7 +552,9 @@ void vcmtpRecvv3::pushMissingDataReq(
 void vcmtpRecvv3::requestAnyMissingData(
         const uint32_t mostRecent)
 {
+    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     uint32_t seqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
+    lock.unlock();
 
     if (seqnum != mostRecent) {
         /*
@@ -560,8 +562,10 @@ void vcmtpRecvv3::requestAnyMissingData(
          */
         std::unique_lock<std::mutex> lock(msgQmutex);
 
+        lock.lock();
         for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
             pushMissingDataReq(vcmtpHeader.prodindex, seqnum, VCMTP_DATA_LEN);
+        lock.unlock();
 
         msgQfilled.notify_one();
     }
@@ -580,6 +584,7 @@ void vcmtpRecvv3::requestMissingBops(
         const uint32_t prodindex)
 {
     // Careful! Product-indexes wrap around!
+    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
         if (addUnrqBOPinList(i)) {
             pushMissingBopReq(i);
@@ -600,6 +605,7 @@ void vcmtpRecvv3::requestMissingBops(
 void vcmtpRecvv3::recvMemData(
         const VcmtpHeader& header)
 {
+    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     if (header.prodindex == vcmtpHeader.prodindex) {
         /*
          * The data-packet is for the current data-product.
@@ -663,7 +669,9 @@ void vcmtpRecvv3::sendRetxEnd()
     char pktBuf[VCMTP_HEADER_LEN];
     (void) memset(pktBuf, 0, sizeof(pktBuf));
 
+    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     uint32_t prodindex = htonl(vcmtpHeader.prodindex);
+    lock.unlock();
     uint32_t seqNum    = htonl(0);
     uint16_t payLen    = htons(0);
     uint16_t flags     = htons(VCMTP_RETX_END);

@@ -65,6 +65,7 @@ private:
     struct sockaddr_in      mcastgroup;
     struct ip_mreq          mreq;        /*!< struct of multicast object */
     VcmtpHeader             vcmtpHeader; /*!< temporary header buffer for each vcmtp packet */
+    std::mutex              vcmtpHeaderMutex;
     BOPMsg                  BOPmsg;      /*!< begin of product struct */
     RecvAppNotifier*        notifier;    /*!< callback function of the receiving application */
     void*                   prodptr;     /*!< pointer to a start point in product queue */
