@@ -204,6 +204,10 @@ private:
     /* Prevent copying because it's meaningless */
     vcmtpSendv3(vcmtpSendv3&);
     vcmtpSendv3& operator=(const vcmtpSendv3&);
+    static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
+    static uint32_t blockCount(uint32_t start, uint32_t length) {
+        return blockIndex(start+length) - blockIndex(start) + 1;
+    }
 };
 
 #endif /* VCMTPSENDV3_H_ */

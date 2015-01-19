@@ -517,28 +517,33 @@ void vcmtpSendv3::retransmit(
         RetxMetadata* const retxMeta,
         const int           sock)
 {
-    VcmtpHeader sendheader;
+    uint32_t       startPos  = recvheader->seqnum;
+    const uint16_t reqAmount = recvheader->payloadlen;
 
-    /* Construct the retx data block and send. */
-    uint16_t remainedSize = recvheader->payloadlen;
-    uint32_t startPos     = recvheader->seqnum;
-    sendheader.prodindex  = htonl(recvheader->prodindex);
-    sendheader.flags      = htons(VCMTP_RETX_DATA);
+    if (0 < reqAmount && startPos + reqAmount <= retxMeta->prodLength) {
+        const uint32_t firstBlock   = blockIndex(startPos);
+        const uint32_t lastBlock    = blockIndex(startPos + reqAmount - 1);
+        VcmtpHeader    sendheader;
 
-    /*
-     * Support for future requirement of sending multiple blocks in
-     * one single shot.
-     */
-    while (remainedSize > 0)
-    {
-        uint16_t payLen = remainedSize > VCMTP_DATA_LEN ?
-                          VCMTP_DATA_LEN : remainedSize;
-        sendheader.seqnum     = htonl(startPos);
-        sendheader.payloadlen = htons(payLen);
-        tcpsend->send(sock, &sendheader, (char*)retxMeta->dataprod_p + startPos,
-                payLen);
-        startPos     += payLen;
-        remainedSize -= payLen;
+        sendheader.prodindex  = htonl(recvheader->prodindex);
+        sendheader.flags      = htons(VCMTP_RETX_DATA);
+
+        /*
+         * Support for future requirement of sending multiple blocks in
+         * one single shot.
+         */
+        for (uint32_t i = firstBlock; i <= lastBlock; i++) {
+            uint16_t payLen = VCMTP_DATA_LEN;
+            startPos = i * VCMTP_DATA_LEN;
+
+            if (startPos + payLen > retxMeta->prodLength)
+                payLen = retxMeta->prodLength - startPos;
+
+            sendheader.seqnum     = htonl(startPos);
+            sendheader.payloadlen = htons(payLen);
+            tcpsend->send(sock, &sendheader,
+                    (char*)retxMeta->dataprod_p + startPos, payLen);
+        }
     }
 }
 
