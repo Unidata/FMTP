@@ -38,6 +38,7 @@
 #include <string.h>
 #include <system_error>
 #include <unistd.h>
+#include <sys/uio.h>
 
 using namespace std;
 

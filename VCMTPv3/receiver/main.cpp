@@ -3,6 +3,8 @@
 #include "vcmtpRecvv3.h"
 #include <unistd.h>
 
+using namespace std;
+
 int main(int argc, char* argv[])
 {
     string tcpAddr                 = "127.0.0.1";

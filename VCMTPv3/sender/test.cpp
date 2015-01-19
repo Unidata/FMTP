@@ -27,7 +27,7 @@ int main()
 		void* data;
 		data = (char*) mmap(0, 5792, PROT_READ, MAP_FILE | MAP_SHARED, fd,0);
 		if (data == MAP_FAILED)
-			cout<<"file map failed"<<endl;
+			std::cout << "file map failed" << std::endl;
 
         sender->startCoordinator();
         sleep(2);
@@ -40,7 +40,7 @@ int main()
 		close(fd);
 	}
 	else
-		cout<<"test::main()::open(): error"<<endl;
+		std::cout << "test::main()::open(): error" << std::endl;
 
     delete sender;
 	return 0;
