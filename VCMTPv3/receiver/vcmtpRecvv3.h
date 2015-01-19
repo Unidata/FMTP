@@ -118,6 +118,7 @@ private:
     bool isBOPrequested(uint32_t prodindex);
     bool rmMisBOPinList(uint32_t prodindex);
     bool addMisBOPinList(uint32_t prodindex);
+    bool addUnrqBOPinList(uint32_t prodindex);
     void EOPHandler();
     /**
      * Handles a multicast BOP message given a peeked-at VCMTP header.
