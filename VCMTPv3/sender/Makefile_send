@@ -1,4 +1,5 @@
-CC = g++
+#CC = g++
+CC = clang++
 INCLUDE = ../
 LIB =
 ELFFILE = vcmtpSendv3
