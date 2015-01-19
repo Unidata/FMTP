@@ -395,29 +395,9 @@ void vcmtpRecvv3::BOPHandler(
 }
 
 
-bool vcmtpRecvv3::isBOPrequested(uint32_t prodindex)
-{
-    bool BOPrqed;
-    list<uint32_t>::iterator it;
-    unique_lock<std::mutex>  lock(BOPListMutex);
-
-    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
-    {
-        if (*it == prodindex)
-        {
-            BOPrqed = true;
-            break;
-        }
-        else
-            BOPrqed = false;
-    }
-    return BOPrqed;
-}
-
-
 bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
 {
-    bool                          rmsuccess;
+    bool rmsuccess;
     list<uint32_t>::iterator it;
     unique_lock<std::mutex>  lock(BOPListMutex);
 
@@ -451,21 +431,6 @@ bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
     }
     misBOPlist.push_back(prodindex);
     addsuccess = true;
-    return addsuccess;
-}
-
-
-bool vcmtpRecvv3::addMisBOPinList(uint32_t prodindex)
-{
-    bool addsuccess;
-    if (!isBOPrequested(prodindex))
-    {
-        std::unique_lock<std::mutex> lock(BOPListMutex);
-        misBOPlist.push_back(prodindex);
-        addsuccess = true;
-    }
-    else
-        addsuccess = false;
     return addsuccess;
 }
 

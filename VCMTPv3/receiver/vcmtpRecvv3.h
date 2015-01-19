@@ -115,9 +115,7 @@ private:
     void BOPHandler(
             const VcmtpHeader& header,
             const char* const  VcmtpPacketData);
-    bool isBOPrequested(uint32_t prodindex);
     bool rmMisBOPinList(uint32_t prodindex);
-    bool addMisBOPinList(uint32_t prodindex);
     bool addUnrqBOPinList(uint32_t prodindex);
     void EOPHandler();
     /**
