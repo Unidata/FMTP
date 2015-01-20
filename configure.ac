@@ -6,12 +6,12 @@ m4_include([version.m4])
 AC_INIT([VCMTP], VERSION_ID, [support-vcmtp@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/vcmtp])
 
-AC_USE_SYSTEM_EXTENSIONS
-
-AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([configure.ac])
+AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
+
+AC_USE_SYSTEM_EXTENSIONS
 
 LT_INIT
 
