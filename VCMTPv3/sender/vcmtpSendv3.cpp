@@ -36,6 +36,9 @@
 #ifndef NULL
     #define NULL 0
 #endif
+#ifndef MIN
+    #define MIN(a,b) ((a) <= (b) ? (a) : (b))
+#endif
 
 using namespace std;
 
@@ -513,36 +516,38 @@ void vcmtpSendv3::rejRetxReq(
  * @param[in] sock        The receiver's socket.
  */
 void vcmtpSendv3::retransmit(
-        VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta,
-        const int           sock)
+        const VcmtpHeader* const  recvheader,
+        const RetxMetadata* const retxMeta,
+        const int                 sock)
 {
-    uint32_t       startPos  = recvheader->seqnum;
-    const uint16_t reqAmount = recvheader->payloadlen;
+    if (0 < recvheader->payloadlen) {
+        uint32_t start = recvheader->seqnum;
+        uint32_t out   = MIN(retxMeta->prodLength,
+                start + recvheader->payloadlen);
 
-    if (0 < reqAmount && startPos + reqAmount <= retxMeta->prodLength) {
-        const uint32_t firstBlock   = blockIndex(startPos);
-        const uint32_t lastBlock    = blockIndex(startPos + reqAmount - 1);
-        VcmtpHeader    sendheader;
-
+        VcmtpHeader sendheader;
         sendheader.prodindex  = htonl(recvheader->prodindex);
         sendheader.flags      = htons(VCMTP_RETX_DATA);
 
         /*
-         * Support for future requirement of sending multiple blocks in
-         * one single shot.
+         * The entire first data-block is sent because it simplifies the
+         * computation of the payload length and a request should start at the
+         * beginning of a data-block anyway.
          */
-        for (uint32_t i = firstBlock; i <= lastBlock; i++) {
-            uint16_t payLen = VCMTP_DATA_LEN;
-            startPos = i * VCMTP_DATA_LEN;
+        start = (start/VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
+        uint16_t payLen = VCMTP_DATA_LEN;
 
-            if (startPos + payLen > retxMeta->prodLength)
-                payLen = retxMeta->prodLength - startPos;
+        /*
+         * Support sending multiple blocks.
+         */
+        for (uint32_t nbytes = out - start; 0 < nbytes; nbytes -= payLen) {
+            if (payLen > nbytes)
+                payLen = nbytes; // only last block might be truncated
 
-            sendheader.seqnum     = htonl(startPos);
+            sendheader.seqnum     = htonl(start);
             sendheader.payloadlen = htons(payLen);
             tcpsend->send(sock, &sendheader,
-                    (char*)retxMeta->dataprod_p + startPos, payLen);
+                    (char*)retxMeta->dataprod_p + start, payLen);
         }
     }
 }
