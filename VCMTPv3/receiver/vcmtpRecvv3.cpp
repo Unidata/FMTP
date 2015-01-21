@@ -557,16 +557,19 @@ void vcmtpRecvv3::requestAnyMissingData(
     uint32_t prodindex = vcmtpHeader.prodindex;
     lock.unlock();
 
-    if (seqnum != mostRecent) {
-        /*
-         * The data-packet associated with the VCMTP header is out-of-order.
-         */
-        std::unique_lock<std::mutex> lock(msgQmutex);
+    if (BOPmsg.prodsize > mostRecent) {
+        if (seqnum != mostRecent) {
+            seqnum = (seqnum / VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
+            /*
+             * The data-packet associated with the VCMTP header is out-of-order.
+             */
+            std::unique_lock<std::mutex> lock(msgQmutex);
 
-        for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
-            pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
+            for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
+                pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
 
-        msgQfilled.notify_one();
+            msgQfilled.notify_one();
+        }
     }
 }
 
