@@ -33,3 +33,12 @@ uint32_t ProdBitMap::count()
     }
     return blkcnt;
 }
+
+
+bool ProdBitMap::checkMiss()
+{
+	if (count() != mapsize)
+		return true;
+	else
+		return false;
+}

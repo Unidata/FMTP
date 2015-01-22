@@ -11,6 +11,7 @@ public:
     ~ProdBitMap();
     void set(uint32_t blockindex);
     uint32_t count();
+    bool checkMiss();
 
 private:
     std::bitset<1>* map;
