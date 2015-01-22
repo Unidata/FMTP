@@ -40,6 +40,11 @@ ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
     iov[1].iov_len  = payLen;
 
     int retval = writev(sockfd, iov, 2);
+    // TODO: what if reconnect() succeeded but still can't write?
+    while (retval < 0) {
+        reconnect();
+        retval = writev(sockfd, iov, 2);
+    }
     return retval;
 }
 
@@ -54,5 +59,18 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
     iov[1].iov_len  = payLen;
 
     int retval = readv(sockfd, iov, 2);
+    while (retval < 0) {
+        retval = readv(sockfd, iov, 2);
+    }
     return retval;
+}
+
+
+bool TcpRecv::reconnect()
+{
+    close(sockfd);
+    /** keep trying to re-connect until success */
+    while( connect(sockfd, (struct sockaddr *) &servAddr,
+            sizeof(servAddr)) < 0 );
+    return true;
 }

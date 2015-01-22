@@ -15,6 +15,8 @@ class TcpRecv
     private:
         int sockfd;
         struct sockaddr_in servAddr;
+
+        bool reconnect();
 };
 
 #endif /* TCPRECV_H_ */
