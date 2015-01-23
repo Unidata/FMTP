@@ -343,7 +343,10 @@ void vcmtpRecvv3::retxHandler()
             if(prodptr)
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
-                // TODO: handle recv failure.
+
+                if (bitmap && !bitmap->checkMiss()) {
+                    notifier->notify_of_eop();
+                }
         }
     }
 }
