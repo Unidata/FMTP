@@ -1,7 +1,7 @@
 #include "ProdBitMap.h"
 
 
-ProdBitMap::ProdBitMap(const uint32_t bitmapsize)
+ProdBitMap::ProdBitMap(const uint32_t bitmapsize) : recvblocks(0), mutex()
 {
     mapsize = bitmapsize;
     map = new std::vector<bool>(bitmapsize, false);
@@ -16,25 +16,23 @@ ProdBitMap::~ProdBitMap()
 
 void ProdBitMap::set(uint32_t blockindex)
 {
-    map->at(blockindex) = true;
+	std::unique_lock<std::mutex> lock(mutex);
+    if (!map->at(blockindex))
+    {
+        map->at(blockindex) = true;
+        recvblocks++;
+    }
 }
 
 
 uint32_t ProdBitMap::count()
 {
-    uint32_t blkcnt = 0;
-    for(uint32_t i=0; i < mapsize; ++i) {
-        blkcnt += (uint32_t) map->at(i);
-    }
-
-    return blkcnt;
+    return recvblocks;
 }
 
 
-bool ProdBitMap::checkMiss()
+bool ProdBitMap::isComplete()
 {
-    if (count() != mapsize)
-        return true;
-    else
-        return false;
+	std::unique_lock<std::mutex> lock(mutex);
+    return (count() == mapsize);
 }

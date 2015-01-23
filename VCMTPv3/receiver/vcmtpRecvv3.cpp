@@ -344,7 +344,7 @@ void vcmtpRecvv3::retxHandler()
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
 
-                if (bitmap && !bitmap->checkMiss()) {
+                if (bitmap && bitmap->isComplete()) {
                     notifier->notify_of_eop();
                 }
         }
@@ -399,16 +399,16 @@ void vcmtpRecvv3::BOPHandler(
         notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
                                 BOPmsg.metasize, &prodptr);
 
-    if (bitmap)
+    if (bitmap) {
         delete bitmap;
+        bitmap = 0;
+    }
 
     uint32_t blocknum = BOPmsg.prodsize ?
         (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
 
-    if (blocknum)
-        bitmap = new ProdBitMap(blocknum);
-    else
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler() prodsize is 0");
+    // TODO: what if blocknum = 0?
+    bitmap = new ProdBitMap(blocknum);
 }
 
 
@@ -659,7 +659,7 @@ void vcmtpRecvv3::EOPHandler()
     std::cout << "(EOP) data-product completely received." << std::endl;
     // notify EOP
     if (bitmap) {
-        if (!bitmap->checkMiss())
+        if (bitmap->isComplete())
             notifier->notify_of_eop();
     }
     else
