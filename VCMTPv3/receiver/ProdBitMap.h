@@ -1,7 +1,7 @@
 #ifndef PRODBITMAP_H_
 #define PRODBITMAP_H_
 
-#include <bitset>
+#include <vector>
 #include <stdint.h>
 
 class ProdBitMap
@@ -14,8 +14,8 @@ public:
     bool checkMiss();
 
 private:
-    std::bitset<1>* map;
-    uint32_t        mapsize;
+    std::vector<bool>* map;
+    uint32_t           mapsize;
 };
 
 #endif /* PRODBITMAP_H_ */

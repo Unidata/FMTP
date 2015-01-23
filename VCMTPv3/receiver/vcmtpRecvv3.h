@@ -39,6 +39,8 @@
 #include <queue>
 #include <list>
 #include "TcpRecv.h"
+#include "ProdBitMap.h"
+
 
 class vcmtpRecvv3 {
 public:
@@ -70,6 +72,7 @@ private:
     RecvAppNotifier*        notifier;    /*!< callback function of the receiving application */
     void*                   prodptr;     /*!< pointer to a start point in product queue */
     TcpRecv*                tcprecv;
+    ProdBitMap*             bitmap;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
     std::mutex              msgQmutex;

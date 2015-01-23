@@ -6,7 +6,8 @@ ELFFILE = vcmtpRecvv3
 DEBUG_FLAG = DEBUG
 
 $(ELFFILE): main.cpp TcpRecv.cpp vcmtpRecvv3.cpp
-	$(CC) -D$(DEBUG_FLAG) -std=c++11 -I$(INCLUDE) -pthread -o $(ELFFILE) main.cpp TcpRecv.cpp vcmtpRecvv3.cpp
+	$(CC) -D$(DEBUG_FLAG) -std=c++11 -I$(INCLUDE) -pthread -o $(ELFFILE) main.cpp \
+		TcpRecv.cpp vcmtpRecvv3.cpp ProdBitMap.cpp
 
 .PHONY : clean
 clean:

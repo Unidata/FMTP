@@ -4,7 +4,7 @@
 ProdBitMap::ProdBitMap(const uint32_t bitmapsize)
 {
     mapsize = bitmapsize;
-    map = new std::bitset<1>[bitmapsize];
+    map = new std::vector<bool>(bitmapsize, false);
 }
 
 
@@ -16,29 +16,25 @@ ProdBitMap::~ProdBitMap()
 
 void ProdBitMap::set(uint32_t blockindex)
 {
-    /**
-     * Order positions are counted from the rightmost bit,
-     * which is order position 0.
-     */
-    map[blockindex].set(0, 1);
+    map->at(blockindex) = true;
 }
 
 
 uint32_t ProdBitMap::count()
 {
-    uint32_t blkcnt;
-    for(uint32_t i=0; i < mapsize; ++i)
-    {
-        blkcnt += map[i].count();
+    uint32_t blkcnt = 0;
+    for(uint32_t i=0; i < mapsize; ++i) {
+        blkcnt += (uint32_t) map->at(i);
     }
+
     return blkcnt;
 }
 
 
 bool ProdBitMap::checkMiss()
 {
-	if (count() != mapsize)
-		return true;
-	else
-		return false;
+    if (count() != mapsize)
+        return true;
+    else
+        return false;
 }
