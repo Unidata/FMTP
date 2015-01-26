@@ -36,6 +36,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string>
 #include <system_error>
 #include "TcpSend.h"
 #include "vcmtpBase.h"
@@ -71,8 +72,10 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
     servAddr.sin_addr.s_addr = inet_addr(tcpAddr.c_str());
     /** If tcpPort = 0, OS will automatically choose an available port number. */
     servAddr.sin_port = htons(tcpPort);
-    if(bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
-        throw std::runtime_error("TcpSend::TcpSend() error binding socket");
+    if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
+                std::to_string(tcpPort) + "\"");
     /** listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
 }
