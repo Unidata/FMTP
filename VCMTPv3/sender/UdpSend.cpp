@@ -63,6 +63,13 @@ UdpSend::UdpSend(const char* recvAddr, unsigned short port)
 }
 
 
+UdpSend::UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl)
+{
+    UdpSend(recvAddr, port);
+    setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
+}
+
+
 /**
  * Destruct elements within the udpsend entity which needs to be deleted.
  *

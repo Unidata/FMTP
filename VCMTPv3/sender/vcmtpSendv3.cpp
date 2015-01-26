@@ -110,6 +110,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
  * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
  * @param[in] timeoutRatio    retranmission timeout factor to tradeoff between
  *                            performance and robustness.
+ * @param[in] ttl             Time to live, if not specified, default value is 1.
  * @param[in] notifier        Sending application notifier.
  */
 vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
@@ -118,9 +119,10 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const unsigned short        mcastPort,
                          uint32_t                    initProdIndex,
                          float                       timeoutRatio,
+                         unsigned char               ttl,
                          SendAppNotifier* notifier)
 :
-    udpsend(new UdpSend(mcastAddr,mcastPort)),
+    udpsend(new UdpSend(mcastAddr, mcastPort, ttl)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     prodIndex(initProdIndex),

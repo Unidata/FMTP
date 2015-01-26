@@ -95,6 +95,7 @@ public:
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
             float                       timeoutRatio,
+            unsigned char               ttl,
             SendAppNotifier* notifier);
     ~vcmtpSendv3();
 

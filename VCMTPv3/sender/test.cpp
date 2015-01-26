@@ -32,8 +32,6 @@ int main()
         sender->startCoordinator();
         sleep(2);
 		sender->sendProduct(data, 5792, metadata, metaSize);
-        sleep(3);
-		sender->sendProduct(data, 5792, metadata, metaSize);
         while(1);
 
 		munmap(data, 5792);

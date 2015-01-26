@@ -42,6 +42,7 @@
 class UdpSend {
 public:
     UdpSend(const char* recvAddr, unsigned short port);
+    UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl);
     ~UdpSend();
     /**
      * SendTo() sends a piece of message to a destination identified by a
