@@ -101,6 +101,9 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
 /**
  * Constructs a sender instance with prodIndex specified and initialized by
  * receiving applications. VCMTP sender will start from this given prodindex.
+ * Besides, timeoutratio for all the products will be passed in, which means
+ * timeoutratio is only associated with a particular network. And TTL will
+ * also be set to override the default value 1.
  *
  * @param[in] tcpAddr         Unicast address of the sender.
  * @param[in] tcpPort         Unicast port of the sender or 0, in which case one

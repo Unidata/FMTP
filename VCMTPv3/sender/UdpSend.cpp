@@ -63,6 +63,15 @@ UdpSend::UdpSend(const char* recvAddr, unsigned short port)
 }
 
 
+/**
+ * Set the IP address and port of the receiver and connect to the udp socket.
+ * Override the default TTL value (which is 1) using the given ttl parameter.
+ *
+ * @param[in] recvAddr     IP address of the receiver.
+ * @param[in] port         Port number of the receiver.
+ * @param[in] ttl          Time to live.
+ * @throw  runtime_error   if socket creation fails.
+ */
 UdpSend::UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl)
 {
     UdpSend(recvAddr, port);
@@ -77,7 +86,6 @@ UdpSend::UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl)
  */
 UdpSend::~UdpSend()
 {
-    // TODO Auto-generated destructor stub
 }
 
 
