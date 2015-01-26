@@ -70,7 +70,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     retxSock(0),
     msgQfilled(),
     msgQmutex(),
-    BOPListMutex()
+    BOPListMutex(),
+    bitmap(0)
 {
 }
 
@@ -101,7 +102,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     retxSock(0),
     msgQfilled(),
     msgQmutex(),
-    BOPListMutex()
+    BOPListMutex(),
+    bitmap(0)
 {
 }
 
@@ -117,6 +119,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     // make sure all resources are released
     delete tcprecv;
     // TODO: clear the misBOPlist
+    delete bitmap;
 }
 
 
@@ -340,7 +343,10 @@ void vcmtpRecvv3::retxHandler()
             if(prodptr)
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
-                // TODO: handle recv failure.
+
+                if (bitmap && bitmap->isComplete()) {
+                    notifier->notify_of_eop();
+                }
         }
     }
 }
@@ -392,6 +398,17 @@ void vcmtpRecvv3::BOPHandler(
     if(notifier)
         notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
                                 BOPmsg.metasize, &prodptr);
+
+    if (bitmap) {
+        delete bitmap;
+        bitmap = 0;
+    }
+
+    uint32_t blocknum = BOPmsg.prodsize ?
+        (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
+
+    // TODO: what if blocknum = 0?
+    bitmap = new ProdBitMap(blocknum);
 }
 
 
@@ -499,8 +516,13 @@ void vcmtpRecvv3::readMcastData(
         checkPayloadLen(header, nbytes);
 
         if (0 == prodptr) {
+            // TODO: throw exception here
             std::cout << "seqnum: " << header.seqnum;
             std::cout << "    paylen: " << header.payloadlen << std::endl;
+        }
+        else {
+            /** receiver should trust the packet from sender is legal */
+            bitmap->set(header.seqnum/VCMTP_DATA_LEN);
         }
     }
 }
@@ -636,6 +658,12 @@ void vcmtpRecvv3::EOPHandler()
     // TODO: better do a integrity check of the received data blocks.
     std::cout << "(EOP) data-product completely received." << std::endl;
     // notify EOP
+    if (bitmap) {
+        if (bitmap->isComplete())
+            notifier->notify_of_eop();
+    }
+    else
+        throw std::runtime_error("vcmtpRecvv3::EOPHandler() has no valid bitmap");
 }
 
 
