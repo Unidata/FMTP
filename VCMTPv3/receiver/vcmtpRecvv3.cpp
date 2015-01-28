@@ -371,7 +371,7 @@ void vcmtpRecvv3::BOPHandler(
     if (header.payloadlen < 6)
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
     BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
-    BOPmsg.metasize = ntohs(*(uint16_t*)VcmtpPacketData+4);
+    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
     BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
                       ? AVAIL_BOP_LEN : BOPmsg.metasize;
     if (header.payloadlen - 6 < BOPmsg.metasize)
