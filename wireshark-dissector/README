@@ -1,0 +1,8 @@
+This directory contains a template for a wireshark dissector in an external
+plugin.
+
+To use it for your own plugin, simply replace all occurrences of "foo" in the
+source with the name of your own protocol.
+The build system uses cmake, see the file INSTALL.
+
+The author is Reinhold Kainhofer <reinhold@kainhofer.com>
