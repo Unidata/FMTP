@@ -660,12 +660,20 @@ void vcmtpRecvv3::recvMemData(
  */
 void vcmtpRecvv3::EOPHandler()
 {
-    // TODO: better do a integrity check of the received data blocks.
-    std::cout << "(EOP) data-product completely received." << std::endl;
-    // notify EOP
+    char          pktBuf[VCMTP_HEADER_LEN];
+    const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
+
+    if (nbytes < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::EOPHandler() recv() error.");
+
     if (bitmap) {
-        if (bitmap->isComplete())
-            notifier->notify_of_eop();
+        if (bitmap->isComplete()) {
+            if (notifier)
+                notifier->notify_of_eop();
+            else
+                std::cout << "(EOP) data-product completely received." << std::endl;
+        }
     }
     else
         throw std::runtime_error("vcmtpRecvv3::EOPHandler() has no valid bitmap");
