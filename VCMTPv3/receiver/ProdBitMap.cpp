@@ -33,6 +33,6 @@ uint32_t ProdBitMap::count()
 
 bool ProdBitMap::isComplete()
 {
-	std::unique_lock<std::mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     return (count() == mapsize);
 }

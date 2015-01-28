@@ -522,10 +522,8 @@ void vcmtpRecvv3::readMcastData(
             std::cout << "    paylen: " << header.payloadlen << std::endl;
 #endif
         }
-        else {
-            /** receiver should trust the packet from sender is legal */
-            bitmap->set(header.seqnum/VCMTP_DATA_LEN);
-        }
+        /** receiver should trust the packet from sender is legal */
+        bitmap->set(header.seqnum/VCMTP_DATA_LEN);
     }
 }
 
@@ -672,7 +670,9 @@ void vcmtpRecvv3::EOPHandler()
             if (notifier)
                 notifier->notify_of_eop();
             else
+#ifdef DEBUG
                 std::cout << "(EOP) data-product completely received." << std::endl;
+#endif
         }
     }
     else
