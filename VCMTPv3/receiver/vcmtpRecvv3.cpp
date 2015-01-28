@@ -516,9 +516,11 @@ void vcmtpRecvv3::readMcastData(
         checkPayloadLen(header, nbytes);
 
         if (0 == prodptr) {
-            // TODO: throw exception here
-            std::cout << "seqnum: " << header.seqnum;
+            std::cout << "No product queue. Data block is discarded." << endl;
+#ifdef DEBUG
+            std::cout << "(Data) seqnum: " << header.seqnum;
             std::cout << "    paylen: " << header.payloadlen << std::endl;
+#endif
         }
         else {
             /** receiver should trust the packet from sender is legal */
@@ -574,7 +576,7 @@ void vcmtpRecvv3::pushMissingDataReq(
 void vcmtpRecvv3::requestAnyMissingData(
         const uint32_t mostRecent)
 {
-    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     uint32_t seqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
     uint32_t prodindex = vcmtpHeader.prodindex;
     lock.unlock();
@@ -590,6 +592,9 @@ void vcmtpRecvv3::requestAnyMissingData(
             pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
 
         msgQfilled.notify_one();
+#ifdef DEBUG
+        std::cout << "data block missing" << std::endl;
+#endif
     }
 }
 
@@ -627,7 +632,7 @@ void vcmtpRecvv3::requestMissingBops(
 void vcmtpRecvv3::recvMemData(
         const VcmtpHeader& header)
 {
-    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+    // TODO: accessing vcmtpHeader, does it need to be locked?
     if (header.prodindex == vcmtpHeader.prodindex) {
         /*
          * The data-packet is for the current data-product.
