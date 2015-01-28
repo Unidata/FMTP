@@ -280,7 +280,7 @@ void vcmtpSendv3::sendData(
         unsigned int payloadlen = dataSize < VCMTP_DATA_LEN ?
                                   dataSize : VCMTP_DATA_LEN;
 
-        header.seqnum     = htons(seqNum);
+        header.seqnum     = htonl(seqNum);
         header.payloadlen = htons(payloadlen);
 
         if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
