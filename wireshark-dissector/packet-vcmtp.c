@@ -11,6 +11,10 @@ static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "VCMTP");
     /* Clear out stuff in the info column */
     col_clear(pinfo->cinfo,COL_INFO);
+    if (tree) { /* we are being asked for details */
+        proto_item *ti = NULL;
+        ti = proto_tree_add_item(tree, proto_vcmtp, tvb, 0, -1, ENC_NA);
+    }
 }
 
 void proto_register_vcmtp(void)
