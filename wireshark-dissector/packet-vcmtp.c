@@ -5,7 +5,7 @@
 #define VCMTP_PORT 5173
 
 static int proto_vcmtp = -1;
-static int hf_vcmtp_pdu_type = -1;
+static int hf_vcmtp_prodindex = -1;
 static gint ett_vcmtp = -1;
 
 static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
