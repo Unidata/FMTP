@@ -23,9 +23,9 @@ static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
         ti = proto_tree_add_item(tree, proto_vcmtp, tvb, 0, -1, ENC_NA);
         vcmtp_tree = proto_item_add_subtree(ti, ett_vcmtp);
         proto_tree_add_item(vcmtp_tree, hf_vcmtp_prodindex, tvb, 0, 4, ENC_BIG_ENDIAN);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_seqnum, tvb, 0, 4, ENC_BIG_ENDIAN);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_paylen, tvb, 0, 2, ENC_BIG_ENDIAN);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flags, tvb, 0, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_seqnum, tvb, 4, 4, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_paylen, tvb, 8, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flags, tvb, 10, 2, ENC_BIG_ENDIAN);
     }
 }
 
