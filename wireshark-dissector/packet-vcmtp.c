@@ -19,6 +19,14 @@ static int hf_vcmtp_prodindex = -1;
 static int hf_vcmtp_seqnum = -1;
 static int hf_vcmtp_paylen = -1;
 static int hf_vcmtp_flags = -1;
+static int hf_vcmtp_flag_bop = -1;
+static int hf_vcmtp_flag_eop = -1;
+static int hf_vcmtp_flag_memdata = -1;
+static int hf_vcmtp_flag_retxreq = -1;
+static int hf_vcmtp_flag_retxrej = -1;
+static int hf_vcmtp_flag_retxend = -1;
+static int hf_vcmtp_flag_retxdata = -1;
+static int hf_vcmtp_flag_bopreq = -1;
 static gint ett_vcmtp = -1;
 
 static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
