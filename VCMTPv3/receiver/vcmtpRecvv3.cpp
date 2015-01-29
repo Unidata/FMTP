@@ -134,6 +134,8 @@ vcmtpRecvv3::~vcmtpRecvv3()
  */
 void vcmtpRecvv3::Start()
 {
+    /** set prodindex to max to avoid BOP missing for prodindex=0 */
+    vcmtpHeader.prodindex = 0xFFFFFFFF;
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
@@ -675,8 +677,6 @@ void vcmtpRecvv3::EOPHandler()
 #endif
         }
     }
-    else
-        throw std::runtime_error("vcmtpRecvv3::EOPHandler() has no valid bitmap");
 }
 
 
