@@ -4,6 +4,16 @@
 
 #define VCMTP_PORT 5173
 
+#define VCMTP_BOP        0x00000001
+#define VCMTP_EOP        0x00000002
+#define VCMTP_MEM_DATA   0x00000004
+#define VCMTP_RETX_REQ   0x00000008
+#define VCMTP_RETX_REJ   0x00000010
+#define VCMTP_RETX_END   0x00000020
+#define VCMTP_RETX_DATA  0x00000040
+#define VCMTP_BOP_REQ    0x00000080
+
+
 static int proto_vcmtp = -1;
 static int hf_vcmtp_prodindex = -1;
 static int hf_vcmtp_seqnum = -1;
@@ -13,6 +23,7 @@ static gint ett_vcmtp = -1;
 
 static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
+    gint offset = 0;
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "VCMTP");
     /* Clear out stuff in the info column */
     col_clear(pinfo->cinfo,COL_INFO);
@@ -22,10 +33,22 @@ static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 
         ti = proto_tree_add_item(tree, proto_vcmtp, tvb, 0, -1, ENC_NA);
         vcmtp_tree = proto_item_add_subtree(ti, ett_vcmtp);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_prodindex, tvb, 0, 4, ENC_BIG_ENDIAN);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_seqnum, tvb, 4, 4, ENC_BIG_ENDIAN);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_paylen, tvb, 8, 2, ENC_BIG_ENDIAN);
-        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flags, tvb, 10, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_prodindex, tvb, offset, 4, ENC_BIG_ENDIAN);
+        offset += 4;
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_seqnum, tvb, offset, 4, ENC_BIG_ENDIAN);
+        offset += 4;
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_paylen, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flags, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_bop, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_eop, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_memdata, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxreq, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxrej, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxend, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxdata, tvb, offset, 2, ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_bopreq, tvb, offset, 2, ENC_BIG_ENDIAN);
+        offset += 2;
     }
 }
 
@@ -52,8 +75,56 @@ void proto_register_vcmtp(void)
         },
         { &hf_vcmtp_flags,
             { "VCMTP Flags", "vcmtp.flags",
-            FT_UINT16, BASE_DEC,
+            FT_UINT16, BASE_HEX,
             NULL, 0x0,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_bop,
+            { "VCMTP BOP Flag", "vcmtp.flags.bop",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_BOP,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_eop,
+            { "VCMTP EOP Flag", "vcmtp.flags.eop",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_EOP,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_memdata,
+            { "VCMTP MEM DATA Flag", "vcmtp.flags.memdata",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_MEM_DATA,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_retxreq,
+            { "VCMTP RETX REQ Flag", "vcmtp.flags.retxreq",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_RETX_REQ,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_retxrej,
+            { "VCMTP RETX REJ Flag", "vcmtp.flags.retxrej",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_RETX_REJ,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_retxend,
+            { "VCMTP RETX END Flag", "vcmtp.flags.retxend",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_RETX_END,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_retxdata,
+            { "VCMTP RETX DATA Flag", "vcmtp.flags.retxdata",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_RETX_DATA,
+            NULL, HFILL }
+        },
+        { &hf_vcmtp_flag_bopreq,
+            { "VCMTP BOP REQ Flag", "vcmtp.flags.bopreq",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_BOP_REQ,
             NULL, HFILL }
         }
     };
