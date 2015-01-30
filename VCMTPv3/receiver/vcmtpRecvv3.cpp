@@ -234,9 +234,9 @@ void vcmtpRecvv3::decodeHeader(
         throw std::runtime_error("vcmtpRecvv3::decodeHeader(): Packet is too small");
 
     header.prodindex  = ntohl(*(uint32_t*)packet);
-    header.seqnum     = ntohl(*(uint32_t*)packet+4);
-    header.payloadlen = ntohs(*(uint16_t*)packet+8);
-    header.flags      = ntohs(*(uint16_t*)packet+10);
+    header.seqnum     = ntohl(*(uint32_t*)(packet+4));
+    header.payloadlen = ntohs(*(uint16_t*)(packet+8));
+    header.flags      = ntohs(*(uint16_t*)(packet+10));
 
     *payload = packet + VCMTP_HEADER_LEN;
 }
@@ -287,7 +287,7 @@ void vcmtpRecvv3::mcastHandler()
             recvMemData(header);
         }
         else if (header.flags & VCMTP_EOP) {
-            EOPHandler();
+            EOPHandler(header);
         }
     }
 }
@@ -328,7 +328,7 @@ void vcmtpRecvv3::retxHandler()
     {
         /** temp buffer, do not access in case of out of bound issues */
         char* paytmp;
-        ssize_t nbytes = recv(retxSock, pktHead, VCMTP_HEADER_LEN, 0);
+        ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
@@ -342,13 +342,31 @@ void vcmtpRecvv3::retxHandler()
         }
         else if (header.flags & VCMTP_RETX_DATA)
         {
+            /**
+             * directly writing unwanted data to NULL is not allowed. So here
+             * uses a temp buffer as trash to dump the payload content.
+             */
+            char tmp[VCMTP_DATA_LEN];
+
             if(prodptr)
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
+            else
+                /** dump the payload since there is no product queue */
+                tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
 
-                if (bitmap && bitmap->isComplete()) {
+            bitmap->set(header.seqnum/VCMTP_DATA_LEN);
+            if (bitmap && bitmap->isComplete()) {
+                sendRetxEnd(header.prodindex);
+                if (notifier)
                     notifier->notify_of_eop();
-                }
+                else
+                    std::cout << "RETX completed" << std::endl;
+            }
+            #ifdef DEBUG
+            if (bitmap && !bitmap->isComplete())
+                std::cout << "RETX Data block received" << std::endl;
+            #endif
         }
     }
 }
@@ -656,11 +674,12 @@ void vcmtpRecvv3::recvMemData(
 /**
  * Report a successful received EOP.
  *
- * @param[in] none
+ * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
  */
-void vcmtpRecvv3::EOPHandler()
+void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 {
     char          pktBuf[VCMTP_HEADER_LEN];
+    /** read the EOP packet out in order to remove it from buffer */
     const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
 
     if (nbytes < 0)
@@ -669,13 +688,20 @@ void vcmtpRecvv3::EOPHandler()
 
     if (bitmap) {
         if (bitmap->isComplete()) {
+            sendRetxEnd(header.prodindex);
             if (notifier)
                 notifier->notify_of_eop();
             else
-#ifdef DEBUG
-                std::cout << "(EOP) data-product completely received." << std::endl;
-#endif
+                #ifdef DEBUG
+                std::cout << "(EOP) data-product completely received."
+                          << std::endl;
+                #endif
         }
+
+        #ifdef DEBUG
+        if (!bitmap->isComplete())
+            std::cout << "(EOP) EOP packet received." << std::endl;
+        #endif
     }
 }
 
@@ -692,6 +718,18 @@ bool vcmtpRecvv3::sendBOPRetxReq(uint32_t prodindex)
 }
 
 
+bool vcmtpRecvv3::sendRetxEnd(uint32_t prodindex)
+{
+    VcmtpHeader header;
+    header.prodindex  = htonl(prodindex);
+    header.seqnum     = 0;
+    header.payloadlen = 0;
+    header.flags      = htons(VCMTP_RETX_END);
+
+    return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
+}
+
+
 bool vcmtpRecvv3::sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
                                   uint16_t payloadlen)
 {
@@ -702,25 +740,4 @@ bool vcmtpRecvv3::sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
     header.flags      = htons(VCMTP_RETX_REQ);
 
     return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
-}
-
-
-void vcmtpRecvv3::sendRetxEnd()
-{
-    char pktBuf[VCMTP_HEADER_LEN];
-    (void) memset(pktBuf, 0, sizeof(pktBuf));
-
-    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-    uint32_t prodindex = htonl(vcmtpHeader.prodindex);
-    lock.unlock();
-    uint32_t seqNum    = htonl(0);
-    uint16_t payLen    = htons(0);
-    uint16_t flags     = htons(VCMTP_RETX_END);
-
-    memcpy(pktBuf,    &prodindex, 4);
-    memcpy(pktBuf+4,  &seqNum,    4);
-    memcpy(pktBuf+8,  &payLen,    2);
-    memcpy(pktBuf+10, &flags,     2);
-
-    tcprecv->sendData(pktBuf, sizeof(pktBuf), NULL, 0);
 }

@@ -75,7 +75,7 @@ ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
 ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
                           size_t payLen)
 {
-    ssize_t      nbytes;
+    ssize_t      nbytes = 0;
     struct iovec iov[2];
 
     iov[0].iov_base = header;
@@ -87,7 +87,9 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
         nbytes = readv(getSocket(), iov, 2);
         if (nbytes != -1)
             break;
+        std::cout << "to call reconnect()" << std::endl;
         reconnect();
+        std::cout << "reconnect() returns" << std::endl;
     }
 
     return nbytes; // Eclipse wants to see a return

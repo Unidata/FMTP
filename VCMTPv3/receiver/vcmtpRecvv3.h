@@ -121,7 +121,7 @@ private:
             const char* const  VcmtpPacketData);
     bool rmMisBOPinList(uint32_t prodindex);
     bool addUnrqBOPinList(uint32_t prodindex);
-    void EOPHandler();
+    void EOPHandler(const VcmtpHeader& header);
     /**
      * Handles a multicast BOP message given a peeked-at VCMTP header.
      *
@@ -194,11 +194,10 @@ private:
     void recvMemData(
             const VcmtpHeader& header);
 
-    // TODO: interfaces maybe need to be re-defined
     bool  sendBOPRetxReq(uint32_t prodindex);
     bool  sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
                           uint16_t payloadlen);
-    void  sendRetxEnd();
+    bool  sendRetxEnd(uint32_t prodindex);
 };
 
 #endif /* VCMTPRECVV3_H_ */
