@@ -332,13 +332,22 @@ void vcmtpRecvv3::retxHandler()
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
-        if (header.flags & VCMTP_BOP)
+        if (header.flags & VCMTP_RETX_BOP)
         {
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             BOPHandler(header, paytmp);
 
             /** remove the BOP from missing list */
             (void)rmMisBOPinList(header.prodindex);
+
+            /**
+             * Under the assumption that all packets are coming in sequence,
+             * when a missing BOP is retransmitted, all the following data
+             * blocks will be missing as well. Thus retxHandler should issue
+             * RETX_REQ for all data blocks.
+             */
+            requestAnyMissingData(BOPmsg.prodsize);
+            // TODO: request RETX EOP
         }
         else if (header.flags & VCMTP_RETX_DATA)
         {
@@ -537,10 +546,10 @@ void vcmtpRecvv3::readMcastData(
 
         if (0 == prodptr) {
             std::cout << "No product queue. Data block is discarded." << endl;
-#ifdef DEBUG
+            #ifdef DEBUG
             std::cout << "(Data) seqnum: " << header.seqnum;
             std::cout << "    paylen: " << header.payloadlen << std::endl;
-#endif
+            #endif
         }
         /** receiver should trust the packet from sender is legal */
         bitmap->set(header.seqnum/VCMTP_DATA_LEN);
@@ -606,13 +615,14 @@ void vcmtpRecvv3::requestAnyMissingData(
          */
         std::unique_lock<std::mutex> lock(msgQmutex);
 
-        for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN)
+        for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN) {
             pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
+        }
 
         msgQfilled.notify_one();
-#ifdef DEBUG
+        #ifdef DEBUG
         std::cout << "data block missing" << std::endl;
-#endif
+        #endif
     }
 }
 
@@ -691,11 +701,12 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             sendRetxEnd(header.prodindex);
             if (notifier)
                 notifier->notify_of_eop();
-            else
+            else {
                 #ifdef DEBUG
                 std::cout << "(EOP) data-product completely received."
                           << std::endl;
                 #endif
+            }
         }
 
         #ifdef DEBUG

@@ -65,6 +65,7 @@ typedef struct VcmtpBOPMessage {
     uint32_t   prodsize;     /*!< support 4GB maximum */
     uint16_t   metasize;
     char       metadata[AVAIL_BOP_LEN];
+    //char*      metadata;
 } BOPMsg;
 
 const uint16_t VCMTP_BOP       = 0x00000001;
@@ -75,6 +76,7 @@ const uint16_t VCMTP_RETX_REJ  = 0x00000010;
 const uint16_t VCMTP_RETX_END  = 0x00000020;
 const uint16_t VCMTP_RETX_DATA = 0x00000040;
 const uint16_t VCMTP_BOP_REQ   = 0x00000080;
+const uint16_t VCMTP_RETX_BOP  = 0x00000100;
 
 
 /** For communication between mcast thread and retx thread */

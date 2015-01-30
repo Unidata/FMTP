@@ -4,10 +4,11 @@ INCLUDE = ../
 LIB =
 ELFFILE = vcmtpSendv3
 DEBUG_FLAG = DEBUG
+TEST_FLAG = TEST_BOP
 
 $(ELFFILE): test.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
-	$(CC) -D$(DEBUG_FLAG) -std=c++0x -I$(INCLUDE) -pthread -lm -o $(ELFFILE) test.cpp UdpSend.cpp TcpSend.cpp \
-		senderMetadata.cpp vcmtpSendv3.cpp
+	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -std=c++0x -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
+		test.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
 
 .PHONY : clean
 clean:

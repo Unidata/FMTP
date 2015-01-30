@@ -87,7 +87,7 @@ public:
             const char*                 mcastAddr,
             const unsigned short        mcastPort,
             uint32_t                    initProdIndex,
-            SendAppNotifier* notifier);
+            SendAppNotifier*            notifier);
     explicit vcmtpSendv3(
             const char*                 tcpAddr,
             const unsigned short        tcpPort,
@@ -96,7 +96,7 @@ public:
             uint32_t                    initProdIndex,
             float                       timeoutRatio,
             unsigned char               ttl,
-            SendAppNotifier* notifier);
+            SendAppNotifier*            notifier);
     ~vcmtpSendv3();
 
     uint32_t sendProduct(void* data, size_t dataSize);
@@ -130,9 +130,8 @@ private:
      * @return              The corresponding retransmission entry.
      * @throw std::runtime_error  if a retransmission entry couldn't be created.
      */
-    RetxMetadata* addRetxMetadata(
-            void* const data,
-            const size_t dataSize);
+    RetxMetadata* addRetxMetadata(void* const data, const size_t dataSize,
+                                  void* const metadata, const size_t metaSize);
     void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
     /**
      * Multicasts the data of a data-product.
@@ -183,6 +182,15 @@ private:
         RetxMetadata* const retxMeta,
         const int          sock);
     /**
+     * Handles a notice from a receiver that BOP for a product is missing.
+     *
+     * @param[in] recvheader  The VCMTP header of the notice.
+     * @param[in] sock        The receiver's socket.
+     */
+    void handleBopReq(VcmtpHeader* const  recvheader,
+                      RetxMetadata* const retxMeta,
+                      const int           sock);
+    /**
      * Rejects a retransmission request from a receiver.
      *
      * @param[in] prodindex  Product-index of the request.
@@ -202,6 +210,16 @@ private:
             const VcmtpHeader* const  recvheader,
             const RetxMetadata* const retxMeta,
             const int                 sock);
+    /**
+     * Retransmits BOP packet to a receiver.
+     *
+     * @param[in] recvheader  The VCMTP header of the retransmission request.
+     * @param[in] retxMeta    The associated retransmission entry.
+     * @param[in] sock        The receiver's socket.
+     */
+    void retransBOP(const VcmtpHeader* const  recvheader,
+                    const RetxMetadata* const retxMeta,
+                    const int                 sock);
     /* Prevent copying because it's meaningless */
     vcmtpSendv3(vcmtpSendv3&);
     vcmtpSendv3& operator=(const vcmtpSendv3&);
