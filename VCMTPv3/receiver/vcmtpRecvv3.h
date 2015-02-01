@@ -76,7 +76,8 @@ private:
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
     std::mutex              msgQmutex;
-    std::list<uint32_t>     misBOPlist;  /*!< track all the missing BOP until received */
+    /** track all the missing BOP until received */
+    std::list<uint32_t>     misBOPlist;
     std::mutex              BOPListMutex;
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
@@ -198,6 +199,7 @@ private:
     bool  sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
                           uint16_t payloadlen);
     bool  sendRetxEnd(uint32_t prodindex);
+    bool  hasLastBlock();
 };
 
 #endif /* VCMTPRECVV3_H_ */

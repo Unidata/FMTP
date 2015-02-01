@@ -119,6 +119,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     // make sure all resources are released
     delete tcprecv;
     // TODO: clear the misBOPlist
+    // TODO: clear the misDatalist
     delete bitmap;
 }
 
@@ -610,7 +611,7 @@ void vcmtpRecvv3::requestAnyMissingData(
 
     if (seqnum != mostRecent) {
         seqnum = (seqnum / VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
-        /*
+        /**
          * The data-packet associated with the VCMTP header is out-of-order.
          */
         std::unique_lock<std::mutex> lock(msgQmutex);
@@ -621,7 +622,7 @@ void vcmtpRecvv3::requestAnyMissingData(
 
         msgQfilled.notify_one();
         #ifdef DEBUG
-        std::cout << "data block missing" << std::endl;
+        std::cout << "data block missing, requesting retx" << std::endl;
         #endif
     }
 }
@@ -697,6 +698,11 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
                 "vcmtpRecvv3::EOPHandler() recv() error.");
 
     if (bitmap) {
+        /**
+         * if bitmap check tells everything is completed, then sends the
+         * RETX_END message back to sender. Meanwhile notify receiving
+         * application.
+         */
         if (bitmap->isComplete()) {
             sendRetxEnd(header.prodindex);
             if (notifier)
@@ -706,6 +712,18 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
                 std::cout << "(EOP) data-product completely received."
                           << std::endl;
                 #endif
+            }
+        }
+        else {
+            /**
+             * check if the last data block has been received. If true, then
+             * all the other missing blocks have been requested. In this case,
+             * receiver just needs to wait until product being all completed.
+             * Otherwise, last block is missing as well, receiver needs to
+             * request retx for all the missing blocks including the last one.
+             */
+            if (!hasLastBlock()) {
+                requestAnyMissingData(BOPmsg.prodsize);
             }
         }
 
@@ -751,4 +769,14 @@ bool vcmtpRecvv3::sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
     header.flags      = htons(VCMTP_RETX_REQ);
 
     return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
+}
+
+
+bool vcmtpRecvv3::hasLastBlock()
+{
+    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+    /**
+     * seqnum + payloadlen should always be equal to or smaller than prodsize
+     */
+    return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == BOPmsg.prodsize);
 }
