@@ -1,3 +1,30 @@
+/**
+ * Copyright (C) 2014 University of Virginia. All rights reserved.
+ *
+ * @file      TcpRecv.cpp
+ * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @version   1.0
+ * @date      Nov 17, 2014
+ *
+ * @section   LICENSE
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or（at your option）
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details at http://www.gnu.org/copyleft/gpl.html
+ *
+ * @brief     Implement the interfaces of TcpRecv class.
+ *
+ * Underlying layer of the vcmtpRecvv3 class. It handles communication over
+ * TCP connections.
+ */
+
+
 #include <errno.h>
 #include <iostream>
 #include <sys/socket.h>
@@ -11,6 +38,13 @@
 
 using namespace std;
 
+
+/**
+ * Constructor of TcpRecv. It establishes a TCP connection to the sender.
+ *
+ * @param[in] tcpAddr        The address of the TCP connection.
+ * @param[in] tcpPort        The port number of the TCP connection.
+ */
 TcpRecv::TcpRecv(string tcpAddr, unsigned short tcpPort)
 :
     mutex()
@@ -22,10 +56,17 @@ TcpRecv::TcpRecv(string tcpAddr, unsigned short tcpPort)
     initSocket();
 }
 
+
+/**
+ * Destructor of TcpRecv.
+ *
+ * @param[in] none
+ */
 TcpRecv::~TcpRecv()
 {
     close(getSocket());
 }
+
 
 /**
  * Sends a header and a payload on the TCP connection. Blocks until the packet
@@ -60,6 +101,7 @@ ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
     return nbytes; // Eclipse wants to see a return
 }
 
+
 /**
  * Receives a header and a payload on the TCP connection. Blocks until the
  * packet is received or a severe error occurs. Re-establishes the TCP
@@ -90,14 +132,16 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
         reconnect();
     }
 
-    return nbytes; // Eclipse wants to see a return
+    return nbytes;
 }
+
 
 /**
  * Initializes the TCP connection. Blocks until the connection is established
- * or a severe error occurs.
+ * or a severe error occurs. The interval between two trials is 30 seconds.
  *
- * @throws std::system_error  if a system error occurs.
+ * @throws std::system_error  if the socket is not created.
+ * @throws std::system_error  if connect() returns errors.
  */
 void TcpRecv::initSocket()
 {
@@ -117,12 +161,13 @@ void TcpRecv::initSocket()
     }
 }
 
+
 /**
  * Ensures that the TCP connection is established. Blocks until the connection
  * is established or a severe error occurs. Does nothing if the connection is
  * OK. This method is thread-safe.
  *
- * @throws std::system_error  if a system error occurs.
+ * @param[in] none
  */
 void TcpRecv::reconnect()
 {
@@ -135,6 +180,7 @@ void TcpRecv::reconnect()
         initSocket();
     }
 }
+
 
 /**
  * Returns the socket corresponding to the TCP connection. This method is
