@@ -91,6 +91,9 @@ private:
     /** track all the missing BOP until received */
     std::list<uint32_t>     misBOPlist;
     std::mutex              BOPListMutex;
+    /*!< the state of EOP, true: received false: missing */
+    bool                    EOPStatus;
+    std::mutex              EOPStatMtx;
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
@@ -210,6 +213,10 @@ private:
     bool  hasLastBlock();
     void  startTimerThread(uint32_t prodindex);
     static void* runTimerThread(void* ptr);
+
+    void setEOPReceived();
+    void clearEOPState();
+    bool isEOPReceived();
 };
 
 #endif /* VCMTPRECVV3_H_ */

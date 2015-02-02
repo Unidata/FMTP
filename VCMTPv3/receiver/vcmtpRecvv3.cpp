@@ -137,6 +137,8 @@ void vcmtpRecvv3::Start()
 {
     /** set prodindex to max to avoid BOP missing for prodindex=0 */
     vcmtpHeader.prodindex = 0xFFFFFFFF;
+    /** clear EOPStatus for new product */
+    clearEOPState();
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
@@ -486,6 +488,9 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     // TODO: what if blocknum = 0?
     bitmap = new ProdBitMap(blocknum);
 
+    /** clear EOPStatus for new product */
+    clearEOPState();
+
     /** start a timer to force requesting missing EOP */
     startTimerThread(vcmtpHeader.prodindex);
 }
@@ -793,6 +798,14 @@ void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
  */
 void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 {
+    /**
+     * Under the assumption that all packets are in sequence, the EOP should
+     * always come in after the BOP. In which case, BOP and EOP are mapped
+     * one to one. When timer thread checks the EOPStatus, it always reflects
+     * the status of current EOP which associates with the latest BOP.
+     */
+    setEOPReceived();
+
     if (bitmap) {
         /**
          * if bitmap check tells everything is completed, then sends the
@@ -968,8 +981,46 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
     #ifdef DEBUG
     std::cout << "timer wakes up, requesting retx EOP" << std::endl;
     #endif
-    receiver->pushMissingEopReq(prodIndex);
+    /** if EOP has not been received yet, issue a request for retx */
+    if (!receiver->isEOPReceived())
+        receiver->pushMissingEopReq(prodIndex);
 
     delete timerInfo;
     return NULL;
+}
+
+
+/**
+ * Sets the EOPStatus to true, which indicates the successful reception of EOP.
+ *
+ * @param[in] none
+ */
+void vcmtpRecvv3::setEOPReceived()
+{
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    EOPStatus = true;
+}
+
+
+/**
+ * Clears the EOPStatus to false as initialization for new product.
+ *
+ * @param[in] none
+ */
+void vcmtpRecvv3::clearEOPState()
+{
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    EOPStatus = false;
+}
+
+
+/**
+ * Returns the current EOPStatus.
+ *
+ * @param[in] none
+ */
+bool vcmtpRecvv3::isEOPReceived()
+{
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    return EOPStatus;
 }

@@ -5,11 +5,12 @@ LIB =
 ELFFILE = vcmtpSendv3
 DEBUG_FLAG = DEBUG
 #TEST_FLAG = TEST_BOP
-TEST_FLAG = TEST_DATA_MISS
-TEST_FLAG2 = TEST_EOP
+#TEST_FLAG = TEST_DATA_MISS
+#TEST_FLAG = TEST_EOP
+TEST_FLAG = NONE
 
 $(ELFFILE): test.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
-	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -D$(TEST_FLAG2) -std=c++0x -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
+	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -std=c++0x -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
 		test.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
 
 .PHONY : clean
