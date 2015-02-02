@@ -35,6 +35,7 @@
 #include <pthread.h>
 #include <stdint.h>
 
+
 struct RetxMetadata {
     uint32_t  prodindex;
     /** recording the whole product size (for timeout factor use) */
@@ -46,8 +47,8 @@ struct RetxMetadata {
     float     retxTimeoutRatio;  /*!< ratio to scale timeout time */
     float     retxTimeoutPeriod; /*!< timeout time in seconds */
     void*     dataprod_p;        /*!< pointer to the data product */
-    std::set<int>  unfinReceivers;    /*!< unfinished receiver set indexed by socket id */
-
+    /** unfinished receiver set indexed by socket id */
+    std::set<int>  unfinReceivers;
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
                     metadata(NULL), mcastStartTime(0.0),

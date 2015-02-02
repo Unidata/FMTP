@@ -77,26 +77,26 @@ class vcmtpSendv3
 {
 public:
     explicit vcmtpSendv3(
-            const char*          tcpAddr,
-            const unsigned short tcpPort,
-            const char*          mcastAddr,
-            const unsigned short mcastPort);
+            const char*           tcpAddr,
+            const unsigned short  tcpPort,
+            const char*           mcastAddr,
+            const unsigned short  mcastPort);
     explicit vcmtpSendv3(
-            const char*                 tcpAddr,
-            const unsigned short        tcpPort,
-            const char*                 mcastAddr,
-            const unsigned short        mcastPort,
-            uint32_t                    initProdIndex,
-            SendAppNotifier*            notifier);
+            const char*           tcpAddr,
+            const unsigned short  tcpPort,
+            const char*           mcastAddr,
+            const unsigned short  mcastPort,
+            uint32_t              initProdIndex,
+            SendAppNotifier*      notifier);
     explicit vcmtpSendv3(
-            const char*                 tcpAddr,
-            const unsigned short        tcpPort,
-            const char*                 mcastAddr,
-            const unsigned short        mcastPort,
-            uint32_t                    initProdIndex,
-            float                       timeoutRatio,
-            unsigned char               ttl,
-            SendAppNotifier*            notifier);
+            const char*           tcpAddr,
+            const unsigned short  tcpPort,
+            const char*           mcastAddr,
+            const unsigned short  mcastPort,
+            uint32_t              initProdIndex,
+            float                 timeoutRatio,
+            unsigned char         ttl,
+            SendAppNotifier*      notifier);
     ~vcmtpSendv3();
 
     uint32_t sendProduct(void* data, size_t dataSize);
@@ -117,9 +117,9 @@ private:
     SendAppNotifier* notifier;
     float                       retxTimeoutRatio;
     /** first: socket fd;  second: pthread_t pointer */
-    std::map<int, pthread_t*> retxSockThreadMap;
+    std::map<int, pthread_t*>   retxSockThreadMap;
     /** first: socket fd;  second: retransmission finished indicator */
-    std::map<int, bool>	retxSockFinishMap;
+    std::map<int, bool>         retxSockFinishMap;
     /** first: socket fd;  second: pointer to the retxThreadInfo struct */
     std::map<int, StartRetxThreadInfo*> retxSockInfoMap;
     /**
@@ -140,6 +140,7 @@ private:
      * @param[in] dataSize  The size of the data-product in bytes.
      * @throw std::runtime_error  if an I/O error occurs.
      */
+    void sendEOPMessage();
     void sendData(
             void* const  data,
             const size_t dataSize);
@@ -148,9 +149,7 @@ private:
      *
      * @param[in] senderProdMeta  The retransmission entry.
      */
-    void setTimerParameters(
-        RetxMetadata* const senderProdMeta);
-    void sendEOPMessage();
+    void setTimerParameters(RetxMetadata* const senderProdMeta);
     void StartNewRetxThread(int newtcpsockfd);
     void startTimerThread(uint32_t prodindex);
     /** new coordinator thread */
@@ -206,9 +205,7 @@ private:
      * @param[in] prodindex  Product-index of the request.
      * @param[in] sock       The receiver's socket.
      */
-    void rejRetxReq(
-            const uint32_t prodindex,
-            const int      sock);
+    void rejRetxReq(const uint32_t prodindex, const int sock);
     /**
      * Retransmits data to a receiver.
      *
