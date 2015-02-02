@@ -41,6 +41,14 @@
 #include "TcpRecv.h"
 #include "ProdBitMap.h"
 
+class vcmtpRecvv3;
+
+struct StartTimerInfo
+{
+    uint32_t     prodindex;  /*!< product index */
+    vcmtpRecvv3* receiver;   /*!< a poniter to the vcmtpRecvv3 instance */
+};
+
 
 class vcmtpRecvv3 {
 public:
@@ -122,6 +130,8 @@ private:
             const char* const  VcmtpPacketData);
     bool rmMisBOPinList(uint32_t prodindex);
     bool addUnrqBOPinList(uint32_t prodindex);
+    void mcastEOPHandler(const VcmtpHeader& header);
+    void retxEOPHandler(const VcmtpHeader& header);
     void EOPHandler(const VcmtpHeader& header);
     /**
      * Handles a multicast BOP message given a peeked-at VCMTP header.
@@ -162,8 +172,13 @@ private:
      *
      * @param[in] prodindex  Index of the associated data-product.
      */
-    void pushMissingBopReq(
-            const uint32_t prodindex);
+    void pushMissingBopReq(const uint32_t prodindex);
+    /**
+     * Pushes a request for a EOP-packet onto the retransmission-request queue.
+     *
+     * @param[in] prodindex  Index of the associated data-product.
+     */
+    void pushMissingEopReq(const uint32_t prodindex);
     /**
      * Requests data-packets that lie between the last previously-received
      * data-packet of the current data-product and its most recently-received
@@ -196,10 +211,13 @@ private:
             const VcmtpHeader& header);
 
     bool  sendBOPRetxReq(uint32_t prodindex);
+    bool  sendEOPRetxReq(uint32_t prodindex);
     bool  sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
                           uint16_t payloadlen);
     bool  sendRetxEnd(uint32_t prodindex);
     bool  hasLastBlock();
+    void  startTimerThread(uint32_t prodindex);
+    static void* runTimerThread(void* ptr);
 };
 
 #endif /* VCMTPRECVV3_H_ */

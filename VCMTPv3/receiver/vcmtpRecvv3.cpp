@@ -39,6 +39,7 @@
 #include <system_error>
 #include <unistd.h>
 #include <sys/uio.h>
+#include <math.h>
 
 using namespace std;
 
@@ -119,7 +120,6 @@ vcmtpRecvv3::~vcmtpRecvv3()
     // make sure all resources are released
     delete tcprecv;
     // TODO: clear the misBOPlist
-    // TODO: clear the misDatalist
     delete bitmap;
 }
 
@@ -281,14 +281,14 @@ void vcmtpRecvv3::mcastHandler()
 
         decodeHeader(header);
 
-        if (header.flags & VCMTP_BOP) {
+        if (header.flags == VCMTP_BOP) {
             BOPHandler(header);
         }
-        else if (header.flags & VCMTP_MEM_DATA) {
+        else if (header.flags == VCMTP_MEM_DATA) {
             recvMemData(header);
         }
-        else if (header.flags & VCMTP_EOP) {
-            EOPHandler(header);
+        else if (header.flags == VCMTP_EOP) {
+            mcastEOPHandler(header);
         }
     }
 }
@@ -307,11 +307,14 @@ void vcmtpRecvv3::retxRequester()
             reqmsg = msgqueue.front();
         }
 
-        if (((reqmsg.reqtype & MISSING_BOP) &&
+        if ( ((reqmsg.reqtype == MISSING_BOP) &&
                 sendBOPRetxReq(reqmsg.prodindex)) ||
-            ((reqmsg.reqtype & MISSING_DATA) &&
-                    sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
-                            reqmsg.payloadlen))) {
+            ((reqmsg.reqtype == MISSING_DATA) &&
+                sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
+                                reqmsg.payloadlen)) ||
+            ((reqmsg.reqtype == MISSING_EOP) &&
+                sendEOPRetxReq(reqmsg.prodindex)) )
+        {
             std::unique_lock<std::mutex> lock(msgQmutex);
             msgqueue.pop();
         }
@@ -333,7 +336,7 @@ void vcmtpRecvv3::retxHandler()
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
-        if (header.flags & VCMTP_RETX_BOP)
+        if (header.flags == VCMTP_RETX_BOP)
         {
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             BOPHandler(header, paytmp);
@@ -345,12 +348,12 @@ void vcmtpRecvv3::retxHandler()
              * Under the assumption that all packets are coming in sequence,
              * when a missing BOP is retransmitted, all the following data
              * blocks will be missing as well. Thus retxHandler should issue
-             * RETX_REQ for all data blocks.
+             * RETX_REQ for all data blocks as well as EOP packet.
              */
             requestAnyMissingData(BOPmsg.prodsize);
-            // TODO: request RETX EOP
+            pushMissingEopReq(header.prodindex);
         }
-        else if (header.flags & VCMTP_RETX_DATA)
+        else if (header.flags == VCMTP_RETX_DATA)
         {
             /**
              * directly writing unwanted data to NULL is not allowed. So here
@@ -377,6 +380,10 @@ void vcmtpRecvv3::retxHandler()
             if (bitmap && !bitmap->isComplete())
                 std::cout << "RETX Data block received" << std::endl;
             #endif
+        }
+        else if (header.flags == VCMTP_RETX_EOP)
+        {
+            retxEOPHandler(header);
         }
     }
 }
@@ -439,6 +446,9 @@ void vcmtpRecvv3::BOPHandler(
 
     // TODO: what if blocknum = 0?
     bitmap = new ProdBitMap(blocknum);
+
+    /** start a timer to force requesting missing EOP */
+    startTimerThread(vcmtpHeader.prodindex);
 }
 
 
@@ -563,11 +573,19 @@ void vcmtpRecvv3::readMcastData(
  *
  * @param[in] prodindex  Index of the associated data-product.
  */
-void vcmtpRecvv3::pushMissingBopReq(
-        const uint32_t prodindex)
+void vcmtpRecvv3::pushMissingBopReq(const uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(msgQmutex);
     INLReqMsg                    reqmsg = {MISSING_BOP, prodindex, 0, 0};
+    msgqueue.push(reqmsg);
+    msgQfilled.notify_one();
+}
+
+
+void vcmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(msgQmutex);
+    INLReqMsg                    reqmsg = {MISSING_EOP, prodindex, 0, 0};
     msgqueue.push(reqmsg);
     msgQfilled.notify_one();
 }
@@ -661,7 +679,6 @@ void vcmtpRecvv3::requestMissingBops(
 void vcmtpRecvv3::recvMemData(
         const VcmtpHeader& header)
 {
-    // TODO: accessing vcmtpHeader, does it need to be locked?
     if (header.prodindex == vcmtpHeader.prodindex) {
         /*
          * The data-packet is for the current data-product.
@@ -687,7 +704,7 @@ void vcmtpRecvv3::recvMemData(
  *
  * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
  */
-void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
+void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
 {
     char          pktBuf[VCMTP_HEADER_LEN];
     /** read the EOP packet out in order to remove it from buffer */
@@ -697,6 +714,18 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::EOPHandler() recv() error.");
 
+    EOPHandler(header);
+}
+
+
+void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
+{
+    EOPHandler(header);
+}
+
+
+void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
+{
     if (bitmap) {
         /**
          * if bitmap check tells everything is completed, then sends the
@@ -726,11 +755,6 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
                 requestAnyMissingData(BOPmsg.prodsize);
             }
         }
-
-        #ifdef DEBUG
-        if (!bitmap->isComplete())
-            std::cout << "(EOP) EOP packet received." << std::endl;
-        #endif
     }
 }
 
@@ -742,6 +766,18 @@ bool vcmtpRecvv3::sendBOPRetxReq(uint32_t prodindex)
     header.seqnum     = 0;
     header.payloadlen = 0;
     header.flags      = htons(VCMTP_BOP_REQ);
+
+    return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
+}
+
+
+bool vcmtpRecvv3::sendEOPRetxReq(uint32_t prodindex)
+{
+    VcmtpHeader header;
+    header.prodindex  = htonl(prodindex);
+    header.seqnum     = 0;
+    header.payloadlen = 0;
+    header.flags      = htons(VCMTP_EOP_REQ);
 
     return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
 }
@@ -779,4 +815,44 @@ bool vcmtpRecvv3::hasLastBlock()
      * seqnum + payloadlen should always be equal to or smaller than prodsize
      */
     return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == BOPmsg.prodsize);
+}
+
+
+void vcmtpRecvv3::startTimerThread(uint32_t prodindex)
+{
+    pthread_t t;
+    StartTimerInfo* timerinfo = new StartTimerInfo();
+    timerinfo->prodindex = prodindex;
+    timerinfo->receiver  = this;
+    int retval = pthread_create(&t, NULL, &vcmtpRecvv3::runTimerThread,
+                                timerinfo);
+
+    if(retval != 0) {
+        throw std::system_error(retval, std::system_category(),
+            "vcmtpRecvv3::startTimerThread() pthread_create() error");
+    }
+
+    pthread_detach(t);
+}
+
+
+void* vcmtpRecvv3::runTimerThread(void* ptr)
+{
+    const StartTimerInfo* const timerInfo = static_cast<StartTimerInfo*>(ptr);
+    const uint32_t              prodIndex = timerInfo->prodindex;
+    vcmtpRecvv3* const           receiver = timerInfo->receiver;
+
+    float       seconds;
+    /** parse the float type timeout value into seconds and fractions */
+    const float fraction = modff(0.9, &seconds);
+    struct timespec timespec;
+    timespec.tv_sec = seconds;
+    timespec.tv_nsec = fraction * 1e9f;
+    /** sleep for a given amount of seconds and nanoseconds */
+    (void) nanosleep(&timespec, 0);
+    std::cout << "timer wakes up, requesting retx EOP" << std::endl;
+    receiver->pushMissingEopReq(prodIndex);
+
+    delete timerInfo;
+    return NULL;
 }

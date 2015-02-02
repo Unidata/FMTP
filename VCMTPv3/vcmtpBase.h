@@ -68,20 +68,23 @@ typedef struct VcmtpBOPMessage {
     //char*      metadata;
 } BOPMsg;
 
-const uint16_t VCMTP_BOP       = 0x00000001;
-const uint16_t VCMTP_EOP       = 0x00000002;
-const uint16_t VCMTP_MEM_DATA  = 0x00000004;
-const uint16_t VCMTP_RETX_REQ  = 0x00000008;
-const uint16_t VCMTP_RETX_REJ  = 0x00000010;
-const uint16_t VCMTP_RETX_END  = 0x00000020;
-const uint16_t VCMTP_RETX_DATA = 0x00000040;
-const uint16_t VCMTP_BOP_REQ   = 0x00000080;
-const uint16_t VCMTP_RETX_BOP  = 0x00000100;
+const uint16_t VCMTP_BOP       = 0x0001;
+const uint16_t VCMTP_EOP       = 0x0002;
+const uint16_t VCMTP_MEM_DATA  = 0x0004;
+const uint16_t VCMTP_RETX_REQ  = 0x0008;
+const uint16_t VCMTP_RETX_REJ  = 0x0010;
+const uint16_t VCMTP_RETX_END  = 0x0020;
+const uint16_t VCMTP_RETX_DATA = 0x0040;
+const uint16_t VCMTP_BOP_REQ   = 0x0080;
+const uint16_t VCMTP_RETX_BOP  = 0x0100;
+const uint16_t VCMTP_EOP_REQ   = 0x0200;
+const uint16_t VCMTP_RETX_EOP  = 0x0400;
 
 
 /** For communication between mcast thread and retx thread */
 const int MISSING_BOP  = 1;
 const int MISSING_DATA = 2;
+const int MISSING_EOP  = 3;
 typedef struct recvInternalRetxReqMessage {
     int reqtype;
     uint32_t prodindex;

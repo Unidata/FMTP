@@ -166,28 +166,38 @@ private:
      * @param[in] recvheader  VCMTP header of the retransmission request.
      * @param[in] retxMeta    Associated retransmission entry.
      */
-    void handleRetxReq(
-            VcmtpHeader* const  recvheader,
-            RetxMetadata* const retxMeta,
-            const int           sock);
+    void handleRetxReq(VcmtpHeader* const  recvheader,
+                       RetxMetadata* const retxMeta,
+                       const int           sock);
     /**
      * Handles a notice from a receiver that a data-product has been completely
      * received.
      *
      * @param[in] recvheader  The VCMTP header of the notice.
+     * @param[in] retxMeta    The associated retransmission entry.
      * @param[in] sock        The receiver's socket.
      */
-    void handleRetxEnd(
-        VcmtpHeader* const recvheader,
-        RetxMetadata* const retxMeta,
-        const int          sock);
+    void handleRetxEnd(VcmtpHeader* const  recvheader,
+                       RetxMetadata* const retxMeta,
+                       const int           sock);
     /**
      * Handles a notice from a receiver that BOP for a product is missing.
      *
      * @param[in] recvheader  The VCMTP header of the notice.
+     * @param[in] retxMeta    The associated retransmission entry.
      * @param[in] sock        The receiver's socket.
      */
     void handleBopReq(VcmtpHeader* const  recvheader,
+                      RetxMetadata* const retxMeta,
+                      const int           sock);
+    /**
+     * Handles a notice from a receiver that EOP for a product is missing.
+     *
+     * @param[in] recvheader  The VCMTP header of the notice.
+     * @param[in] retxMeta    The associated retransmission entry.
+     * @param[in] sock        The receiver's socket.
+     */
+    void handleEopReq(VcmtpHeader* const  recvheader,
                       RetxMetadata* const retxMeta,
                       const int           sock);
     /**
@@ -219,6 +229,14 @@ private:
      */
     void retransBOP(const VcmtpHeader* const  recvheader,
                     const RetxMetadata* const retxMeta,
+                    const int                 sock);
+    /**
+     * Retransmits EOP packet to a receiver.
+     *
+     * @param[in] recvheader  The VCMTP header of the retransmission request.
+     * @param[in] sock        The receiver's socket.
+     */
+    void retransEOP(const VcmtpHeader* const  recvheader,
                     const int                 sock);
     /* Prevent copying because it's meaningless */
     vcmtpSendv3(vcmtpSendv3&);
