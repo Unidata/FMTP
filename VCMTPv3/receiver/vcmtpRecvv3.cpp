@@ -978,12 +978,13 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
     timespec.tv_nsec = fraction * 1e9f;
     /** sleep for a given amount of seconds and nanoseconds */
     (void) nanosleep(&timespec, 0);
-    #ifdef DEBUG
-    std::cout << "timer wakes up, requesting retx EOP" << std::endl;
-    #endif
     /** if EOP has not been received yet, issue a request for retx */
-    if (!receiver->isEOPReceived())
+    if (!receiver->isEOPReceived()) {
         receiver->pushMissingEopReq(prodIndex);
+        #ifdef DEBUG
+        std::cout << "timer wakes up, requesting retx EOP" << std::endl;
+        #endif
+    }
 
     delete timerInfo;
     return NULL;
