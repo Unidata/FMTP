@@ -46,7 +46,7 @@
 #ifndef NULL
     #define NULL 0
 #endif
-#define MAX_CONNECTION 5
+#define MAX_CONNECTION 50
 
 using namespace std;
 
