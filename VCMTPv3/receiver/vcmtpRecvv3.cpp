@@ -35,6 +35,7 @@
 #include <memory.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <string>
 #include <string.h>
 #include <system_error>
 #include <unistd.h>
@@ -142,6 +143,11 @@ void vcmtpRecvv3::Start()
     mcastHandler();
 }
 
+std::string operator+(const std::string& lhs, const struct sockaddr_in& rhs)
+{
+    return lhs + inet_ntoa(rhs.sin_addr) + ":" +
+            std::to_string(ntohs(rhs.sin_port));
+}
 
 /**
  * Join multicast group specified by mcastAddr:mcastPort.
@@ -162,17 +168,19 @@ void vcmtpRecvv3::joinGroup(
     mcastgroup.sin_port = htons(mcastPort);
     if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() creating socket failed.");
+                "vcmtpRecvv3::joinGroup() creating socket failed");
     if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
             < 0)
         throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() binding socket failed.");
+                "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
+                std::to_string(mcastSock) + " to multicast group " +
+                mcastgroup);
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
                    sizeof(mreq)) < 0 )
         throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() setsockopt() failed.");
+                "vcmtpRecvv3::joinGroup() setsockopt() failed");
 }
 
 
@@ -689,13 +697,16 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
     if (bitmap) {
         if (bitmap->isComplete()) {
             sendRetxEnd(header.prodindex);
-            if (notifier)
+            if (notifier) {
                 notifier->notify_of_eop();
-            else
+            }
+            else {
                 #ifdef DEBUG
-                std::cout << "(EOP) data-product completely received."
-                          << std::endl;
+                    std::cout << "(EOP) data-product completely received."
+                              << std::endl
                 #endif
+                ;
+            }
         }
 
         #ifdef DEBUG
