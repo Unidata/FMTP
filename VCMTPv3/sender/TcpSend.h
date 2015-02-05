@@ -38,25 +38,27 @@
 
 class TcpSend
 {
-    public:
-        /** source port would be initialized to 0 if not being specified. */
-        TcpSend(std::string tcpAddr, unsigned short tcpPort = 0);
-        ~TcpSend();
-        int acceptConn();
-        /** return the reference of a socket list */
-        const std::list<int>& getConnSockList();
-        unsigned short getPortNum();
-        /** read any data coming into this given socket */
-        int readSock(int retxsockfd, char* pktBuf, int bufSize);
-        /** only parse the header part of a coming packet */
-        int parseHeader(int retxsockfd, VcmtpHeader* recvheader);
-        /** gathering send by calling io vector system call */
-        int send(int retxsockfd, VcmtpHeader* sendheader, char* payload, size_t paylen);
-    private:
-        int sockfd;
-        struct sockaddr_in servAddr;
-        std::list<int> connSockList;
-        pthread_mutex_t sockListMutex; /*!< protect operation on shared sockList */
+public:
+    /** source port would be initialized to 0 if not being specified. */
+    TcpSend(std::string tcpAddr, unsigned short tcpPort = 0);
+    ~TcpSend();
+    int acceptConn();
+    /** return the reference of a socket list */
+    const std::list<int>& getConnSockList();
+    unsigned short getPortNum();
+    /** read any data coming into this given socket */
+    int readSock(int retxsockfd, char* pktBuf, int bufSize);
+    /** only parse the header part of a coming packet */
+    int parseHeader(int retxsockfd, VcmtpHeader* recvheader);
+    /** gathering send by calling io vector system call */
+    int send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
+             size_t paylen);
+
+private:
+    int sockfd;
+    struct sockaddr_in servAddr;
+    std::list<int> connSockList;
+    pthread_mutex_t sockListMutex; /*!< protect operation on shared sockList */
 };
 
 #endif /* TCPSEND_H_ */

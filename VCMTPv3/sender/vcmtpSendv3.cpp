@@ -62,7 +62,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     prodIndex(0),
-    retxTimeoutRatio(50.0),
+    retxTimeoutRatio(500000.0),
     notifier(0)
 {
 }
@@ -86,13 +86,13 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const char*                 mcastAddr,
                          const unsigned short        mcastPort,
                          uint32_t                    initProdIndex,
-                         SendAppNotifier* notifier)
+                         SendAppNotifier*            notifier)
 :
     udpsend(new UdpSend(mcastAddr,mcastPort)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     prodIndex(initProdIndex),
-    retxTimeoutRatio(50.0),
+    retxTimeoutRatio(500000.0),
     notifier(notifier)
 {
 }
@@ -123,7 +123,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          uint32_t                    initProdIndex,
                          float                       timeoutRatio,
                          unsigned char               ttl,
-                         SendAppNotifier* notifier)
+                         SendAppNotifier*            notifier)
 :
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
@@ -163,9 +163,9 @@ vcmtpSendv3::~vcmtpSendv3()
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const unsigned metaSize)
 {
-    VcmtpHeader   header;   // in network byte order
-    BOPMsg        bopMsg;   // in network byte order
-    struct iovec  ioVec[3]; // gather-send used to eliminate copying
+    VcmtpHeader   header;
+    BOPMsg        bopMsg;
+    struct iovec  ioVec[3];
 
     /* Set the VCMTP packet header. */
     header.prodindex  = htonl(prodIndex);
@@ -183,13 +183,17 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     ioVec[1].iov_len  = sizeof(bopMsg) - sizeof(bopMsg.metadata);
 
     /* Reference the metadata for the gather send. */
-    ioVec[2].iov_base = metadata; // might be 0
-    ioVec[2].iov_len  = metaSize; // will be 0 if `metadata == 0`
+    ioVec[2].iov_base = metadata;
+    ioVec[2].iov_len  = metaSize;
 
+#ifdef TEST_BOP
+    std::cout << "dummy sending out BOP" << std::endl;
+#else
     /* Send the BOP message on multicast socket */
     if (udpsend->SendTo(ioVec, 3) < 0)
         throw std::runtime_error(
                 "vcmtpSendv3::SendBOPMessage(): SendTo() error");
+#endif
 }
 
 
@@ -221,9 +225,10 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
  * @return              The corresponding retransmission entry.
  * @throw std::runtime_error  if a retransmission entry couldn't be created.
  */
-RetxMetadata* vcmtpSendv3::addRetxMetadata(
-        void* const data,
-        const size_t dataSize)
+RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
+                                           const size_t dataSize,
+                                           void* const metadata,
+                                           const size_t metaSize)
 {
     /* Create a new RetxMetadata struct for this product */
     RetxMetadata* senderProdMeta = new RetxMetadata();
@@ -236,6 +241,12 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(
 
     /* Update current product length in RetxMetadata */
     senderProdMeta->prodLength       = dataSize;
+
+    /* Update current metadata size in RetxMetadata */
+    senderProdMeta->metaSize         = metaSize;
+
+    /* Update current metadata pointer in RetxMetadata */
+    senderProdMeta->metadata         = (void*) metadata;
 
     /* Update current product pointer in RetxMetadata */
     senderProdMeta->dataprod_p       = (void*) data;
@@ -258,19 +269,20 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(
     return senderProdMeta;
 }
 
+
 /**
- * Multicasts the data of a data-product.
+ * Multicasts the data blocks of a data-product. A legal boundary check is
+ * performed to make sure all the data blocks going out are multiples of
+ * VCMTP_DATA_LEN except the last block.
  *
  * @param[in] data      The data-product.
  * @param[in] dataSize  The size of the data-product in bytes.
  * @throw std::runtime_error  if an I/O error occurs.
  */
-void vcmtpSendv3::sendData(
-        void*  data,
-        size_t dataSize)
+void vcmtpSendv3::sendData(void* data, size_t dataSize)
 {
     VcmtpHeader header;
-    uint32_t    seqNum = 0;
+    uint32_t  seqNum = 0;
     header.prodindex = htonl(prodIndex);
     header.flags     = htons(VCMTP_MEM_DATA);
 
@@ -283,22 +295,32 @@ void vcmtpSendv3::sendData(
         header.seqnum     = htonl(seqNum);
         header.payloadlen = htons(payloadlen);
 
+#ifdef TEST_DATA_MISS
+        if (seqNum == 0 || seqNum == 1448 || seqNum == 2896 || seqNum == 4344)
+        {}
+        else {
+#endif
         if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
-            throw std::runtime_error("vcmtpSendv3::sendProduct::SendData() error");
-
+            throw std::runtime_error(
+                    "vcmtpSendv3::sendProduct::SendData() error");
+#ifdef TEST_DATA_MISS
+        }
+#endif
         dataSize -= payloadlen;
         data      = (char*)data + payloadlen;
         seqNum   += payloadlen;
     }
 }
 
+
 /**
- * Sets the retransmission timeout parameters in a retransmission entry.
+ * Sets the retransmission timeout parameters in a retransmission entry. The
+ * start time being recorded is when a new RetxMetadata is added into the
+ * metadata map. The end time is when the whole sending process is finished.
  *
  * @param[in] senderProdMeta  The retransmission entry.
  */
-void vcmtpSendv3::setTimerParameters(
-    RetxMetadata* const senderProdMeta)
+void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
     /* Get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
@@ -311,6 +333,7 @@ void vcmtpSendv3::setTimerParameters(
     senderProdMeta->retxTimeoutPeriod = mcastPeriod *
                                         senderProdMeta->retxTimeoutRatio;
 }
+
 
 /**
  * Transfers Application-specific metadata and a contiguous block of memory.
@@ -355,7 +378,8 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
     }
 
     /* Add a retransmission entry */
-    RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize);
+    RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
+                                                   metadata, metaSize);
 
     /* send out BOP message */
     SendBOPMessage(dataSize, metadata, metaSize);
@@ -392,8 +416,11 @@ void vcmtpSendv3::sendEOPMessage()
     header.payloadlen = 0;
     header.flags      = htons(VCMTP_EOP);
 
-    if (udpsend->SendTo((char*)&header, sizeof(header)) < 0)
+#ifdef TEST_EOP
+#else
+    if (udpsend->SendTo(&header, sizeof(header)) < 0)
         throw std::runtime_error("vcmtpSendv3::sendEOPMessage::SendTo error");
+#endif
 }
 
 
@@ -494,15 +521,16 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
     return NULL;
 }
 
+
 /**
- * Rejects a retransmission request from a receiver.
+ * Rejects a retransmission request from a receiver. A sender side timeout or
+ * received RETX_END message from all receivers and then receiving retx
+ * requests again would cause the rejection.
  *
  * @param[in] prodindex  Product-index of the request.
  * @param[in] sock       The receiver's socket.
  */
-void vcmtpSendv3::rejRetxReq(
-        const uint32_t prodindex,
-        const int      sock)
+void vcmtpSendv3::rejRetxReq(const uint32_t prodindex, const int sock)
 {
     VcmtpHeader sendheader;
 
@@ -513,12 +541,16 @@ void vcmtpSendv3::rejRetxReq(
     tcpsend->send(sock, &sendheader, NULL, 0);
 }
 
+
 /**
- * Retransmits data to a receiver.
+ * Retransmits data to a receiver. Requested retransmition block size will be
+ * checked to make sure the request is valid.
  *
  * @param[in] recvheader  The VCMTP header of the retransmission request.
  * @param[in] retxMeta    The associated retransmission entry.
  * @param[in] sock        The receiver's socket.
+ *
+ * @throw std::runtime_error if TcpSend::send() fails.
  */
 void vcmtpSendv3::retransmit(
         const VcmtpHeader* const  recvheader,
@@ -534,7 +566,7 @@ void vcmtpSendv3::retransmit(
         sendheader.prodindex  = htonl(recvheader->prodindex);
         sendheader.flags      = htons(VCMTP_RETX_DATA);
 
-        /*
+        /**
          * The entire first data-block is sent because it simplifies the
          * computation of the payload length and a request should start at the
          * beginning of a data-block anyway.
@@ -542,20 +574,94 @@ void vcmtpSendv3::retransmit(
         start = (start/VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
         uint16_t payLen = VCMTP_DATA_LEN;
 
-        /*
+        /**
          * Support sending multiple blocks.
          */
         for (uint32_t nbytes = out - start; 0 < nbytes; nbytes -= payLen) {
             if (payLen > nbytes)
-                payLen = nbytes; // only last block might be truncated
+                /** only last block might be truncated */
+                payLen = nbytes;
 
             sendheader.seqnum     = htonl(start);
             sendheader.payloadlen = htons(payLen);
-            tcpsend->send(sock, &sendheader,
-                    (char*)retxMeta->dataprod_p + start, payLen);
+            int retval = tcpsend->send(sock, &sendheader,
+                            (char*)retxMeta->dataprod_p + start, payLen);
+            if (retval < 0)
+                throw std::runtime_error(
+                        "vcmtpSendv3::retransmit() TcpSend::send() error");
         }
     }
 }
+
+
+/**
+ * Retransmits BOP to a receiver. All necessary metadata will be retrieved
+ * from the RetxMetadata map. This implies the addRetxMetadata() operation
+ * should be guaranteed to succeed so that a valid metadata can always be
+ * retrieved.
+ *
+ * @param[in] recvheader  The VCMTP header of the retransmission request.
+ * @param[in] retxMeta    The associated retransmission entry.
+ * @param[in] sock        The receiver's socket.
+ *
+ * @throw std::runtime_error if TcpSend::send() fails.
+ */
+void vcmtpSendv3::retransBOP(
+        const VcmtpHeader* const  recvheader,
+        const RetxMetadata* const retxMeta,
+        const int                 sock)
+{
+    VcmtpHeader   sendheader;
+    BOPMsg        bopMsg;
+
+    /* Set the VCMTP packet header. */
+    sendheader.prodindex  = htonl(recvheader->prodindex);
+    sendheader.seqnum     = 0;
+    sendheader.payloadlen = htons(retxMeta->metaSize +
+                                  (VCMTP_DATA_LEN - AVAIL_BOP_LEN));
+    sendheader.flags      = htons(VCMTP_RETX_BOP);
+
+    /* Set the VCMTP BOP message. */
+    bopMsg.prodsize = htonl(retxMeta->prodLength);
+    bopMsg.metasize = htons(retxMeta->metaSize);
+    memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
+
+    /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is corret */
+    int retval = tcpsend->send(sock, &sendheader, (char*)(&bopMsg),
+                               ntohs(sendheader.payloadlen));
+    if (retval < 0)
+        throw std::runtime_error(
+                "vcmtpSendv3::retransBOP() TcpSend::send() error");
+}
+
+
+/**
+ * Retransmits EOP to a receiver.
+ *
+ * @param[in] recvheader  The VCMTP header of the retransmission request.
+ * @param[in] sock        The receiver's socket.
+ *
+ * @throw std::runtime_error if TcpSend::send() fails.
+ */
+void vcmtpSendv3::retransEOP(
+        const VcmtpHeader* const  recvheader,
+        const int                 sock)
+{
+    VcmtpHeader   sendheader;
+
+    /* Set the VCMTP packet header. */
+    sendheader.prodindex  = htonl(recvheader->prodindex);
+    sendheader.seqnum     = 0;
+    sendheader.payloadlen = 0;
+    /** notice the flags field should be set to RETX_EOP other than EOP */
+    sendheader.flags      = htons(VCMTP_RETX_EOP);
+
+    int retval = tcpsend->send(sock, &sendheader, NULL, 0);
+    if (retval < 0)
+        throw std::runtime_error(
+                "vcmtpSendv3::retransEOP() TcpSend::send() error");
+}
+
 
 /**
  * Handles a retransmission request from a receiver.
@@ -565,22 +671,22 @@ void vcmtpSendv3::retransmit(
  *                        the request will be rejected.
  * @param[in] sock        The receiver's socket.
  */
-void vcmtpSendv3::handleRetxReq(
-        VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta,
-        const int           sock)
+void vcmtpSendv3::handleRetxReq(VcmtpHeader* const  recvheader,
+                                RetxMetadata* const retxMeta,
+                                const int           sock)
 {
     if (retxMeta) {
         retransmit(recvheader, retxMeta, sock);
     }
     else {
-        /*
+        /**
          * Reject the request because the retransmission entry was removed by
          * the per-product timer thread.
          */
         rejRetxReq(recvheader->prodindex, sock);
     }
 }
+
 
 /**
  * Handles a notice from a receiver that a data-product has been completely
@@ -591,19 +697,18 @@ void vcmtpSendv3::handleRetxReq(
  *                        nothing is done.
  * @param[in] sock        The receiver's socket.
  */
-void vcmtpSendv3::handleRetxEnd(
-        VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta,
-        const int           sock)
+void vcmtpSendv3::handleRetxEnd(VcmtpHeader* const  recvheader,
+                                RetxMetadata* const retxMeta,
+                                const int           sock)
 {
     if (retxMeta) {
-        /*
+        /**
          * Remove the specific receiver out of the unfinished receiver
          * set. Only if the product is removed by clearUnfinishedSet(),
          * it returns a true value.
          */
         if (sendMeta->clearUnfinishedSet(recvheader->prodindex, sock)) {
-            /*
+            /**
              * Only if the product is removed by clearUnfinishedSet()
              * since this receiver is the last one in the unfinished set,
              * notify the sending application.
@@ -613,6 +718,59 @@ void vcmtpSendv3::handleRetxEnd(
         }
     }
 }
+
+
+/**
+ * Handles the RETX_BOP request from receiver. If the corresponding metadata
+ * is still in the RetxMetadata map, then issue a BOP retransmission.
+ * Otherwise, reject the request.
+ *
+ * @param[in] recvheader  The VCMTP header of the retransmission request.
+ * @param[in] retxMeta    Associated retransmission entry.
+ * @param[in] sock        The receiver's socket.
+ */
+void vcmtpSendv3::handleBopReq(VcmtpHeader* const  recvheader,
+                               RetxMetadata* const retxMeta,
+                               const int           sock)
+{
+    if (retxMeta) {
+        retransBOP(recvheader, retxMeta, sock);
+    }
+    else {
+        /**
+         * Reject the request because the retransmission entry was removed by
+         * the per-product timer thread.
+         */
+        rejRetxReq(recvheader->prodindex, sock);
+    }
+}
+
+
+/**
+ * Handles the RETX_EOP request from receiver. If the corresponding metadata
+ * is still in the RetxMetadata map, then issue a EOP retransmission.
+ * Otherwise, reject the request.
+ *
+ * @param[in] recvheader  The VCMTP header of the retransmission request.
+ * @param[in] retxMeta    Associated retransmission entry.
+ * @param[in] sock        The receiver's socket.
+ */
+void vcmtpSendv3::handleEopReq(VcmtpHeader* const  recvheader,
+                               RetxMetadata* const retxMeta,
+                               const int           sock)
+{
+    if (retxMeta) {
+        retransEOP(recvheader, sock);
+    }
+    else {
+        /**
+         * Reject the request because the retransmission entry was removed by
+         * the per-product timer thread.
+         */
+        rejRetxReq(recvheader->prodindex, sock);
+    }
+}
+
 
 /**
  * The actual retransmission handling thread. Each thread listens on a receiver
@@ -638,19 +796,25 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
     VcmtpHeader recvheader;
 
     while(1) {
-        /* Receive the message from tcp connection and parse the header */
+        /** Receive the message from tcp connection and parse the header */
         if (tcpsend->parseHeader(retxsockfd, &recvheader) < 0)
             throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive "
                                      "header error");
 
-        /* Retrieve the retransmission entry of the requested product */
+        /** Retrieve the retransmission entry of the requested product */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
-        if (recvheader.flags & VCMTP_RETX_REQ) {
+        if (recvheader.flags == VCMTP_RETX_REQ) {
             handleRetxReq(&recvheader, retxMeta, retxsockfd);
         }
-        else if ((recvheader.flags & VCMTP_RETX_END)) {
+        else if (recvheader.flags == VCMTP_RETX_END) {
             handleRetxEnd(&recvheader, retxMeta, retxsockfd);
+        }
+        else if (recvheader.flags == VCMTP_BOP_REQ) {
+            handleBopReq(&recvheader, retxMeta, retxsockfd);
+        }
+        else if (recvheader.flags == VCMTP_EOP_REQ) {
+            handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
     }
 }

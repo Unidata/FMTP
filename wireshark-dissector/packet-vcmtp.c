@@ -25,17 +25,21 @@
 #include "config.h"
 #include <epan/packet.h>
 
-#define VCMTP_PORT 5173
+#define VCMTP_MCAST_PORT 5173
+#define VCMTP_RETX_PORT 1234
 
 /* packet types in the flag field */
-#define VCMTP_BOP        0x00000001
-#define VCMTP_EOP        0x00000002
-#define VCMTP_MEM_DATA   0x00000004
-#define VCMTP_RETX_REQ   0x00000008
-#define VCMTP_RETX_REJ   0x00000010
-#define VCMTP_RETX_END   0x00000020
-#define VCMTP_RETX_DATA  0x00000040
-#define VCMTP_BOP_REQ    0x00000080
+#define VCMTP_BOP        0x0001
+#define VCMTP_EOP        0x0002
+#define VCMTP_MEM_DATA   0x0004
+#define VCMTP_RETX_REQ   0x0008
+#define VCMTP_RETX_REJ   0x0010
+#define VCMTP_RETX_END   0x0020
+#define VCMTP_RETX_DATA  0x0040
+#define VCMTP_BOP_REQ    0x0080
+#define VCMTP_RETX_BOP   0x0100
+#define VCMTP_EOP_REQ    0x0200
+#define VCMTP_RETX_EOP   0x0400
 
 
 /* register the packet data structure */
@@ -52,6 +56,9 @@ static int hf_vcmtp_flag_retxrej = -1;
 static int hf_vcmtp_flag_retxend = -1;
 static int hf_vcmtp_flag_retxdata = -1;
 static int hf_vcmtp_flag_bopreq = -1;
+static int hf_vcmtp_flag_retxbop = -1;
+static int hf_vcmtp_flag_eopreq = -1;
+static int hf_vcmtp_flag_retxeop = -1;
 static gint ett_vcmtp = -1;
 
 
@@ -104,6 +111,12 @@ static void dissect_vcmtp(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
         proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxdata, tvb, offset, 2,
                             ENC_BIG_ENDIAN);
         proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_bopreq, tvb, offset, 2,
+                            ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxbop, tvb, offset, 2,
+                            ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_eopreq, tvb, offset, 2,
+                            ENC_BIG_ENDIAN);
+        proto_tree_add_item(vcmtp_tree, hf_vcmtp_flag_retxeop, tvb, offset, 2,
                             ENC_BIG_ENDIAN);
         offset += 2;
     }
@@ -204,6 +217,27 @@ void proto_register_vcmtp(void)
             FT_BOOLEAN, 16,
             NULL, VCMTP_BOP_REQ,
             NULL, HFILL }
+        },
+        /* RETX BOP type, sub-structure of flags field */
+        { &hf_vcmtp_flag_retxbop,
+            { "VCMTP RETX BOP Flag", "vcmtp.flags.retxbop",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_RETX_BOP,
+            NULL, HFILL }
+        },
+        /* EOP request type, sub-structure of flags field */
+        { &hf_vcmtp_flag_eopreq,
+            { "VCMTP EOP REQ Flag", "vcmtp.flags.eopreq",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_EOP_REQ,
+            NULL, HFILL }
+        },
+        /* RETX EOP type, sub-structure of flags field */
+        { &hf_vcmtp_flag_retxeop,
+            { "VCMTP RETX EOP Flag", "vcmtp.flags.retxeop",
+            FT_BOOLEAN, 16,
+            NULL, VCMTP_RETX_EOP,
+            NULL, HFILL }
         }
     };
 
@@ -232,5 +266,6 @@ void proto_reg_handoff_vcmtp(void)
     static dissector_handle_t vcmtp_handle;
 
     vcmtp_handle = create_dissector_handle(dissect_vcmtp, proto_vcmtp);
-    dissector_add_uint("udp.port", VCMTP_PORT, vcmtp_handle);
+    dissector_add_uint("udp.port", VCMTP_MCAST_PORT, vcmtp_handle);
+    dissector_add_uint("tcp.port", VCMTP_RETX_PORT, vcmtp_handle);
 }

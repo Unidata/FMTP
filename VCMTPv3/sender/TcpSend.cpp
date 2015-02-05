@@ -46,7 +46,7 @@
 #ifndef NULL
     #define NULL 0
 #endif
-#define MAX_CONNECTION 5
+#define MAX_CONNECTION 50
 
 using namespace std;
 
@@ -131,7 +131,7 @@ int TcpSend::acceptConn()
  */
 const list<int>& TcpSend::getConnSockList()
 {
-	return connSockList;
+    return connSockList;
 }
 
 
@@ -198,16 +198,10 @@ int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
 int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
                   size_t paylen)
 {
-    char headbuf[VCMTP_HEADER_LEN];
     struct iovec iov[2];
 
-    memcpy(headbuf,    &sendheader->prodindex,  4);
-    memcpy(headbuf+4,  &sendheader->seqnum,     4);
-    memcpy(headbuf+8,  &sendheader->payloadlen, 2);
-    memcpy(headbuf+10, &sendheader->flags,      2);
-
-    iov[0].iov_base = headbuf;
-    iov[0].iov_len  = sizeof(headbuf);
+    iov[0].iov_base = sendheader;
+    iov[0].iov_len  = sizeof(VcmtpHeader);
     iov[1].iov_base = payload;
     iov[1].iov_len  = paylen;
 
