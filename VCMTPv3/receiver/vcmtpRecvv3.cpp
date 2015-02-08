@@ -827,7 +827,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             else {
                 #ifdef DEBUG
                     std::cout << "(EOP) data-product completely received."
-                              << std::endl
+                              << std::endl;
                 #endif
             }
         }
