@@ -150,7 +150,7 @@ void vcmtpRecvv3::Start()
 std::string operator+(const std::string& lhs, const struct sockaddr_in& rhs)
 {
     return lhs + inet_ntoa(rhs.sin_addr) + ":" +
-            std::to_string(ntohs(static_cast<long long>(rhs.sin_port)));
+            std::to_string(static_cast<long long>(ntohs(rhs.sin_port)));
 }
 
 
