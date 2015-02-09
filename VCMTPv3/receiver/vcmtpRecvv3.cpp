@@ -178,8 +178,8 @@ void vcmtpRecvv3::joinGroup(
             < 0)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
-                std::to_string(mcastSock) + " to multicast group " +
-                mcastgroup);
+                std::to_string(static_cast<long long>(mcastSock)) +
+                               " to multicast group " + mcastgroup);
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
