@@ -46,6 +46,7 @@ class vcmtpRecvv3;
 struct StartTimerInfo
 {
     uint32_t     prodindex;  /*!< product index */
+    float        seconds;    /*!< product index */
     vcmtpRecvv3* receiver;   /*!< a poniter to the vcmtpRecvv3 instance */
 };
 
@@ -94,6 +95,8 @@ private:
     /*!< the state of EOP, true: received false: missing */
     bool                    EOPStatus;
     std::mutex              EOPStatMtx;
+    /** handler of the most recent timer thread being created */
+    pthread_t               latestTimer;
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
@@ -211,7 +214,7 @@ private:
                           uint16_t payloadlen);
     bool  sendRetxEnd(uint32_t prodindex);
     bool  hasLastBlock();
-    void  startTimerThread(uint32_t prodindex);
+    pthread_t startTimerThread(const uint32_t prodindex, const float seconds);
     static void* runTimerThread(void* ptr);
 
     void setEOPReceived();

@@ -491,18 +491,17 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         delete bitmap;
         bitmap = 0;
     }
-
     uint32_t blocknum = BOPmsg.prodsize ?
         (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
-
     // TODO: what if blocknum = 0?
     bitmap = new ProdBitMap(blocknum);
 
     /** clear EOPStatus for new product */
     clearEOPState();
 
-    /** start a timer to force requesting missing EOP */
-    startTimerThread(vcmtpHeader.prodindex);
+    /** start a timer to force requesting missing EOP if timeout */
+    // TODO: find a model for timeout
+    latestTimer = startTimerThread(vcmtpHeader.prodindex, 0.1);
 }
 
 
@@ -783,6 +782,8 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::EOPHandler() recv() error.");
 
+    /** cancel the timer since EOP has arrived. no need for retx req */
+    pthread_cancel(latestTimer);
     EOPHandler(header);
 }
 
@@ -945,12 +946,16 @@ bool vcmtpRecvv3::hasLastBlock()
  *
  * @param[in] prodindex        The product index of the product which timer is
  *                             set on.
+ * @param[in] seconds          Amount of time the timer should be sleeping for.
+ * @return                     The handler of the created timer thread.
  */
-void vcmtpRecvv3::startTimerThread(uint32_t prodindex)
+pthread_t vcmtpRecvv3::startTimerThread(const uint32_t prodindex,
+                                        const float    seconds)
 {
     pthread_t t;
     StartTimerInfo* timerinfo = new StartTimerInfo();
     timerinfo->prodindex = prodindex;
+    timerinfo->seconds   = seconds;
     timerinfo->receiver  = this;
     int retval = pthread_create(&t, NULL, &vcmtpRecvv3::runTimerThread,
                                 timerinfo);
@@ -961,6 +966,7 @@ void vcmtpRecvv3::startTimerThread(uint32_t prodindex)
     }
 
     pthread_detach(t);
+    return t;
 }
 
 
@@ -975,17 +981,22 @@ void vcmtpRecvv3::startTimerThread(uint32_t prodindex)
  */
 void* vcmtpRecvv3::runTimerThread(void* ptr)
 {
+    /** disable cancelability until all pre-work has finished */
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
     const StartTimerInfo* const timerInfo = static_cast<StartTimerInfo*>(ptr);
     const uint32_t              prodIndex = timerInfo->prodindex;
-    vcmtpRecvv3* const           receiver = timerInfo->receiver;
+    const float                 seconds   = timerInfo->seconds;
+    vcmtpRecvv3* const          receiver  = timerInfo->receiver;
 
-    float       seconds;
+    float sec;
     /** parse the float type timeout value into seconds and fractions */
-    // TODO: use a model for sleeping time
-    const float fraction = modff(0.9, &seconds);
+    const float nsec = modff(seconds, &sec);
     struct timespec timespec;
-    timespec.tv_sec = seconds;
-    timespec.tv_nsec = fraction * 1e9f;
+    timespec.tv_sec = sec;
+    timespec.tv_nsec = nsec * 1e9f;
+
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     /** sleep for a given amount of seconds and nanoseconds */
     (void) nanosleep(&timespec, 0);
     /** if EOP has not been received yet, issue a request for retx */
@@ -995,6 +1006,7 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
         std::cout << "timer wakes up, requesting retx EOP" << std::endl;
         #endif
     }
+    std::cout << "timer not cancelled" << std::endl;
 
     delete timerInfo;
     return NULL;
