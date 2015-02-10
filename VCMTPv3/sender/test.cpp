@@ -20,7 +20,7 @@ int main()
 	//sender = new vcmtpSendv3("192.168.0.101", 1234, "128.143.137.117", 5173, 0);
 	sender = new vcmtpSendv3("127.0.0.1", 1234, "233.0.225.123", 5173, 0, 0);
 	char *filename = "TEST1B";
-    size_t datasize = 1
+    size_t datasize = 1;
 	int fd;
 	fd = open(filename,O_RDONLY);
 	if(fd>0)
@@ -32,7 +32,9 @@ int main()
 
         sender->startCoordinator();
         sleep(2);
-		sender->sendProduct(data, datasize, metadata, metaSize);
+        for(int i=0; i<100; ++i) {
+            sender->sendProduct(data, datasize, metadata, metaSize);
+        }
         while(1);
 
 		munmap(data, datasize);
