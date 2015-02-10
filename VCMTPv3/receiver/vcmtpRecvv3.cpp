@@ -999,7 +999,9 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
         std::cout << "timer wakes up, requesting retx EOP" << std::endl;
         #endif
     }
+    #ifdef DEBUG
     std::cout << "timer not cancelled" << std::endl;
+    #endif
 
     delete timerInfo;
     return NULL;
