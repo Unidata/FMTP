@@ -27,7 +27,9 @@
 
 #include <errno.h>
 #include <iostream>
+#include <stdexcept>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -42,16 +44,33 @@ using namespace std;
 /**
  * Constructor of TcpRecv. It establishes a TCP connection to the sender.
  *
- * @param[in] tcpAddr        The address of the TCP connection.
- * @param[in] tcpPort        The port number of the TCP connection.
+ * @param[in] tcpAddr           The address of the TCP server: either an IPv4
+ *                              address in dotted-decimal format or an Internet
+ *                              host name.
+ * @param[in] tcpPort           The port number of the TCP connection in host
+ *                              byte-order.
+ * @throw std::invalid_argument if `tcpAddr` is invalid.
+ * @throw std::system_error     if a TCP connection can't be established.
  */
-TcpRecv::TcpRecv(string tcpAddr, unsigned short tcpPort)
+TcpRecv::TcpRecv(const string& tcpAddr, unsigned short tcpPort)
 :
     mutex()
 {
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
-    servAddr.sin_addr.s_addr = inet_addr(tcpAddr.c_str());
+    in_addr_t inAddr = inet_addr(tcpAddr.c_str());
+    if ((in_addr_t)-1 == inAddr) {
+        const struct hostent* hostEntry = gethostbyname(tcpAddr.c_str());
+        if (hostEntry == NULL)
+            throw std::invalid_argument(
+                    std::string("Invalid TCP-server identifier: \"") +
+                    tcpAddr + "\"");
+        if (hostEntry->h_addrtype != AF_INET || hostEntry->h_length != 4)
+            throw std::invalid_argument( std::string("TCP-server \"") + tcpAddr
+                    + "\" doesn't have an IPv4 address");
+        inAddr = *(in_addr_t*)hostEntry->h_addr_list[0];
+    }
+    servAddr.sin_addr.s_addr = inAddr;
     servAddr.sin_port = htons(tcpPort);
     initSocket();
 }
@@ -155,7 +174,7 @@ void TcpRecv::initSocket()
         if (errno != ECONNREFUSED && errno != ETIMEDOUT &&
                 errno != ECONNRESET && errno != EHOSTUNREACH) {
             throw std::system_error(errno, std::system_category(),
-                    "TcpRecv:TcpRecv() error connecting to sender");
+                    "TcpRecv:TcpRecv() error connecting to sender " + servAddr);
         }
         sleep(30);
     }

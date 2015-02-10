@@ -28,14 +28,16 @@
 #ifndef TCPRECV_H_
 #define TCPRECV_H_
 
+#include <arpa/inet.h>
 #include <mutex>
+#include <netinet/in.h>
 #include <string>
 
 
 class TcpRecv
 {
 public:
-    TcpRecv(std::string tcpAddr, unsigned short tcpPort);
+    TcpRecv(const std::string& tcpAddr, unsigned short tcpPort);
     ~TcpRecv();
     /**
      * Sends a header and a payload on the TCP connection. Blocks until the packet
@@ -94,5 +96,12 @@ private:
      */
     int  getSocket();
 };
+
+
+inline std::string operator+(const std::string& lhs, const struct sockaddr_in& rhs)
+{
+    return lhs + inet_ntoa(rhs.sin_addr) + ":" +
+            std::to_string(static_cast<long long>(ntohs(rhs.sin_port)));
+}
 
 #endif /* TCPRECV_H_ */
