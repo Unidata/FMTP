@@ -143,6 +143,7 @@ void vcmtpRecvv3::Start()
     joinGroup(mcastAddr, mcastPort);
     tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
+    startTimerThread();
     mcastHandler();
 }
 
@@ -476,6 +477,9 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     std::cout << "    metasize: " << BOPmsg.metasize << std::endl;
     #endif
 
+    /** forcibly terminate the previous timer */
+    timerWake.notify_all();
+
     if(notifier)
         notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
                                 BOPmsg.metasize, &prodptr);
@@ -489,12 +493,21 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     // TODO: what if blocknum = 0?
     bitmap = new ProdBitMap(blocknum);
 
-    /** clear EOPStatus for new product */
+    /**
+     * clear EOPStatus for new product. due to the sequencial feature that VC
+     * has, if new BOP arrives and previous EOP is missing, then the EOP is
+     * really missing. In which case, should be requested.
+     */
     clearEOPState();
 
-    /** start a timer to force requesting missing EOP if timeout */
-    // TODO: find a model for timeout
-    latestTimer = startTimerThread(vcmtpHeader.prodindex, 0.1);
+    /** add the new product into timer queue */
+    {
+        std::unique_lock<std::mutex> lock(timerQmtx);
+        // TODO: timer model need adjusting
+        timerParam timerparam = {vcmtpHeader.prodindex, 0.9};
+        timerParamQ.push(timerparam);
+        timerQfilled.notify_all();
+    }
 }
 
 
@@ -775,8 +788,8 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::EOPHandler() recv() error.");
 
-    /** cancel the timer since EOP has arrived. no need for retx req */
-    pthread_cancel(latestTimer);
+    setEOPReceived();
+    timerWake.notify_all();
     EOPHandler(header);
 }
 
@@ -937,21 +950,12 @@ bool vcmtpRecvv3::hasLastBlock()
 /**
  * Starts a timer thread to watch for the case of missing EOP.
  *
- * @param[in] prodindex        The product index of the product which timer is
- *                             set on.
- * @param[in] seconds          Amount of time the timer should be sleeping for.
- * @return                     The handler of the created timer thread.
+ * @return  none
  */
-pthread_t vcmtpRecvv3::startTimerThread(const uint32_t prodindex,
-                                        const float    seconds)
+void vcmtpRecvv3::startTimerThread()
 {
     pthread_t t;
-    StartTimerInfo* timerinfo = new StartTimerInfo();
-    timerinfo->prodindex = prodindex;
-    timerinfo->seconds   = seconds;
-    timerinfo->receiver  = this;
-    int retval = pthread_create(&t, NULL, &vcmtpRecvv3::runTimerThread,
-                                timerinfo);
+    int retval = pthread_create(&t, NULL, &vcmtpRecvv3::runTimerThread, this);
 
     if(retval != 0) {
         throw std::system_error(retval, std::system_category(),
@@ -959,50 +963,57 @@ pthread_t vcmtpRecvv3::startTimerThread(const uint32_t prodindex,
     }
 
     pthread_detach(t);
-    return t;
+}
+
+
+/**
+ * Start the actual timer thread.
+ *
+ * @param[in] *ptr    A pointer to an vcmtpRecvv3 instance.
+ */
+void* vcmtpRecvv3::runTimerThread(void* ptr)
+{
+    vcmtpRecvv3* const receiver = static_cast<vcmtpRecvv3*>(ptr);
+    receiver->timerThread();
+    return NULL;
 }
 
 
 /**
  * Runs a timer thread to watch for the case of missing EOP. If an expected
  * EOP is not received, the timer should trigger after sleeping. If it is
- * received on the other hand, do not trigger to request for retransmission
- * of the EOP.
+ * received from the mcast socket, do not trigger to request for retransmission
+ * of the EOP. mcastEOPHandler will notify the condition variable to interrupt
+ * the timed wait function.
  *
- * @param[in] *ptr    A pointer to a pre-defined data structure, including
- *                    prodindex and a pointer to the vcmtpRecvv3 class itself.
+ * @param[in] none
  */
-void* vcmtpRecvv3::runTimerThread(void* ptr)
+void vcmtpRecvv3::timerThread()
 {
-    /** disable cancelability until all pre-work has finished */
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    while (1) {
+        timerParam timerparam;
+        {
+            std::unique_lock<std::mutex> lock(timerQmtx);
+            while (timerParamQ.empty())
+                timerQfilled.wait(lock);
+            timerparam = timerParamQ.front();
+        }
 
-    const StartTimerInfo* const timerInfo = static_cast<StartTimerInfo*>(ptr);
-    const uint32_t              prodIndex = timerInfo->prodindex;
-    const float                 seconds   = timerInfo->seconds;
-    vcmtpRecvv3* const          receiver  = timerInfo->receiver;
+        unsigned long period = timerparam.seconds * 1000000000lu;
+        {
+            std::unique_lock<std::mutex> lk(timerWakemtx);
+            /** sleep for a given amount of time in precision of nanoseconds */
+            timerWake.wait_for(lk, std::chrono::nanoseconds(period));
+        }
 
-    float sec;
-    /** parse the float type timeout value into seconds and fractions */
-    const float nsec = modff(seconds, &sec);
-    struct timespec timespec;
-    timespec.tv_sec = sec;
-    timespec.tv_nsec = nsec * 1e9f;
-
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    /** sleep for a given amount of seconds and nanoseconds */
-    (void) nanosleep(&timespec, 0);
-    /** if EOP has not been received yet, issue a request for retx */
-    if (!receiver->isEOPReceived()) {
-        receiver->pushMissingEopReq(prodIndex);
-        #ifdef DEBUG
-        std::cout << "timer wakes up, requesting retx EOP" << std::endl;
-        #endif
+        /** if EOP has not been received yet, issue a request for retx */
+        if (!isEOPReceived()) {
+            pushMissingEopReq(timerparam.prodindex);
+            #ifdef DEBUG
+            std::cout << "timer wakes up, requesting retx EOP" << std::endl;
+            #endif
+        }
     }
-    std::cout << "timer not cancelled" << std::endl;
-
-    delete timerInfo;
-    return NULL;
 }
 
 
