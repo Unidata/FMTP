@@ -857,12 +857,11 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
 {
     const StartTimerThreadInfo* const timerInfo =
             static_cast<StartTimerThreadInfo*>(ptr);
-    const uint32_t                    prodIndex = timerInfo->prodindex;
-    vcmtpSendv3* const                sender = timerInfo->sender;
-    SendAppNotifier* const notifier = sender->notifier;
-    senderMetadata* const             sendMeta = sender->sendMeta;
-    const RetxMetadata* const         perProdMeta =
-            sendMeta->getMetadata(prodIndex);
+    const uint32_t            prodIndex   = timerInfo->prodindex;
+    vcmtpSendv3* const        sender      = timerInfo->sender;
+    SendAppNotifier* const    notifier    = sender->notifier;
+    senderMetadata* const     sendMeta    = sender->sendMeta;
+    const RetxMetadata* const perProdMeta = sendMeta->getMetadata(prodIndex);
 
     if (perProdMeta != NULL)
     {
