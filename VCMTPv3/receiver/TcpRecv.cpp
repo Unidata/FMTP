@@ -137,7 +137,7 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
     if (nbytes > 0)
         return nbytes;
 
-    std::string sockStr = std::to_string(sockfd);
+    std::string sockStr = std::to_string(static_cast<long long>(sockfd));
 
     if (nbytes == 0)
         throw std::logic_error("TcpRecv::recvData(): Socket " + sockStr +
