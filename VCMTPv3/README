@@ -52,3 +52,24 @@ pre-requisites have been met. All of the following instructions will be given
 based on CentOS 6.6 x86_64.
 Git
 $ sudo yum install git
+G++ 4.4 or above
+$ sudo yum install gcc-c++
+For Mac OS X users, Apple has been moved to LLVM, thus no default gcc is provided
+any more, you could use clang++ as an alternative.
+Next, for sending side, go into the sending protocol folder
+$ cd VCMTPv3/sender
+$ make -f Makefile_send
+For receiving side, go into the receiving protocol folder
+$ cd VCMTPv3/receiver
+$ make -f Makefile_recv
+
+
+
+
+USAGE
+-----
+
+VCMTPv3 is designed to cooperate with LDM (by UCAR) as an underlying transport
+protocol. But it's also possible to work alone using the testing applications.
+There is a testSendApp.cpp in the sender folder and a testRecvApp in the
+receiver folder.

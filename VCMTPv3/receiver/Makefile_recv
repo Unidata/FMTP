@@ -1,12 +1,12 @@
-#CC = g++
-CC = clang++
+CC = g++
+#CC = clang++
 INCLUDE = ../
 LIB =
-ELFFILE = vcmtpRecvv3
+ELFFILE = testRecvApp
 DEBUG_FLAG = DEBUG
 
-$(ELFFILE): main.cpp TcpRecv.cpp vcmtpRecvv3.cpp
-	$(CC) -D$(DEBUG_FLAG) -std=c++0x -I$(INCLUDE) -pthread -o $(ELFFILE) main.cpp \
+$(ELFFILE): testRecvApp.cpp TcpRecv.cpp vcmtpRecvv3.cpp
+	$(CC) -D$(DEBUG_FLAG) -std=c++0x -I$(INCLUDE) -pthread -o $(ELFFILE) testRecvApp.cpp \
 		TcpRecv.cpp vcmtpRecvv3.cpp ProdBitMap.cpp
 
 .PHONY : clean
