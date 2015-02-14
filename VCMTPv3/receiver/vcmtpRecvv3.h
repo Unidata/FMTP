@@ -96,11 +96,15 @@ private:
     /*!< the state of EOP, true: received false: missing */
     bool                    EOPStatus;
     std::mutex              EOPStatMtx;
-    /** handler of the most recent timer thread being created */
-    pthread_t               latestTimer;
     pthread_t               retx_rq; ///< Retransmission request thread
     pthread_t               retx_t;  ///< Retransmission receive thread
     pthread_t               mcast_t; ///< Multicast receiver thread
+    /** a queue containing timerParam structure for each product */
+    std::queue<timerParam>  timerParamQ;
+    std::condition_variable timerQfilled;
+    std::mutex              timerQmtx;
+    std::condition_variable timerWake;
+    std::mutex              timerWakemtx;
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
@@ -219,8 +223,9 @@ private:
                           uint16_t payloadlen);
     bool  sendRetxEnd(uint32_t prodindex);
     bool  hasLastBlock();
-    pthread_t startTimerThread(const uint32_t prodindex, const float seconds);
+    void  startTimerThread();
     static void* runTimerThread(void* ptr);
+    void  timerThread();
 
     void setEOPReceived();
     void clearEOPState();

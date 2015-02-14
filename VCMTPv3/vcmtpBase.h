@@ -65,7 +65,6 @@ typedef struct VcmtpBOPMessage {
     uint32_t   prodsize;     /*!< support 4GB maximum */
     uint16_t   metasize;
     char       metadata[AVAIL_BOP_LEN];
-    //char*      metadata;
 } BOPMsg;
 
 const uint16_t VCMTP_BOP       = 0x0001;
@@ -91,6 +90,13 @@ typedef struct recvInternalRetxReqMessage {
     uint32_t seqnum;
     uint16_t payloadlen;
 } INLReqMsg;
+
+
+/** a structure defining parameters for each product, prodindex : sleeptime */
+typedef struct timerParameter {
+    uint32_t prodindex;
+    float    seconds;
+} timerParam;
 
 
 class vcmtpBase {

@@ -1,0 +1,54 @@
+CONTENTS OF THIS FILE
+---------------------
+
+* Introduction
+* System Requirements
+* Installation
+* Usage
+* Troubleshooting
+* FAQ
+* Maintainers
+
+
+
+INTRODUCTION
+------------
+
+VCMTPv3 is the third version of the reliable multicast transportation protocol
+developed by University of Virginia. Currently, this protocol is running in
+the user space as an application protocol. And underneath it's calling the
+standard TCP/UDP and IP protocol stack. This protocol is consisted of two major
+parts: the sending side and the receiving side. In a typical scenario, there
+should be one sender and multiple receivers in a multicast group. The sender
+runs the sending side protocol and sends out the data via multicast. Those
+receivers will run the receiving side protocol to receive the data. If losses
+happen, the receiver can request for retransmission via a TCP connection from
+the receiver to the sender. And sender will determine either to respond to the
+request or to reject it.
+
+
+
+
+SYSTEM REQUIREMENTS
+-------------------
+
+VCMTPv3 is developed and tested on Linux/UNIX. All the mainstream distributions
+such as Ubuntu LTS 12.04 or above, CentOS 5 or above, Mac OSX 10.9 or above
+and FreeBSD 9 or above will be supported. Microsoft Windows is not supported.
+
+Recommended hardware for running this protocol would be:
+Duo core CPU or higher
+1GB memory or higher
+10GB hard drive or higher
+
+
+
+
+INSTALLATION
+------------
+
+Before actually start to compile and install the protocol. Make sure the listed
+pre-requisites have been met. All of the following instructions will be given
+based on CentOS 6.6 x86_64.
+Git
+$ sudo yum install git
