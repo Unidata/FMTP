@@ -5,8 +5,6 @@ CONTENTS OF THIS FILE
 * System Requirements
 * Installation
 * Usage
-* Troubleshooting
-* FAQ
 * Maintainers
 
 
@@ -25,6 +23,7 @@ receivers will run the receiving side protocol to receive the data. If losses
 happen, the receiver can request for retransmission via a TCP connection from
 the receiver to the sender. And sender will determine either to respond to the
 request or to reject it.
+The whole program is written in C++.
 
 
 
@@ -50,15 +49,19 @@ INSTALLATION
 Before actually start to compile and install the protocol. Make sure the listed
 pre-requisites have been met. All of the following instructions will be given
 based on CentOS 6.6 x86_64.
+
 Git
 $ sudo yum install git
+
 G++ 4.4 or above
 $ sudo yum install gcc-c++
 For Mac OS X users, Apple has been moved to LLVM, thus no default gcc is provided
 any more, you could use clang++ as an alternative.
+
 Next, for sending side, go into the sending protocol folder
 $ cd VCMTPv3/sender
 $ make -f Makefile_send
+
 For receiving side, go into the receiving protocol folder
 $ cd VCMTPv3/receiver
 $ make -f Makefile_recv
@@ -73,3 +76,25 @@ VCMTPv3 is designed to cooperate with LDM (by UCAR) as an underlying transport
 protocol. But it's also possible to work alone using the testing applications.
 There is a testSendApp.cpp in the sender folder and a testRecvApp in the
 receiver folder.
+As being explained earlier, the testSendApp is the sending application which
+plays the role of the single sender in a multicast group. And you can start as
+many as testRecvApp you like to make them work as multicast receivers. But do
+remember that the sender should always be started first before the receivers.
+
+Start the sender by
+$ ./testSendApp
+
+Start the receiver by
+$ ./testRecvApp
+
+
+
+
+MAINTAINERS
+-----------
+
+Steve Emmerson, emmerson@ucar.edu,
+University Corporation for Atmospheric Research
+
+Shawn Chen, sc7cq@virginia.edu,
+University of Virginia
