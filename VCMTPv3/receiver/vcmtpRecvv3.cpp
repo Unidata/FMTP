@@ -279,7 +279,7 @@ void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
     if (nbytes < VCMTP_HEADER_LEN)
         throw std::runtime_error(
                 std::string("vcmtpRecvv3::decodeHeader(): Packet is too small: ")
-                + std::to_string(nbytes) + " bytes");
+                + std::to_string(static_cast<long long>(nbytes)) + " bytes");
 
     header.prodindex  = ntohl(*(uint32_t*)packet);
     header.seqnum     = ntohl(*(uint32_t*)(packet+4));
