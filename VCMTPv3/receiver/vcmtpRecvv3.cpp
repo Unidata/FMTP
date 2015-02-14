@@ -65,7 +65,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    tcprecv(0),
+    tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     prodptr(0),
     notifier(notifier),
     mcastSock(0),
@@ -96,7 +96,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    tcprecv(0),
+    tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     prodptr(0),
     notifier(0),   /*!< constructor called by independent test program will
                     set notifier to NULL */
@@ -111,39 +111,61 @@ vcmtpRecvv3::vcmtpRecvv3(
 
 
 /**
- * Destructs the receiver side instance. Release the resources.
+ * Destroys the receiver side instance. Releases the resources.
  *
  * @param[in] none
  */
 vcmtpRecvv3::~vcmtpRecvv3()
 {
+    Stop();
     close(mcastSock);
-    close(retxSock);
+    (void)close(retxSock); // failure is irrelevant
     misBOPlist.clear();
     delete tcprecv;
-    delete bitmap;
+    if (bitmap)
+        delete bitmap;
 }
 
 
 /**
  * Join given multicast group (defined by mcastAddr:mcastPort) to receive
  * multicasting products and start receiving thread to listen on the socket.
- * Doesn't return until `vcmtpRecvv3::~vcmtpRecvv3()` or `vcmtpRecvv3::Stop()`
- * is called or an exception is thrown.
+ * Doesn't return until `vcmtpRecvv3::Stop` is called or an exception
+ * is thrown.
  *
  * @throw std::system_error  if the multicast group couldn't be joined.
  * @throw std::system_error  if an I/O error occurs.
+ * @throw std::system_error  if the multicast-receiving thread couldn't be
+ *                           created.
  */
 void vcmtpRecvv3::Start()
 {
-    /** set prodindex to max to avoid BOP missing for prodindex=0 */
+    /* set prodindex to max to avoid BOP missing for prodindex=0 */
     vcmtpHeader.prodindex = 0xFFFFFFFF;
-    /** clear EOPStatus for new product */
+    /* clear EOPStatus for new product */
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
-    tcprecv = new TcpRecv(tcpAddr, tcpPort);
     StartRetxProcedure();
-    mcastHandler();
+
+    int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
+            this);
+    if (status)
+        throw std::system_error(status, std::system_category(),
+                "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
+    (void)pthread_join(mcast_t, NULL);
+}
+
+
+/**
+ * Stops a running VCMTP receiver. Idempotent.
+ *
+ * @pre  `vcmtpRecvv3::Start()` was previously called.
+ */
+void vcmtpRecvv3::Stop()
+{
+    (void)pthread_cancel(mcast_t); // failure is irrelevant
+    (void)pthread_cancel(retx_rq); // failure is irrelevant
+    (void)pthread_cancel(retx_t); // failure is irrelevant
 }
 
 
@@ -184,14 +206,13 @@ void vcmtpRecvv3::joinGroup(
 
 /**
  * Start a Retx procedure, including the retxHandler thread and retxRequester
- * thread. These two threads will be started independantly and after the
+ * thread. These two threads will be started independently and after the
  * procedure returns, it continues to run the mcastHandler thread.
  *
  * @param[in] none
  */
 void vcmtpRecvv3::StartRetxProcedure()
 {
-    pthread_t retx_t, retx_rq;
     pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler, this);
     pthread_detach(retx_t);
     pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester, this);
@@ -256,7 +277,8 @@ void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
 {
     if (nbytes < VCMTP_HEADER_LEN)
         throw std::runtime_error(
-                "vcmtpRecvv3::decodeHeader(): Packet is too small");
+                std::string("vcmtpRecvv3::decodeHeader(): Packet is too small: ")
+                + std::to_string(nbytes) + " bytes");
 
     header.prodindex  = ntohl(*(uint32_t*)packet);
     header.seqnum     = ntohl(*(uint32_t*)(packet+4));
@@ -282,6 +304,20 @@ void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes
                 "Invalid payload length");
 }
 
+/**
+ * Starts the multicast-receiving task of a VCMTP receiver. Called by
+ * `pthread_create()`.
+ *
+ * @param[in] arg   Pointer to the VCMTP receiver.
+ * @retval    NULL  Always.
+ */
+void* vcmtpRecvv3::StartMcastHandler(
+        void* const arg)
+{
+    (static_cast<vcmtpRecvv3*>(arg))->mcastHandler();
+    return 0;
+}
+
 
 /**
  * Handles multicast packets. To avoid extra copying operations, here recv()
@@ -299,6 +335,14 @@ void vcmtpRecvv3::mcastHandler()
         VcmtpHeader   header;
         const ssize_t nbytes = recv(mcastSock, &header, sizeof(header),
                                     MSG_PEEK);
+        /*
+         * Allow the current thread to be cancelled only when it is likely
+         * blocked attempting to read from the multicast socket because that
+         * prevents the receiver from being put into an inconsistent state yet
+         * allows for fast termination.
+         */
+        int prevState;
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState);
 
         if (nbytes < 0)
             throw std::system_error(errno, std::system_category(),
@@ -317,6 +361,9 @@ void vcmtpRecvv3::mcastHandler()
         else if (header.flags == VCMTP_EOP) {
             mcastEOPHandler(header);
         }
+
+        int cancelState;
+        (void)pthread_setcancelstate(prevState, &cancelState);
     }
 }
 
@@ -378,12 +425,24 @@ void vcmtpRecvv3::retxHandler()
         /** temp buffer, do not access in case of out of bound issues */
         char* paytmp;
         ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
+        /*
+         * Allow the current thread to be cancelled only when it is likely
+         * blocked attempting to read from the unicast socket because that
+         * prevents the receiver from being put into an inconsistent state yet
+         * allows for fast termination.
+         */
+        int cancelState;
+        int prevState;
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState);
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
         if (header.flags == VCMTP_RETX_BOP)
         {
+            (void)pthread_setcancelstate(prevState, &cancelState);
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
+            (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+
             BOPHandler(header, paytmp);
 
             /** remove the BOP from missing list */
@@ -406,12 +465,20 @@ void vcmtpRecvv3::retxHandler()
              */
             char tmp[VCMTP_DATA_LEN];
 
-            if(prodptr)
+            if(prodptr) {
+                (void)pthread_setcancelstate(prevState, &cancelState);
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
-            else
+                (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
+                        &cancelState);
+            }
+            else {
                 /** dump the payload since there is no product queue */
+                (void)pthread_setcancelstate(prevState, &cancelState);
                 tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
+                        &cancelState);
+            }
 
             bitmap->set(header.seqnum/VCMTP_DATA_LEN);
             if (bitmap && bitmap->isComplete()) {
@@ -430,6 +497,8 @@ void vcmtpRecvv3::retxHandler()
         {
             retxEOPHandler(header);
         }
+
+        (void)pthread_setcancelstate(prevState, &cancelState);
     }
 }
 

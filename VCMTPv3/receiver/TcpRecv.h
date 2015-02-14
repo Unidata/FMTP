@@ -71,7 +71,6 @@ public:
 private:
     int                     sockfd;
     struct sockaddr_in      servAddr;
-    std::mutex              mutex;
 
     /**
      * Initializes the TCP connection. Blocks until the connection is established
@@ -80,21 +79,6 @@ private:
      * @throws std::system_error  if a system error occurs.
      */
     void initSocket();
-    /**
-     * Ensures that the TCP connection is established. Blocks until the connection
-     * is established or a severe error occurs. Does nothing if the connection is
-     * OK. This method is thread-safe.
-     *
-     * @throws std::system_error  if a system error occurs.
-     */
-    void reconnect();
-    /**
-     * Returns the socket corresponding to the TCP connection. This method is
-     * thread-safe.
-     *
-     * @return  The corresponding socket.
-     */
-    int  getSocket();
 };
 
 

@@ -64,6 +64,7 @@ public:
                 const unsigned short mcastPort);
     ~vcmtpRecvv3();
     void    Start();
+    void    Stop();
 
 private:
     std::string             tcpAddr;
@@ -97,10 +98,14 @@ private:
     std::mutex              EOPStatMtx;
     /** handler of the most recent timer thread being created */
     pthread_t               latestTimer;
+    pthread_t               retx_rq; ///< Retransmission request thread
+    pthread_t               retx_t;  ///< Retransmission receive thread
+    pthread_t               mcast_t; ///< Multicast receiver thread
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
     static void*  StartRetxHandler(void* ptr);
+    static void*  StartMcastHandler(void* ptr);
     void    StartRetxProcedure();
     void    mcastHandler();
     void    retxHandler();

@@ -33,6 +33,7 @@
 
 #include <string>
 #include <list>
+#include <mutex>
 #include "vcmtpBase.h"
 #include <pthread.h>
 
@@ -58,7 +59,7 @@ private:
     int sockfd;
     struct sockaddr_in servAddr;
     std::list<int> connSockList;
-    pthread_mutex_t sockListMutex; /*!< protect operation on shared sockList */
+    std::mutex sockListMutex; /*!< protect operation on shared sockList */
 };
 
 #endif /* TCPSEND_H_ */

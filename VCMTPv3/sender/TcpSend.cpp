@@ -29,7 +29,9 @@
 
 
 #include <errno.h>
+#include <iostream>
 #include <sys/socket.h>
+#include <mutex>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -55,27 +57,39 @@ using namespace std;
  * tcp connection. When the connection is established, keep listen on it with a
  * maximum of MAX_CONNECTION allowed to connect.
  *
- * @param[in] tcpAddr     tcp server address
+ * @param[in] tcpAddr     Specification of the interface on which the TCP
+ *                        server will listen as a dotted-decimal IPv4 address.
  * @param[in] tcpPort     tcp port number (in host order) specified by sending
  *                        application. (or 0, meaning system will use random
  *                        available port)
- * @throw  runtime_error if socket creation fails.
- * @throw  runtime_error if socket bind() operation fails.
+ * @throw  std::invalid_argument if `tcpAddr` is invalid.
+ * @throw  std::runtime_error    if socket creation fails.
+ * @throw  std::runtime_error    if socket bind() operation fails.
  */
 TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
+    : sockListMutex()
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         throw std::runtime_error("TcpSend::TcpSend() error creating socket");
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
-    servAddr.sin_addr.s_addr = inet_addr(tcpAddr.c_str());
+    in_addr_t inAddr = inet_addr(tcpAddr.c_str());
+    if ((in_addr_t)(-1) == inAddr)
+        throw std::invalid_argument(std::string("Invalid interface: ") +
+                tcpAddr);
+    servAddr.sin_addr.s_addr = inAddr;
     /** If tcpPort = 0, OS will automatically choose an available port number. */
     servAddr.sin_port = htons(tcpPort);
+#if 0
+    cerr << std::string("TcpSend::TcpSend() Binding TCP socket to ").
+            append(tcpAddr).append(":").append(std::to_string(tcpPort)).
+            append("\n");
+#endif
     if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
-                std::to_string(static_cast<long long>(tcpPort)) + "\"");
+                std::to_string(tcpPort) + "\"");
     /** listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
 }
@@ -95,7 +109,6 @@ TcpSend::~TcpSend()
         connSockList.erase(it);
     }
     close(sockfd);
-    pthread_mutex_destroy(&sockListMutex);
 }
 
 
@@ -110,13 +123,30 @@ TcpSend::~TcpSend()
  */
 int TcpSend::acceptConn()
 {
+    struct sockaddr_in addr;
+    unsigned           addrLen = sizeof(addr);
+    if (getsockname(sockfd, (struct sockaddr*)&addr, &addrLen))
+        throw std::system_error(errno, std::system_category(),
+                std::string("Couldn't get address of socket ") +
+                std::to_string(sockfd));
+#if 0
+    cerr << std::string("TcpSend::acceptConn(): Accept()ing on socket ").
+            append(std::to_string(sockfd)).append(" (").
+            append(inet_ntoa(addr.sin_addr)).append(":").
+            append(std::to_string(ntohs(addr.sin_port))).append(")\n");
+#endif
     int newsockfd = accept(sockfd, NULL, NULL);
     if(newsockfd < 0)
-        throw std::runtime_error("TcpSend::readSock() error reading from socket");
+        throw std::runtime_error("TcpSend::acceptConn() error reading from socket");
 
-    pthread_mutex_lock(&sockListMutex);
-    connSockList.push_back(newsockfd);
-    pthread_mutex_unlock(&sockListMutex);
+#if 0
+    cerr << std::string("TcpSend::acceptConn(): Accepted new socket ").
+            append(std::to_string(newsockfd)).append("\n");
+#endif
+    {
+        std::unique_lock<std::mutex> lock(sockListMutex);
+        connSockList.push_back(newsockfd);
+    }
 
     return newsockfd;
 }

@@ -468,7 +468,8 @@ void* vcmtpSendv3::coordinator(void* ptr)
 /**
  * Return the local port number.
  *
- * @return                    The local port number in host byte-order.
+ * @return                   The local port number in host byte-order.
+ * @throw std::system_error  The port number cannot be obtained.
  */
 unsigned short vcmtpSendv3::getTcpPortNum()
 {

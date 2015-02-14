@@ -53,8 +53,6 @@ using namespace std;
  * @throw std::system_error     if a TCP connection can't be established.
  */
 TcpRecv::TcpRecv(const string& tcpAddr, unsigned short tcpPort)
-:
-    mutex()
 {
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
@@ -83,14 +81,13 @@ TcpRecv::TcpRecv(const string& tcpAddr, unsigned short tcpPort)
  */
 TcpRecv::~TcpRecv()
 {
-    close(getSocket());
+    close(sockfd);
 }
 
 
 /**
  * Sends a header and a payload on the TCP connection. Blocks until the packet
- * is sent or a severe error occurs. Re-establishes the TCP connection if
- * necessary.
+ * is sent or a severe error occurs.
  *
  * @param[in] header   Header.
  * @param[in] headLen  Length of the header in bytes.
@@ -102,7 +99,6 @@ TcpRecv::~TcpRecv()
 ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
                           size_t payLen)
 {
-    ssize_t      nbytes;
     struct iovec iov[2];
 
     iov[0].iov_base = header;
@@ -110,33 +106,25 @@ ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
     iov[1].iov_base = payload;
     iov[1].iov_len  = payLen;
 
-    for (;;) {
-        nbytes = writev(getSocket(), iov, 2);
-        if (nbytes != -1)
-            break;
-        reconnect();
-    }
-
-    return nbytes; // Eclipse wants to see a return
+    return writev(sockfd, iov, 2);
 }
 
 
 /**
- * Receives a header and a payload on the TCP connection. Blocks until the
- * packet is received or a severe error occurs. Re-establishes the TCP
- * connection if necessary.
+ * Receives a header and a payload on the TCP connection. Blocks until a packet
+ * is received or an error occurs.
  *
  * @param[in] header   Header.
  * @param[in] headLen  Length of the header in bytes.
  * @param[in] payload  Payload.
  * @param[in] payLen   Length of the payload in bytes.
- * @retval    -1       O/S failure.
  * @return             Number of bytes received.
+ * @throw std::logic_error  if the socket was closed while being read.
+ * @throw std::system_error if the socket couldn't be read.
  */
 ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
                           size_t payLen)
 {
-    ssize_t      nbytes = 0;
     struct iovec iov[2];
 
     iov[0].iov_base = header;
@@ -144,14 +132,19 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
     iov[1].iov_base = payload;
     iov[1].iov_len  = payLen;
 
-    for (;;) {
-        nbytes = readv(getSocket(), iov, 2);
-        if (nbytes != -1)
-            break;
-        reconnect();
-    }
+    const ssize_t nbytes = readv(sockfd, iov, 2);
 
-    return nbytes;
+    if (nbytes > 0)
+        return nbytes;
+
+    std::string sockStr = std::to_string(sockfd);
+
+    if (nbytes == 0)
+        throw std::logic_error("TcpRecv::recvData(): Socket " + sockStr +
+                " was closed");
+
+    throw std::system_error(errno, std::system_category(),
+            "TcpRecv::recvData(): Couldn't read from socket " + sockStr);
 }
 
 
@@ -170,45 +163,22 @@ void TcpRecv::initSocket()
         throw std::system_error(errno, std::system_category(),
                 "TcpRecv::TcpRecv() error creating socket");
 
+#if 0
+    cout << std::string("TcpRecv::initSocket(): Connecting TCP socket ").
+            append(std::to_string(sockfd)).append(" to ").
+            append(inet_ntoa(servAddr.sin_addr)).append(":").
+            append(std::to_string(ntohs(servAddr.sin_port))).append("\n");
+#endif
     while (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
-        if (errno != ECONNREFUSED && errno != ETIMEDOUT &&
-                errno != ECONNRESET && errno != EHOSTUNREACH) {
-            throw std::system_error(errno, std::system_category(),
-                    "TcpRecv:TcpRecv() error connecting to sender " + servAddr);
+        if (errno == ECONNREFUSED || errno == ETIMEDOUT ||
+                errno == ECONNRESET || errno == EHOSTUNREACH) {
+            if (sleep(30))
+                throw std::system_error(EINTR, std::system_category(),
+                    "TcpRecv:TcpRecv() sleep() interrupted");
         }
-        sleep(30);
+        else {
+            throw std::system_error(errno, std::system_category(),
+                    "TcpRecv:TcpRecv() Error connecting to " + servAddr);
+        }
     }
-}
-
-
-/**
- * Ensures that the TCP connection is established. Blocks until the connection
- * is established or a severe error occurs. Does nothing if the connection is
- * OK. This method is thread-safe.
- *
- * @param[in] none
- */
-void TcpRecv::reconnect()
-{
-    int                          status;
-    socklen_t                    len = sizeof(status);
-    std::unique_lock<std::mutex> lock(mutex);
-
-    if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &status, &len) || status) {
-        close(sockfd);
-        initSocket();
-    }
-}
-
-
-/**
- * Returns the socket corresponding to the TCP connection. This method is
- * thread-safe.
- *
- * @return  The corresponding socket.
- */
-int TcpRecv::getSocket()
-{
-    std::unique_lock<std::mutex> lock(mutex);
-    return sockfd;
 }
