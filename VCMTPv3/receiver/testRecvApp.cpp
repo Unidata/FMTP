@@ -30,7 +30,6 @@
 #include <string>
 #include "vcmtpRecvv3.h"
 
-using namespace std;
 
 int main(int argc, char* argv[])
 {
@@ -44,9 +43,9 @@ int main(int argc, char* argv[])
     string mcastAddr               = "233.0.225.123";
     const unsigned short mcastPort = 5173;
     */
-    string tcpAddr(argv[1]);
+    std::string tcpAddr(argv[1]);
     const unsigned short tcpPort = (unsigned short)atoi(argv[2]);
-    string mcastAddr(argv[3]);
+    std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
