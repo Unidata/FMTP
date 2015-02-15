@@ -51,5 +51,5 @@ int main(int argc, char* argv[])
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecvv3.Start();
-    while(1);
+    return 0;
 }
