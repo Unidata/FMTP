@@ -488,8 +488,14 @@ void vcmtpRecvv3::retxHandler()
                     notifier->notify_of_eop();
                 else
                     std::cout << "RETX completed" << std::endl;
+
+                #ifdef DEBUG1
+                    std::cout << "Product #" << header.prodindex <<
+                        " has been received." << std::endl;
+                #endif
             }
-            #ifdef DEBUG
+
+            #ifdef DEBUG2
             if (bitmap && !bitmap->isComplete())
                 std::cout << "RETX Data block received" << std::endl;
             #endif
@@ -540,7 +546,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         vcmtpHeader.payloadlen = 0;
     }
 
-    #ifdef DEBUG
+    #ifdef DEBUG2
     std::cout << "(BOP) prodindex: " << vcmtpHeader.prodindex;
     std::cout << "    prodsize: " << BOPmsg.prodsize;
     std::cout << "    metasize: " << BOPmsg.metasize << std::endl;
@@ -573,7 +579,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     {
         std::unique_lock<std::mutex> lock(timerQmtx);
         // TODO: timer model need adjusting
-        timerParam timerparam = {vcmtpHeader.prodindex, 0.9};
+        timerParam timerparam = {vcmtpHeader.prodindex, 0.5};
         timerParamQ.push(timerparam);
         timerQfilled.notify_all();
     }
@@ -696,8 +702,8 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
         checkPayloadLen(header, nbytes);
 
         if (0 == prodptr) {
+            #ifdef DEBUG2
             std::cout << "No product queue. Data block is discarded." << endl;
-            #ifdef DEBUG
             std::cout << "(Data) seqnum: " << header.seqnum;
             std::cout << "    paylen: " << header.payloadlen << std::endl;
             #endif
@@ -782,7 +788,7 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t mostRecent)
         }
 
         msgQfilled.notify_one();
-        #ifdef DEBUG
+        #ifdef DEBUG2
         std::cout << "data block missing, requesting retx" << std::endl;
         #endif
     }
@@ -903,11 +909,15 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             if (notifier)
                 notifier->notify_of_eop();
             else {
-                #ifdef DEBUG
+                #ifdef DEBUG2
                     std::cout << "(EOP) data-product completely received."
                               << std::endl;
                 #endif
             }
+            #ifdef DEBUG1
+                std::cout << "Product #" << header.prodindex <<
+                    " has been received." << std::endl;
+            #endif
         }
         else {
             /**
@@ -1078,7 +1088,7 @@ void vcmtpRecvv3::timerThread()
         /** if EOP has not been received yet, issue a request for retx */
         if (!isEOPReceived()) {
             pushMissingEopReq(timerparam.prodindex);
-            #ifdef DEBUG
+            #ifdef DEBUG2
             std::cout << "timer wakes up, requesting retx EOP" << std::endl;
             #endif
         }
