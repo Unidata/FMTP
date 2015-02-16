@@ -82,6 +82,15 @@ Similarly, TEST_DATA_MISS enables emulation for data block missing case and
 TEST_EOP enables emulation for EOP-missing case. On the other hand, if you just
 want to do normal transmission, set TEST flag to NONE will be fine.
 
+* To switch between those levels, simply open the makefile
+  $ vi Makefile_send/Makefile_recv
+
+* Comment the original flag and uncomment the new one (e.g.)
+  DEBUG_FLAG = DEBUG1
+  #DEBUG_FLAG = DEBUG2
+
+* Likewise, for TEST flags, you can also do the same and switch among the flags.
+
 
 
 
