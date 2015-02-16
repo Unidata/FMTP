@@ -67,6 +67,21 @@ based on CentOS 6.6 x86_64.
   $ cd VCMTPv3/receiver
   $ make -f Makefile_recv
 
+DEBUG and TEST flags
+In the Makefile_send and Makefile_recv, there are DEBUG and TEST flags that
+you can see. DEBUG flags are used with testing applications to print some
+helpful statements for diagnosis. There are two different DEBUG flags which
+is called the 2-level debug statements. If setting to DEBUG1, which means
+DEBUG level 1 is enabled, only a statement indicating the sending and receiving
+status will be printed. If setting to DEBUG2, which means DEBUG level 2 is
+enabled, detailed statements will be printed to indicate the multicast status
+and retransmission status of each block.
+TEST flags are used to switch between different test cases. For example, if
+TEST_BOP flag is set, the testSendApp will emulate the BOP-missing case.
+Similarly, TEST_DATA_MISS enables emulation for data block missing case and
+TEST_EOP enables emulation for EOP-missing case. On the other hand, if you just
+want to do normal transmission, set TEST flag to NONE will be fine.
+
 
 
 
