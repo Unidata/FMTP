@@ -98,15 +98,12 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
 /**
  * Destructor for TcpSend class. Release all the allocated resources, including
  * mutex, socket lists and etc.
- *
- * @param[in] none
  */
 TcpSend::~TcpSend()
 {
-    for (list<int>::iterator it = connSockList.begin();
-         it != connSockList.end(); ++it)
     {
-        connSockList.erase(it);
+        std::unique_lock<std::mutex> lock(sockListMutex); // cache coherence
+        connSockList.clear();
     }
     close(sockfd);
 }
