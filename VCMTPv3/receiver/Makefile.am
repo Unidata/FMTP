@@ -6,7 +6,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-EXTRA_DIST		= main.cpp Makefile_recv
+EXTRA_DIST		= Makefile_recv
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= TcpRecv.cpp TcpRecv.h vcmtpRecvv3.cpp vcmtpRecvv3.h \
 			  RecvAppNotifier.h ProdBitMap.cpp ProdBitMap.h
