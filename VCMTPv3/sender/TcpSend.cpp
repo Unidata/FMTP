@@ -89,7 +89,8 @@ TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
     if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
-                std::to_string(tcpPort) + "\"");
+                std::to_string(static_cast<long long unsigned int>(tcpPort)) +
+                "\"");
     /** listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
 }
@@ -125,7 +126,7 @@ int TcpSend::acceptConn()
     if (getsockname(sockfd, (struct sockaddr*)&addr, &addrLen))
         throw std::system_error(errno, std::system_category(),
                 std::string("Couldn't get address of socket ") +
-                std::to_string(sockfd));
+                std::to_string(static_cast<long long>(sockfd)));
 #if 0
     cerr << std::string("TcpSend::acceptConn(): Accept()ing on socket ").
             append(std::to_string(sockfd)).append(" (").

@@ -40,6 +40,8 @@
     #define MIN(a,b) ((a) <= (b) ? (a) : (b))
 #endif
 
+#define DROPSEQ 0*VCMTP_DATA_LEN
+
 using namespace std;
 
 /**
@@ -187,7 +189,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     ioVec[2].iov_len  = metaSize;
 
 #ifdef TEST_BOP
-    std::cout << "dummy sending out BOP" << std::endl;
+    std::cout << "dropping BOP (not sent)" << std::endl;
 #else
     /* Send the BOP message on multicast socket */
     if (udpsend->SendTo(ioVec, 3) < 0)
@@ -211,11 +213,9 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
  */
 uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
 {
-    // TODO: need an accurate model to give a default timeout ratio. Though
-    // default value has been fixed to 50.0. It's still capable to update the
-    // value again here.
     return sendProduct(data, dataSize, 0, 0);
 }
+
 
 /**
  * Adds and entry for a data-product to the retransmission set.
@@ -296,7 +296,7 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
         header.payloadlen = htons(payloadlen);
 
 #ifdef TEST_DATA_MISS
-        if (seqNum == 0 || seqNum == 1448 || seqNum == 2896 || seqNum == 4344)
+        if (seqNum == DROPSEQ)
         {}
         else {
 #endif
@@ -363,9 +363,11 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
                                   unsigned metaSize)
 {
     if (data == NULL)
-        throw std::invalid_argument("vcmtpSendv3::sendProduct() data pointer is NULL");
+        throw std::invalid_argument(
+                "vcmtpSendv3::sendProduct() data pointer is NULL");
     if (dataSize > 0xFFFFFFFFu)
-        throw std::invalid_argument("vcmtpSendv3::sendProduct() dataSize out of range");
+        throw std::invalid_argument(
+                "vcmtpSendv3::sendProduct() dataSize out of range");
     if (metadata) {
         if (AVAIL_BOP_LEN < metaSize)
             throw std::invalid_argument(
@@ -377,7 +379,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
                     "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
     }
 
-    /* Add a retransmission entry */
+    /* Add a retransmission metadata entry */
     RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
                                                    metadata, metaSize);
 
@@ -395,6 +397,10 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
 
     /* start a new timer for this product in a separate thread */
     startTimerThread(prodIndex);
+
+#ifdef DEBUG1
+    std::cout << "Product #" << prodIndex << " has been sent." << std::endl;
+#endif
 
     return prodIndex++;
 }
