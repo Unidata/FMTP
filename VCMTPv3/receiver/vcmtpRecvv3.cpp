@@ -73,7 +73,15 @@ vcmtpRecvv3::vcmtpRecvv3(
     msgQfilled(),
     msgQmutex(),
     BOPListMutex(),
-    bitmap(0)
+    bitmap(0),
+    EOPStatus(false),
+    exitMutex(),
+    except(),
+    exceptIsSet(false),
+    retx_rq(),
+    retx_t(),
+    mcast_t(),
+    timer_t()
 {
 }
 
@@ -105,7 +113,15 @@ vcmtpRecvv3::vcmtpRecvv3(
     msgQfilled(),
     msgQmutex(),
     BOPListMutex(),
-    bitmap(0)
+    bitmap(0),
+    EOPStatus(false),
+    exitMutex(),
+    except(),
+    exceptIsSet(false),
+    retx_rq(),
+    retx_t(),
+    mcast_t(),
+    timer_t()
 {
 }
 
@@ -150,10 +166,17 @@ void vcmtpRecvv3::Start()
 
     int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
             this);
-    if (status)
+    if (status) {
+        Stop();
         throw std::system_error(status, std::system_category(),
                 "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
+    }
     (void)pthread_join(mcast_t, NULL);
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        if (exceptIsSet)
+            throw except;
+    }
 }
 
 
@@ -164,9 +187,10 @@ void vcmtpRecvv3::Start()
  */
 void vcmtpRecvv3::Stop()
 {
+    (void)pthread_cancel(timer_t); // failure is irrelevant
     (void)pthread_cancel(mcast_t); // failure is irrelevant
     (void)pthread_cancel(retx_rq); // failure is irrelevant
-    (void)pthread_cancel(retx_t); // failure is irrelevant
+    (void)pthread_cancel(retx_t);  // failure is irrelevant
 }
 
 
@@ -229,7 +253,13 @@ void vcmtpRecvv3::StartRetxProcedure()
  */
 void* vcmtpRecvv3::StartRetxHandler(void* ptr)
 {
-    (static_cast<vcmtpRecvv3*>(ptr))->retxHandler();
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
+    try {
+        recvr->retxHandler();
+    }
+    catch (const std::exception& e) {
+        recvr->taskExit(e);
+    }
     return NULL;
 }
 
@@ -242,7 +272,13 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
  */
 void* vcmtpRecvv3::StartRetxRequester(void* ptr)
 {
-    (static_cast<vcmtpRecvv3*>(ptr))->retxRequester();
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
+    try {
+        recvr->retxRequester();
+    }
+    catch (const std::exception& e) {
+        recvr->taskExit(e);
+    }
     return NULL;
 }
 
@@ -315,8 +351,14 @@ void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes
 void* vcmtpRecvv3::StartMcastHandler(
         void* const arg)
 {
-    (static_cast<vcmtpRecvv3*>(arg))->mcastHandler();
-    return 0;
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(arg);
+    try {
+        recvr->mcastHandler();
+    }
+    catch (const std::exception& e) {
+        recvr->taskExit(e);
+    }
+    return NULL;
 }
 
 
@@ -342,8 +384,8 @@ void vcmtpRecvv3::mcastHandler()
          * prevents the receiver from being put into an inconsistent state yet
          * allows for fast termination.
          */
-        int prevState;
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState);
+        int initState;
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
 
         if (nbytes < 0)
             throw std::system_error(errno, std::system_category(),
@@ -363,8 +405,8 @@ void vcmtpRecvv3::mcastHandler()
             mcastEOPHandler(header);
         }
 
-        int cancelState;
-        (void)pthread_setcancelstate(prevState, &cancelState);
+        int ignoredState;
+        (void)pthread_setcancelstate(initState, &ignoredState);
     }
 }
 
@@ -432,17 +474,17 @@ void vcmtpRecvv3::retxHandler()
          * prevents the receiver from being put into an inconsistent state yet
          * allows for fast termination.
          */
-        int cancelState;
-        int prevState;
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState);
+        int ignoredState;
+        int initState;
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
         if (header.flags == VCMTP_RETX_BOP)
         {
-            (void)pthread_setcancelstate(prevState, &cancelState);
+            (void)pthread_setcancelstate(initState, &ignoredState);
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
-            (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+            (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
             BOPHandler(header, paytmp);
 
@@ -467,18 +509,18 @@ void vcmtpRecvv3::retxHandler()
             char tmp[VCMTP_DATA_LEN];
 
             if(prodptr) {
-                (void)pthread_setcancelstate(prevState, &cancelState);
+                (void)pthread_setcancelstate(initState, &ignoredState);
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
-                        &cancelState);
+                        &ignoredState);
             }
             else {
                 /** dump the payload since there is no product queue */
-                (void)pthread_setcancelstate(prevState, &cancelState);
+                (void)pthread_setcancelstate(initState, &ignoredState);
                 tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
-                        &cancelState);
+                        &ignoredState);
             }
 
             bitmap->set(header.seqnum/VCMTP_DATA_LEN);
@@ -505,7 +547,7 @@ void vcmtpRecvv3::retxHandler()
             retxEOPHandler(header);
         }
 
-        (void)pthread_setcancelstate(prevState, &cancelState);
+        (void)pthread_setcancelstate(initState, &ignoredState);
     }
 }
 
@@ -1033,15 +1075,15 @@ bool vcmtpRecvv3::hasLastBlock()
  */
 void vcmtpRecvv3::startTimerThread()
 {
-    pthread_t t;
-    int retval = pthread_create(&t, NULL, &vcmtpRecvv3::runTimerThread, this);
+    int retval = pthread_create(&timer_t, NULL, &vcmtpRecvv3::runTimerThread,
+            this);
 
     if(retval != 0) {
         throw std::system_error(retval, std::system_category(),
             "vcmtpRecvv3::startTimerThread() pthread_create() error");
     }
 
-    pthread_detach(t);
+    pthread_detach(timer_t);
 }
 
 
@@ -1052,8 +1094,13 @@ void vcmtpRecvv3::startTimerThread()
  */
 void* vcmtpRecvv3::runTimerThread(void* ptr)
 {
-    vcmtpRecvv3* const receiver = static_cast<vcmtpRecvv3*>(ptr);
-    receiver->timerThread();
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
+    try {
+        recvr->timerThread();
+    }
+    catch (std::exception& e) {
+        recvr->taskExit(e);
+    }
     return NULL;
 }
 
@@ -1129,4 +1176,16 @@ bool vcmtpRecvv3::isEOPReceived()
 {
     std::unique_lock<std::mutex> lock(EOPStatMtx);
     return EOPStatus;
+}
+
+void vcmtpRecvv3::taskExit(const std::exception& e)
+{
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        if (!exceptIsSet) {
+            except = e;
+            exceptIsSet = true;
+        }
+    }
+    Stop();
 }

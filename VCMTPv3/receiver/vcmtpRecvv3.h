@@ -29,6 +29,7 @@
 #define VCMTPRECVV3_H_
 
 #include <condition_variable>
+#include <exception>
 #include <mutex>
 #include "vcmtpBase.h"
 #include "RecvAppNotifier.h"
@@ -99,12 +100,16 @@ private:
     pthread_t               retx_rq; ///< Retransmission request thread
     pthread_t               retx_t;  ///< Retransmission receive thread
     pthread_t               mcast_t; ///< Multicast receiver thread
+    pthread_t               timer_t; ///< BOP timer thread
     /** a queue containing timerParam structure for each product */
     std::queue<timerParam>  timerParamQ;
     std::condition_variable timerQfilled;
     std::mutex              timerQmtx;
     std::condition_variable timerWake;
     std::mutex              timerWakemtx;
+    std::mutex              exitMutex;
+    std::exception          except;
+    bool                    exceptIsSet;
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);
@@ -230,6 +235,7 @@ private:
     void setEOPReceived();
     void clearEOPState();
     bool isEOPReceived();
+    void taskExit(const std::exception&);
 };
 
 #endif /* VCMTPRECVV3_H_ */

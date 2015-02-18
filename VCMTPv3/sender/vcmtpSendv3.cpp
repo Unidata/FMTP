@@ -457,7 +457,7 @@ void vcmtpSendv3::startCoordinator()
  * specific thread.
  *
  * @param[in] *ptr    void type pointer that points to whatever data structure.
- * @return            void type pointer that ponits to whatever return value.
+ * @return            void type pointer that points to whatever return value.
  */
 void* vcmtpSendv3::coordinator(void* ptr)
 {
