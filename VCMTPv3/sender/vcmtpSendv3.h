@@ -122,6 +122,10 @@ private:
     std::map<int, bool>         retxSockFinishMap;
     /** first: socket fd;  second: pointer to the retxThreadInfo struct */
     std::map<int, StartRetxThreadInfo*> retxSockInfoMap;
+    std::mutex                  exitMutex;
+    std::exception              except;
+    bool                        exceptIsSet;
+
     /**
      * Adds and entry for a data-product to the retransmission set.
      *

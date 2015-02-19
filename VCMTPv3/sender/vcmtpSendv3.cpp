@@ -65,7 +65,10 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     sendMeta(new senderMetadata()),
     prodIndex(0),
     retxTimeoutRatio(500000.0),
-    notifier(0)
+    notifier(0),
+    exitMutex(),
+    except(),
+    exceptIsSet(false)
 {
 }
 
@@ -95,7 +98,10 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     sendMeta(new senderMetadata()),
     prodIndex(initProdIndex),
     retxTimeoutRatio(500000.0),
-    notifier(notifier)
+    notifier(notifier),
+    exitMutex(),
+    except(),
+    exceptIsSet(false)
 {
 }
 
