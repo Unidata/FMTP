@@ -271,6 +271,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
 
     /* Update multicast start time in RetxMetadata */
     senderProdMeta->mcastStartTime = clock();
+    //senderProdMeta->mcastStartTime = myClock::now();
 
     return senderProdMeta;
 }
@@ -330,6 +331,7 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
     /* Get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
+    //senderProdMeta->mcastEndTime = myClock::now();
 
     /* Cast clock_t type value into float type seconds */
     float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
