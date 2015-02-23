@@ -1132,6 +1132,12 @@ void vcmtpRecvv3::timerThread()
             timerWake.wait_for(lk, std::chrono::nanoseconds(period));
         }
 
+        /** pop the current entry in timer queue when timer wakes up */
+        {
+            std::unique_lock<std::mutex> lock(timerQmtx);
+            timerParamQ.pop();
+        }
+
         /** if EOP has not been received yet, issue a request for retx */
         if (!isEOPReceived()) {
             pushMissingEopReq(timerparam.prodindex);
