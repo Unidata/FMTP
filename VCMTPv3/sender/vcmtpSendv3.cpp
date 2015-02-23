@@ -775,14 +775,14 @@ void vcmtpSendv3::handleEopReq(VcmtpHeader* const  recvheader,
     if (retxMeta) {
         #ifdef DEBUG2
             std::cout << "retxMetadata for product #"
-                << recvheader.prodindex << " found." << std::endl;
+                << recvheader->prodindex << " found." << std::endl;
         #endif
         retransEOP(recvheader, sock);
     }
     else {
         #ifdef DEBUG2
             std::cout << "retxMetadata for product #"
-                << recvheader.prodindex << " not found." << std::endl;
+                << recvheader->prodindex << " not found." << std::endl;
         #endif
         /**
          * Reject the request because the retransmission entry was removed by
