@@ -221,6 +221,11 @@ private:
      * @throw std::runtime_error  if the packet is invalid.
      */
     void recvMemData(const VcmtpHeader& header);
+    /**
+     * request EOP retx if EOP is not received yet and return true if
+     * the request is sent out. Otherwise, return false.
+     * */
+    bool reqEOPifMiss(const uint32_t prodindex);
 
     bool  sendBOPRetxReq(uint32_t prodindex);
     bool  sendEOPRetxReq(uint32_t prodindex);

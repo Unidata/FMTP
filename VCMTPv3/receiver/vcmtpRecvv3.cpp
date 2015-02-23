@@ -1139,8 +1139,7 @@ void vcmtpRecvv3::timerThread()
         }
 
         /** if EOP has not been received yet, issue a request for retx */
-        if (!isEOPReceived()) {
-            pushMissingEopReq(timerparam.prodindex);
+        if (reqEOPifMiss(timerparam.prodindex)) {
             #ifdef DEBUG2
             std::cout << "timer wakes up, requesting retx EOP" << std::endl;
             #endif
@@ -1183,6 +1182,27 @@ bool vcmtpRecvv3::isEOPReceived()
     std::unique_lock<std::mutex> lock(EOPStatMtx);
     return EOPStatus;
 }
+
+
+/**
+ * Request for EOP retransmission if the EOP is not received. This function is
+ * an integration of isEOPReceived() and pushMissingEopReq() but being made
+ * atomic. If the EOP is requested by this function, it returns a boolean true.
+ * Otherwise, if not requested, it returns a boolean false.
+ *
+ * @param[in] prodindex        Product index which the EOP is using.
+ */
+bool vcmtpRecvv3::reqEOPifMiss(const uint32_t prodindex)
+{
+    bool hasReq = false;
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    if (!EOPStatus) {
+        pushMissingEopReq(prodindex);
+        hasReq = true;
+    }
+    return hasReq;
+}
+
 
 void vcmtpRecvv3::taskExit(const std::exception& e)
 {
