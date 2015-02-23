@@ -915,13 +915,13 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
         /** sleep for a given amount of seconds and nanoseconds */
         (void) nanosleep(&timespec, 0);
 
-        const bool wasRemoved = sendMeta->rmRetxMetadata(prodIndex);
+        const bool isRemoved = sendMeta->rmRetxMetadata(prodIndex);
 
         /**
          * Only if the product is removed by this remove call, notify the
          * sending application
          */
-        if (notifier && wasRemoved)
+        if (notifier && isRemoved)
             notifier->notify_of_eop(prodIndex);
     }
 
