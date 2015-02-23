@@ -818,15 +818,31 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
         if (recvheader.flags == VCMTP_RETX_REQ) {
+            #ifdef DEBUG2
+                std::cout << "RETX_REQ for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleRetxReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_RETX_END) {
+            #ifdef DEBUG2
+                std::cout << "RETX_END for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleRetxEnd(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_BOP_REQ) {
+            #ifdef DEBUG2
+                std::cout << "BOP_REQ for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
+            #ifdef DEBUG2
+                std::cout << "EOP_REQ for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
     }
