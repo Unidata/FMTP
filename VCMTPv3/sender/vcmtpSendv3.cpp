@@ -271,6 +271,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
 
     /* Update multicast start time in RetxMetadata */
     senderProdMeta->mcastStartTime = clock();
+    //senderProdMeta->mcastStartTime = myClock::now();
 
     return senderProdMeta;
 }
@@ -330,6 +331,7 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
     /* Get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
+    //senderProdMeta->mcastEndTime = myClock::now();
 
     /* Cast clock_t type value into float type seconds */
     float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
@@ -773,9 +775,17 @@ void vcmtpSendv3::handleEopReq(VcmtpHeader* const  recvheader,
                                const int           sock)
 {
     if (retxMeta) {
+        #ifdef DEBUG2
+            std::cout << "retxMetadata for product #"
+                << recvheader->prodindex << " found." << std::endl;
+        #endif
         retransEOP(recvheader, sock);
     }
     else {
+        #ifdef DEBUG2
+            std::cout << "retxMetadata for product #"
+                << recvheader->prodindex << " not found." << std::endl;
+        #endif
         /**
          * Reject the request because the retransmission entry was removed by
          * the per-product timer thread.
@@ -818,15 +828,31 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
         if (recvheader.flags == VCMTP_RETX_REQ) {
+            #ifdef DEBUG2
+                std::cout << "RETX_REQ for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleRetxReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_RETX_END) {
+            #ifdef DEBUG2
+                std::cout << "RETX_END for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleRetxEnd(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_BOP_REQ) {
+            #ifdef DEBUG2
+                std::cout << "BOP_REQ for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
+            #ifdef DEBUG2
+                std::cout << "EOP_REQ for Product #"
+                    << recvheader.prodindex << std::endl;
+            #endif
             handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
     }
@@ -889,13 +915,13 @@ void* vcmtpSendv3::runTimerThread(void* ptr)
         /** sleep for a given amount of seconds and nanoseconds */
         (void) nanosleep(&timespec, 0);
 
-        const bool wasRemoved = sendMeta->rmRetxMetadata(prodIndex);
+        const bool isRemoved = sendMeta->rmRetxMetadata(prodIndex);
 
         /**
          * Only if the product is removed by this remove call, notify the
          * sending application
          */
-        if (notifier && wasRemoved)
+        if (notifier && isRemoved)
             notifier->notify_of_eop(prodIndex);
     }
 

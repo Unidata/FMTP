@@ -34,7 +34,10 @@
 #include <map>
 #include <pthread.h>
 #include <stdint.h>
+#include <chrono>
+#include <time.h>
 
+typedef std::chrono::high_resolution_clock myClock;
 
 struct RetxMetadata {
     uint32_t  prodindex;
@@ -44,6 +47,8 @@ struct RetxMetadata {
     void*     metadata;          /*!< metadata pointer */
     clock_t   mcastStartTime;    /*!< multicasting start time */
     clock_t   mcastEndTime;      /*!< multicasting end time */
+    //auto      mcastStartTime;    /*!< multicasting start time */
+    //auto      mcastEndTime;      /*!< multicasting end time */
     float     retxTimeoutRatio;  /*!< ratio to scale timeout time */
     float     retxTimeoutPeriod; /*!< timeout time in seconds */
     void*     dataprod_p;        /*!< pointer to the data product */

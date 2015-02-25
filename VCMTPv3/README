@@ -118,7 +118,8 @@ passing in command line arguments. As you can see, for the testSendApp, it
 accepts the unicast IP:PORT, the multicast IP:PORT and a filename to be sent.
 For the testRecvApp, it accepts the unicast IP:PORT and the multicast IP:PORT.
 If there is a mocked product queue and TTL needs to be non-one value,
-developers can modify the testSendApp.cpp to call another sendProduct().
+developers can modify the testSendApp.cpp to call another vcmtpSendv3()
+constructor.
 
 To terminate the transmission, it is recommended to terminate the testRecvApp
 first, or the other receivers could be affected if testSendApp is terminated
