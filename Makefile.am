@@ -4,7 +4,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= VCMTPv3
+SUBDIRS 		= VCMTPv3 test
 ACLOCAL_AMFLAGS         = -I m4
 EXTRA_DIST		= m4 CHANGE_LOG COPYRIGHT 
 noinst_LTLIBRARIES	= libvcmtp.la
