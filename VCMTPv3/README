@@ -22,7 +22,10 @@ runs the sending side protocol and sends out the data via multicast. Those
 receivers will run the receiving side protocol to receive the data. If losses
 happen, the receiver can request for retransmission via a TCP connection from
 the receiver to the sender. And sender will determine either to respond to the
-request or to reject it.
+request or to reject it. Both the sender and receiver side have a timer thread.
+The sender timer is used to form a window for legal retransmission and release
+resources after the window is closed. And the receiver timer is used to watch
+the EOPs. If it finds missing EOP, a requested will be sent back immediately.
 The whole program is written in C++.
 
 
