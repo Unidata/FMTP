@@ -20,7 +20,7 @@
  *                     reveal-time of the element. May be negative.
  */
 ProdIndexDelayQueue::Element::Element(
-        const u_int32_t index,
+        const uint32_t index,
         const double    seconds)
 :
     index(index),
@@ -79,7 +79,7 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
  *                     via `pop()`).
  */
 void ProdIndexDelayQueue::push(
-        const u_int32_t index,
+        const uint32_t index,
         const double    seconds)
 {
     std::unique_lock<std::mutex>(mutex);
@@ -110,12 +110,12 @@ const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTim
  * @return  The product-index with the earliest reveal-time that's not later
  *          than the current time.
  */
-u_int32_t ProdIndexDelayQueue::pop()
+uint32_t ProdIndexDelayQueue::pop()
 {
     std::unique_lock<std::mutex> lock(mutex);
     while (getEarliestTime(lock) > std::chrono::system_clock::now())
         cond.wait_until(lock, getEarliestTime(lock));
-    u_int32_t index = priQ.top().getIndex();
+    uint32_t index = priQ.top().getIndex();
     priQ.pop();
     cond.notify_one();
     return index;
@@ -128,10 +128,10 @@ u_int32_t ProdIndexDelayQueue::pop()
  *
  * @return  The product-index with the earliest reveal-time.
  */
-u_int32_t ProdIndexDelayQueue::get()
+uint32_t ProdIndexDelayQueue::get()
 {
     std::unique_lock<std::mutex> lock(mutex);
-    u_int32_t index = priQ.top().getIndex();
+    uint32_t index = priQ.top().getIndex();
     priQ.pop();
     cond.notify_one();
     return index;
