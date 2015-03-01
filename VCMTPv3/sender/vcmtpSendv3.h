@@ -103,7 +103,8 @@ public:
     uint32_t sendProduct(void* data, size_t dataSize);
     uint32_t sendProduct(void* data, size_t dataSize, void* metadata,
                          unsigned metaSize);
-    void startCoordinator();
+    /** Sender side start point, the first function to be called */
+    void Start();
     unsigned short getTcpPortNum();
 
 private:
@@ -157,6 +158,7 @@ private:
      */
     void setTimerParameters(RetxMetadata* const senderProdMeta);
     void StartNewRetxThread(int newtcpsockfd);
+    /** a wrapper to call the actual vcmtpSendv3::timerThread() */
     static void* timerWrapper(void* ptr);
     void timerThread();
     /** new coordinator thread */

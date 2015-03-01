@@ -82,7 +82,7 @@ int main(int argc, char const* argv[])
         if (data == MAP_FAILED)
             std::cerr << "file map failed" << std::endl;
 
-        sender->startCoordinator();
+        sender->Start();
         sleep(2);
         //for(int i=0; i<100; ++i) {
             sender->sendProduct(data, datasize, metadata, metaSize);

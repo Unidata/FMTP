@@ -439,30 +439,32 @@ void vcmtpSendv3::sendEOPMessage()
 
 
 /**
- * Starts the coordinator thread from this function. And passes a vcmtpSendv3
- * type pointer to the coordinator thread so that coordinator can have access
- * to all the resources inside this vcmtpSendv3 instance.
+ * Starts the coordinator thread and timer thread from this function. And
+ * passes a vcmtpSendv3 type pointer to each newly created thread so that
+ * coordinator and timer can have access to all the resources inside this
+ * vcmtpSendv3 instance.
  *
  * @throw  std::system_error  if pthread_create() fails.
+ * @throw  std::system_error  if pthread_create() fails.
  */
-void vcmtpSendv3::startCoordinator()
+void vcmtpSendv3::Start()
 {
-    pthread_t new_t, timer_t;
+    pthread_t coor_t, timer_t;
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
     if(retval != 0)
     {
         throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::startCoordinator() pthread_create() error");
+                "vcmtpSendv3::Start() pthread_create() timerWrapper error");
     }
     pthread_detach(timer_t);
 
-    retval = pthread_create(&new_t, NULL, &vcmtpSendv3::coordinator, this);
+    retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0)
     {
         throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::startCoordinator() pthread_create() error");
+                "vcmtpSendv3::Start() pthread_create() coordinator error");
     }
-    pthread_detach(new_t);
+    pthread_detach(coor_t);
 }
 
 
