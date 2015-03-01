@@ -162,6 +162,7 @@ void vcmtpRecvv3::Start()
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
     StartRetxProcedure();
+    // TODO: should consider use delay queue for timer.
     startTimerThread();
 
     int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
