@@ -870,12 +870,12 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
 
 
 /**
- * The function for starting a timer thread. It fills the prodindex and the
- * senderMetadata into the StartTimerThreadInfo structure and passes the
- * pointer of this structure to runTimerThread().
+ * A wrapper function which is used to call the real timerThread(). Due to the
+ * unavailability of some vcmtpSendv3 private resources (e.g. notifier), this
+ * wrapper is called first when timer needs to be started and itself points
+ * back to the vcmtpSendv3 instance.
  *
- * @param[in] prodindex          product index the timer is supervising on.
- * @throw     std::system_error  if pthread_create() fails.
+ * @param[in] ptr                a pointer to the vcmtpSendv3 class.
  */
 void* vcmtpSendv3::timerWrapper(void* ptr)
 {
@@ -887,12 +887,17 @@ void* vcmtpSendv3::timerWrapper(void* ptr)
 
 
 /**
- * The per-product timer. A timer will be created to sleep for a given period
- * of time, which is specified in the RetxMetadata structure. When the timer
+ * The per-product timer. A product-specified timer element will be created
+ * when sendProduct() is called and pushed into the ProductIndexDelayQueue.
+ * The timer will keep querying the queue with a blocking operation and fetch
+ * the valid element with a mutex-protected pop(). Basically, the delay queue
+ * makes the valid element and only the valid element visible to the timer
+ * thread. The element is made visible when the designated sleep time expires.
+ * The sleep time is specified in the RetxMetadata structure. When the timer
  * wakes up from sleeping, it will check and remove the corresponding product
  * from the prodindex-retxmetadata map.
  *
- * @param[in] *ptr          pointer to the StartTimerThreadInfo structure
+ * @param[in] none
  */
 void vcmtpSendv3::timerThread()
 {
