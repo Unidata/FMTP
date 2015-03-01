@@ -150,6 +150,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
  */
 vcmtpSendv3::~vcmtpSendv3()
 {
+    Stop();
     delete udpsend;
     delete tcpsend;
     delete sendMeta;
@@ -449,7 +450,6 @@ void vcmtpSendv3::sendEOPMessage()
  */
 void vcmtpSendv3::Start()
 {
-    pthread_t coor_t, timer_t;
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
     if(retval != 0)
     {
@@ -465,6 +465,18 @@ void vcmtpSendv3::Start()
                 "vcmtpSendv3::Start() pthread_create() coordinator error");
     }
     pthread_detach(coor_t);
+}
+
+
+/**
+ * Stop all the created threads.
+ *
+ * @param[in] none
+ */
+void vcmtpSendv3::Stop()
+{
+    (void)pthread_cancel(timer_t);
+    (void)pthread_cancel(coor_t);
 }
 
 

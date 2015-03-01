@@ -97,10 +97,10 @@ private:
     /*!< the state of EOP, true: received false: missing */
     bool                    EOPStatus;
     std::mutex              EOPStatMtx;
-    pthread_t               retx_rq; ///< Retransmission request thread
-    pthread_t               retx_t;  ///< Retransmission receive thread
-    pthread_t               mcast_t; ///< Multicast receiver thread
-    pthread_t               timer_t; ///< BOP timer thread
+    pthread_t               retx_rq; /*!< Retransmission request thread */
+    pthread_t               retx_t;  /*!< Retransmission receive thread */
+    pthread_t               mcast_t; /*!< Multicast receiver thread     */
+    pthread_t               timer_t; /*!< BOP timer thread              */
     /** a queue containing timerParam structure for each product */
     std::queue<timerParam>  timerParamQ;
     std::condition_variable timerQfilled;

@@ -105,6 +105,8 @@ public:
                          unsigned metaSize);
     /** Sender side start point, the first function to be called */
     void Start();
+    /** Sender side stop point */
+    void Stop();
     unsigned short getTcpPortNum();
 
 private:
@@ -128,6 +130,8 @@ private:
     std::exception              except;
     bool                        exceptIsSet;
     ProdIndexDelayQueue         timerDelayQ;
+    pthread_t                   coor_t;
+    pthread_t                   timer_t;
 
     /**
      * Adds and entry for a data-product to the retransmission set.
