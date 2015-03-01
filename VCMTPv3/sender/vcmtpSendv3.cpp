@@ -68,7 +68,9 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     notifier(0),
     exitMutex(),
     except(),
-    exceptIsSet(false)
+    exceptIsSet(false),
+    coor_t(),
+    timer_t()
 {
 }
 
@@ -101,7 +103,9 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     notifier(notifier),
     exitMutex(),
     except(),
-    exceptIsSet(false)
+    exceptIsSet(false),
+    coor_t(),
+    timer_t()
 {
 }
 
@@ -138,7 +142,12 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     sendMeta(new senderMetadata()),
     prodIndex(initProdIndex),
     retxTimeoutRatio(timeoutRatio),
-    notifier(notifier)
+    notifier(notifier),
+    exitMutex(),
+    except(),
+    exceptIsSet(false),
+    coor_t(),
+    timer_t()
 {
 }
 
