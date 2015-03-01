@@ -40,6 +40,7 @@
 #include <set>
 #include <pthread.h>
 #include <ctime>
+#include "ProdIndexDelayQueue.h"
 
 class vcmtpSendv3;
 
@@ -125,6 +126,7 @@ private:
     std::mutex                  exitMutex;
     std::exception              except;
     bool                        exceptIsSet;
+    ProdIndexDelayQueue         timerDelayQ;
 
     /**
      * Adds and entry for a data-product to the retransmission set.
@@ -155,13 +157,13 @@ private:
      */
     void setTimerParameters(RetxMetadata* const senderProdMeta);
     void StartNewRetxThread(int newtcpsockfd);
-    void startTimerThread(uint32_t prodindex);
+    static void* timerWrapper(void* ptr);
+    void timerThread();
     /** new coordinator thread */
     static void* coordinator(void* ptr);
     /** new retranmission thread */
     static void* StartRetxThread(void* ptr);
     /** new timer thread */
-    static void* runTimerThread(void* ptr);
     void RunRetxThread(int retxsockfd);
     /**
      * Handles a retransmission request.

@@ -34,7 +34,7 @@ public:
      *                     product-index (i.e., until the element can be
      *                     retrieved via `pop()`).
      */
-    void      push(uint32_t index, double seconds);
+    void push(uint32_t index, double seconds);
     /**
      * Returns the product-index whose reveal-time is the earliest and not later
      * than the current time and removes it from the queue. Blocks until such a

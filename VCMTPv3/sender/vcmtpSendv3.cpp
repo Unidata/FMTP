@@ -404,7 +404,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
     setTimerParameters(senderProdMeta);
 
     /* start a new timer for this product in a separate thread */
-    startTimerThread(prodIndex);
+    timerDelayQ.push(prodIndex, 0.1);
 
 #ifdef DEBUG1
     std::cout << "Product #" << prodIndex << " has been sent." << std::endl;
@@ -447,8 +447,16 @@ void vcmtpSendv3::sendEOPMessage()
  */
 void vcmtpSendv3::startCoordinator()
 {
-    pthread_t new_t;
-    int retval = pthread_create(&new_t, NULL, &vcmtpSendv3::coordinator, this);
+    pthread_t new_t, timer_t;
+    int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
+    if(retval != 0)
+    {
+        throw std::system_error(retval, std::system_category(),
+                "vcmtpSendv3::startCoordinator() pthread_create() error");
+    }
+    pthread_detach(timer_t);
+
+    retval = pthread_create(&new_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0)
     {
         throw std::system_error(retval, std::system_category(),
@@ -867,20 +875,12 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
  * @param[in] prodindex          product index the timer is supervising on.
  * @throw     std::system_error  if pthread_create() fails.
  */
-void vcmtpSendv3::startTimerThread(uint32_t prodindex)
+void* vcmtpSendv3::timerWrapper(void* ptr)
 {
-    pthread_t t;
-    StartTimerThreadInfo* timerinfo = new StartTimerThreadInfo();
-    timerinfo->prodindex = prodindex;
-    timerinfo->sender = this;
-    int retval = pthread_create(&t, NULL, &vcmtpSendv3::runTimerThread,
-                                timerinfo);
-    if(retval != 0)
-    {
-        throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::startTimerThread() pthread_create() error");
-    }
-    pthread_detach(t);
+    vcmtpSendv3* const sender = static_cast<vcmtpSendv3*>(ptr);
+    sender->timerThread();
+
+    return NULL;
 }
 
 
@@ -892,39 +892,20 @@ void vcmtpSendv3::startTimerThread(uint32_t prodindex)
  *
  * @param[in] *ptr          pointer to the StartTimerThreadInfo structure
  */
-void* vcmtpSendv3::runTimerThread(void* ptr)
+void vcmtpSendv3::timerThread()
 {
-    const StartTimerThreadInfo* const timerInfo =
-            static_cast<StartTimerThreadInfo*>(ptr);
-    const uint32_t            prodIndex   = timerInfo->prodindex;
-    vcmtpSendv3* const        sender      = timerInfo->sender;
-    SendAppNotifier* const    notifier    = sender->notifier;
-    senderMetadata* const     sendMeta    = sender->sendMeta;
-    const RetxMetadata* const perProdMeta = sendMeta->getMetadata(prodIndex);
-
-    if (perProdMeta != NULL)
-    {
-        float           seconds;
-        /** parse the float type timeout value into seconds and fractions */
-        const float     fraction = modff(perProdMeta->retxTimeoutPeriod,
-                                         &seconds);
-        struct timespec timespec;
-
-        timespec.tv_sec = seconds;
-        timespec.tv_nsec = fraction * 1e9f;
-        /** sleep for a given amount of seconds and nanoseconds */
-        (void) nanosleep(&timespec, 0);
-
-        const bool isRemoved = sendMeta->rmRetxMetadata(prodIndex);
-
+    while (1) {
+        uint32_t prodindex = timerDelayQ.pop();
+        #ifdef DEBUG2
+            std::cout << "Timer: Product #" << prodindex
+                << " wakes up" << std::endl;
+        #endif
+        const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
          * Only if the product is removed by this remove call, notify the
          * sending application
          */
         if (notifier && isRemoved)
-            notifier->notify_of_eop(prodIndex);
+            notifier->notify_of_eop(prodindex);
     }
-
-    delete timerInfo;
-    return NULL;
 }
