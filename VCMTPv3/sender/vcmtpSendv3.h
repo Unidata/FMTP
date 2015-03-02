@@ -38,6 +38,7 @@
 #include "SendAppNotifier.h"
 #include <map>
 #include <set>
+#include <list>
 #include <pthread.h>
 #include <ctime>
 #include "ProdIndexDelayQueue.h"
@@ -120,10 +121,6 @@ private:
     /** sending application callback hook */
     SendAppNotifier* notifier;
     float                       retxTimeoutRatio;
-    /** first: socket fd;  second: pthread_t pointer */
-    std::map<int, pthread_t*>   retxSockThreadMap;
-    /** first: socket fd;  second: retransmission finished indicator */
-    std::map<int, bool>         retxSockFinishMap;
     /** first: socket fd;  second: pointer to the retxThreadInfo struct */
     std::map<int, StartRetxThreadInfo*> retxSockInfoMap;
     std::mutex                  exitMutex;
@@ -132,6 +129,8 @@ private:
     ProdIndexDelayQueue         timerDelayQ;
     pthread_t                   coor_t;
     pthread_t                   timer_t;
+    /** help tracking all the dynamically created retx threads */
+    std::list<pthread_t>        retxThreadList;
 
     /**
      * Adds and entry for a data-product to the retransmission set.

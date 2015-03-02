@@ -159,6 +159,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
  */
 vcmtpSendv3::~vcmtpSendv3()
 {
+    /** Stop() will not be impedient */
     Stop();
     delete udpsend;
     delete tcpsend;
@@ -452,7 +453,7 @@ void vcmtpSendv3::sendEOPMessage()
  * Starts the coordinator thread and timer thread from this function. And
  * passes a vcmtpSendv3 type pointer to each newly created thread so that
  * coordinator and timer can have access to all the resources inside this
- * vcmtpSendv3 instance.
+ * vcmtpSendv3 instance. Start() returns immediately.
  *
  * @throw  std::system_error  if pthread_create() fails.
  * @throw  std::system_error  if pthread_create() fails.
@@ -486,6 +487,13 @@ void vcmtpSendv3::Stop()
 {
     (void)pthread_cancel(timer_t);
     (void)pthread_cancel(coor_t);
+
+    std::list<pthread_t>::iterator it;
+    for (it = retxThreadList.begin(); it != retxThreadList.end(); ++it)
+    {
+        (void)pthread_cancel(*it);
+        retxThreadList.erase(it);
+    }
 }
 
 
@@ -533,8 +541,6 @@ unsigned short vcmtpSendv3::getTcpPortNum()
 void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
     pthread_t t;
-    retxSockThreadMap[newtcpsockfd] = &t;
-    retxSockFinishMap[newtcpsockfd] = false;
 
     StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
     retxThreadInfo->retxmitterptr       = this;
@@ -549,6 +555,9 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::StartNewRetxThread() error pthread_create()");
     }
+
+    /** track all the newly created retx threads for later termination */
+    retxThreadList.push_back(t);
     pthread_detach(t);
 }
 
