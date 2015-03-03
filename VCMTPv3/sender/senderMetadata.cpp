@@ -29,8 +29,6 @@
 #include "senderMetadata.h"
 
 
-using namespace std;
-
 #ifndef NULL
     #define NULL 0
 #endif
@@ -56,7 +54,7 @@ senderMetadata::senderMetadata()
  */
 senderMetadata::~senderMetadata()
 {
-    for (map<uint32_t, RetxMetadata*>::iterator it = indexMetaMap.begin();
+    for (std::map<uint32_t, RetxMetadata*>::iterator it = indexMetaMap.begin();
          it != indexMetaMap.end(); ++it)
     {
         delete(it->second);
@@ -77,7 +75,7 @@ senderMetadata::~senderMetadata()
 RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 {
     RetxMetadata* temp = NULL;
-    map<uint32_t, RetxMetadata*>::iterator it;
+    std::map<uint32_t, RetxMetadata*>::iterator it;
     pthread_rwlock_rdlock(&indexMetaMapLock);
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
         temp = it->second;
@@ -111,7 +109,7 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
 {
     bool rmSuccess;
-    map<uint32_t, RetxMetadata*>::iterator it;
+    std::map<uint32_t, RetxMetadata*>::iterator it;
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
     {
         delete it->second;
@@ -154,7 +152,7 @@ bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
 {
     bool prodRemoved;
-    map<uint32_t, RetxMetadata*>::iterator it;
+    std::map<uint32_t, RetxMetadata*>::iterator it;
     pthread_rwlock_wrlock(&indexMetaMapLock);
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
     {

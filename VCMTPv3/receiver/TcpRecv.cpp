@@ -36,9 +36,6 @@
 #include <unistd.h>
 
 
-using namespace std;
-
-
 /**
  * Constructor of TcpRecv. It establishes a TCP connection to the sender.
  *
@@ -50,7 +47,7 @@ using namespace std;
  * @throw std::invalid_argument if `tcpAddr` is invalid.
  * @throw std::system_error     if a TCP connection can't be established.
  */
-TcpRecv::TcpRecv(const string& tcpAddr, unsigned short tcpPort)
+TcpRecv::TcpRecv(const std::string& tcpAddr, unsigned short tcpPort)
 {
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;

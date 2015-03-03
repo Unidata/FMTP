@@ -43,7 +43,6 @@
 #endif
 #define MAX_CONNECTION 50
 
-using namespace std;
 
 /**
  * Contructor for TcpSend class, taking tcp address and tcp port to establish a
@@ -59,7 +58,7 @@ using namespace std;
  * @throw  std::runtime_error    if socket creation fails.
  * @throw  std::runtime_error    if socket bind() operation fails.
  */
-TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
+TcpSend::TcpSend(std::string tcpAddr, unsigned short tcpPort)
     : sockListMutex()
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -150,7 +149,7 @@ int TcpSend::acceptConn()
  * @param[in] none
  * @return    connSockList          connected socket list (a collection of
  */
-const list<int>& TcpSend::getConnSockList()
+const std::list<int>& TcpSend::getConnSockList()
 {
     return connSockList;
 }

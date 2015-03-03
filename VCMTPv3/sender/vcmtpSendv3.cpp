@@ -43,7 +43,6 @@
 
 #define DROPSEQ 0*VCMTP_DATA_LEN
 
-using namespace std;
 
 /**
  * Constructs a sender instance and initializes a udpsend object pointer, a
@@ -273,8 +272,8 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
     senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
 
     /* Get a full list of current connected sockets and add to unfinished set */
-    list<int> currSockList = tcpsend->getConnSockList();
-    list<int>::iterator it;
+    std::list<int> currSockList = tcpsend->getConnSockList();
+    std::list<int>::iterator it;
     for (it = currSockList.begin(); it != currSockList.end(); ++it)
         senderProdMeta->unfinReceivers.insert(*it);
 
