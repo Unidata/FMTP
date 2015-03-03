@@ -84,6 +84,23 @@ AM_COND_IF([HAVE_OPMOCK],
     [AC_MSG_NOTICE([Opmock found. Enabling mocking-tests.])],
     [AC_MSG_NOTICE([Opmock not found. Disabling mocking-tests.])])
 
+# Check for the Google-test C++ unit-testing and mocking package
+AC_MSG_NOTICE([checking for the Google Test package.])
+AC_CHECK_FILE(
+    [/usr/include/gtest/gtest.h],
+    [GTEST_CPPFLAGS=
+     AC_SUBST([GTEST_CPPFLAGS])
+     AC_CHECK_FILE(
+        [/usr/lib64/libgtest.so],
+        [GTEST_LDFLAGS='-rpath /usr/local/lib64'
+         GTEST_LDADD='-L/usr/local/lib64 -lgtest'
+         AC_SUBST([GTEST_LDFLAGS])
+         AC_SUBST([GTEST_LDADD]) ])])
+AM_CONDITIONAL([HAVE_GTEST], [test "$GTEST_LDADD"])
+AM_COND_IF([HAVE_GTEST], 
+    [AC_MSG_NOTICE([Google Test found. Enabling associated tests.])],
+    [AC_MSG_NOTICE([Google Test not found. Disabling associated tests.])])
+
 AC_CONFIG_FILES([
     Makefile
     test/Makefile

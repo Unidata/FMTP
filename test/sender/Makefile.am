@@ -7,11 +7,13 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 SENDER_SRCDIR	= $(top_srcdir)/VCMTPv3/sender
-CPPFLAGS	= -I$(SENDER_SRCDIR)
-ProdIndexDeleyQueueTest_SOURCES 	= \
+CPPFLAGS	= -I$(SENDER_SRCDIR) @GTEST_CPPFLAGS@
+ProdIndexDelayQueueTest_SOURCES 	= \
         ProdIndexDelayQueueTest.cpp \
         $(SENDER_SRCDIR)/ProdIndexDelayQueue.cpp
-LDFLAGS		= -lgtest
+LDFLAGS		= @GTEST_LDFLAGS@ @GTEST_LDADD@
 
-check_PROGRAMS	= ProdIndexDeleyQueueTest
+if HAVE_GTEST
+check_PROGRAMS	= ProdIndexDelayQueueTest
 TESTS		= $(check_PROGRAMS)
+endif
