@@ -14,7 +14,9 @@
 #ifndef VCMTP_SENDER_SENDAPPNOTIFIER_H_
 #define VCMTP_SENDER_SENDAPPNOTIFIER_H_
 
+
 #include <stdint.h>
+
 
 /**
  * This base class notifies a sending application about events.
@@ -31,5 +33,6 @@ public:
      */
     virtual void notify_of_eop(uint32_t prodindex) = 0;
 };
+
 
 #endif /* VCMTP_SENDER_SENDAPPNOTIFIER_H_ */

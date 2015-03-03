@@ -28,6 +28,7 @@
 #ifndef VCMTP_RECEIVER_TCPRECV_H_
 #define VCMTP_RECEIVER_TCPRECV_H_
 
+
 #include <arpa/inet.h>
 #include <mutex>
 #include <netinet/in.h>
@@ -87,5 +88,6 @@ inline std::string operator+(const std::string& lhs, const struct sockaddr_in& r
     return lhs + inet_ntoa(rhs.sin_addr) + ":" +
             std::to_string(static_cast<long long>(ntohs(rhs.sin_port)));
 }
+
 
 #endif /* VCMTP_RECEIVER_TCPRECV_H_ */

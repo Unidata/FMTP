@@ -27,15 +27,13 @@
  */
 
 
-
 #ifndef VCMTP_SENDER_UDPSOCKET_H_
 #define VCMTP_SENDER_UDPSOCKET_H_
 
 
-#include <sys/socket.h>
-#include <iostream>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <sys/uio.h>
 
 
@@ -55,9 +53,8 @@ public:
      * @param[in] iovec  First I/O vector.
      * @param[in] nvec   Number of I/O vectors.
      */
-    int SendTo(
-            const struct iovec* const iovec,
-            const int                 nvec);
+    int SendTo(const struct iovec* const iovec,
+               const int                 nvec);
     /**
      * SendData() sends the packet content separated in two different physical
      * locations, which is put together into a io vector structure, to the
@@ -72,6 +69,4 @@ private:
 };
 
 
-
 #endif /* VCMTP_SENDER_UDPSOCKET_H_ */
-

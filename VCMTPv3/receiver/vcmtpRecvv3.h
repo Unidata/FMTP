@@ -28,19 +28,22 @@
 #ifndef VCMTP_RECEIVER_VCMTPRECVV3_H_
 #define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
+
 #include <condition_variable>
 #include <exception>
+#include <list>
 #include <mutex>
-#include "vcmtpBase.h"
-#include "RecvAppNotifier.h"
+#include <netinet/in.h>
+#include <pthread.h>
+#include <queue>
 #include <stdint.h>
 #include <string>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <queue>
-#include <list>
-#include "TcpRecv.h"
+
 #include "ProdBitMap.h"
+#include "RecvAppNotifier.h"
+#include "TcpRecv.h"
+#include "vcmtpBase.h"
+
 
 class vcmtpRecvv3;
 
@@ -242,5 +245,6 @@ private:
     bool isEOPReceived();
     void taskExit(const std::exception&);
 };
+
 
 #endif /* VCMTP_RECEIVER_VCMTPRECVV3_H_ */

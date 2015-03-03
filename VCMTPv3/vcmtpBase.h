@@ -29,8 +29,8 @@
 
 
 #include <stdint.h>
-#include <strings.h>
 #include <string.h>
+#include <strings.h>
 
 
 /**
@@ -42,6 +42,7 @@ typedef struct VcmtpPacketHeader {
     uint16_t   payloadlen;
     uint16_t   flags;
 } VcmtpHeader;
+
 
 /**
  * struct of Vcmtp retx-request-message
@@ -58,6 +59,7 @@ const int VCMTP_DATA_LEN       = MAX_VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
 const int AVAIL_BOP_LEN        = VCMTP_DATA_LEN - 4 - 2; /*!< prosize is 4 bytes, metasize is 2 bytes */
 const int RETX_REQ_LEN         = sizeof(RetxReqMsg);
 
+
 /**
  * structure of Begin-Of-Product message
  */
@@ -66,6 +68,7 @@ typedef struct VcmtpBOPMessage {
     uint16_t   metasize;
     char       metadata[AVAIL_BOP_LEN];
 } BOPMsg;
+
 
 const uint16_t VCMTP_BOP       = 0x0001;
 const uint16_t VCMTP_EOP       = 0x0002;
@@ -106,5 +109,6 @@ public:
 
 private:
 };
+
 
 #endif /* VCMTP_VCMTPV3_VCMTPBASE_H_ */

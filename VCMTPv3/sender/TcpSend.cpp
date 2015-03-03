@@ -27,23 +27,16 @@
  */
 
 
+#include "TcpSend.h"
 
 #include <errno.h>
-#include <iostream>
-#include <sys/socket.h>
-#include <mutex>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string>
-#include <system_error>
-#include "TcpSend.h"
-#include "vcmtpBase.h"
-#include <sys/uio.h>
 #include <stdexcept>
+#include <system_error>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
 
 #ifndef NULL
     #define NULL 0

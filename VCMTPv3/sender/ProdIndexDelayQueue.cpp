@@ -9,8 +9,9 @@
  * This file implements a thread-safe delay-queue of product-indexes.
  */
 
+
 #include "ProdIndexDelayQueue.h"
-#include <chrono>
+
 
 /**
  * Constructs an instance.
@@ -30,6 +31,7 @@ ProdIndexDelayQueue::Element::Element(
 {
 }
 
+
 /**
  * Indicates if the time of the current element is later than another element.
  *
@@ -42,6 +44,7 @@ bool ProdIndexDelayQueue::Element::isLaterThan(
 {
     return this->when > that.when;
 }
+
 
 /**
  * Indicates if the priority of an element is lower than the priority of another
@@ -59,6 +62,7 @@ bool ProdIndexDelayQueue::isLowerPriority(
     return a.isLaterThan(b);
 }
 
+
 /**
  * Constructs an instance.
  */
@@ -69,6 +73,7 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
     priQ(&isLowerPriority)
 {
 }
+
 
 /**
  * Adds an element to the queue.
@@ -87,6 +92,7 @@ void ProdIndexDelayQueue::push(
     cond.notify_one();
 }
 
+
 /**
  * Returns the time associated with the highest-priority element in the queue.
  *
@@ -101,6 +107,7 @@ const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTim
         cond.wait(lock);
     return priQ.top().getTime();
 }
+
 
 /**
  * Returns the product-index whose reveal-time is the earliest and not later
@@ -121,6 +128,7 @@ uint32_t ProdIndexDelayQueue::pop()
     return index;
 }
 
+
 /**
  * Unconditionally returns the product-index whose reveal-time is the earliest
  * and removes it from the queue. Undefined behavior results if the queue is
@@ -136,6 +144,7 @@ uint32_t ProdIndexDelayQueue::get()
     cond.notify_one();
     return index;
 }
+
 
 /**
  * Returns the number of product-indexes in the queue.

@@ -30,18 +30,20 @@
 #define VCMTP_SENDER_VCMTPSENDV3_H_
 
 
-#include <sys/types.h>
-#include "UdpSend.h"
-#include "TcpSend.h"
-#include "vcmtpBase.h"
-#include "senderMetadata.h"
-#include "SendAppNotifier.h"
-#include <map>
-#include <set>
-#include <list>
-#include <pthread.h>
 #include <ctime>
+#include <list>
+#include <map>
+#include <pthread.h>
+#include <set>
+#include <sys/types.h>
+
 #include "ProdIndexDelayQueue.h"
+#include "SendAppNotifier.h"
+#include "senderMetadata.h"
+#include "TcpSend.h"
+#include "UdpSend.h"
+#include "vcmtpBase.h"
+
 
 class vcmtpSendv3;
 
@@ -251,5 +253,6 @@ private:
     vcmtpSendv3& operator=(const vcmtpSendv3&);
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
 };
+
 
 #endif /* VCMTP_SENDER_VCMTPSENDV3_H_ */

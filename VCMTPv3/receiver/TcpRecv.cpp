@@ -25,18 +25,16 @@
  */
 
 
+#include "TcpRecv.h"
+
 #include <errno.h>
 #include <iostream>
+#include <netdb.h>
 #include <stdexcept>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
 #include <sys/uio.h>
-#include "TcpRecv.h"
+#include <unistd.h>
+
 
 using namespace std;
 

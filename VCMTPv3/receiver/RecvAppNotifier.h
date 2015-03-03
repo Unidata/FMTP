@@ -14,8 +14,10 @@
 #ifndef VCMTP_RECEIVER_RECVAPPNOTIFIER_H_
 #define VCMTP_RECEIVER_RECVAPPNOTIFIER_H_
 
+
 #include <stdint.h>
 #include <sys/types.h>
+
 
 /**
  * This base class notifies a receiving application about events.
@@ -50,5 +52,6 @@ public:
      */
     virtual void notify_of_missed_prod(uint32_t prodIndex) = 0;
 };
+
 
 #endif /* VCMTP_RECEIVER_RECVAPPNOTIFIER_H_ */

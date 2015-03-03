@@ -26,21 +26,18 @@
 
 
 #include "vcmtpRecvv3.h"
-#include <stdio.h>
-#include <iostream>
-#include <sys/socket.h>
+
 #include <arpa/inet.h>
-#include <netinet/in.h>
-#include <strings.h>
-#include <memory.h>
-#include <pthread.h>
 #include <fcntl.h>
-#include <string>
-#include <string.h>
-#include <system_error>
-#include <unistd.h>
-#include <sys/uio.h>
+#include <iostream>
 #include <math.h>
+#include <memory.h>
+#include <netinet/in.h>
+#include <system_error>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
 
 using namespace std;
 
