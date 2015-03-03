@@ -26,20 +26,24 @@
  */
 
 
-#ifndef VCMTPSENDV3_H_
-#define VCMTPSENDV3_H_
+#ifndef VCMTP_SENDER_VCMTPSENDV3_H_
+#define VCMTP_SENDER_VCMTPSENDV3_H_
 
 
-#include <sys/types.h>
-#include "UdpSend.h"
-#include "TcpSend.h"
-#include "vcmtpBase.h"
-#include "senderMetadata.h"
-#include "SendAppNotifier.h"
-#include <map>
-#include <set>
-#include <pthread.h>
 #include <ctime>
+#include <list>
+#include <map>
+#include <pthread.h>
+#include <set>
+#include <sys/types.h>
+
+#include "ProdIndexDelayQueue.h"
+#include "SendAppNotifier.h"
+#include "senderMetadata.h"
+#include "TcpSend.h"
+#include "UdpSend.h"
+#include "vcmtpBase.h"
+
 
 class vcmtpSendv3;
 
@@ -102,7 +106,10 @@ public:
     uint32_t sendProduct(void* data, size_t dataSize);
     uint32_t sendProduct(void* data, size_t dataSize, void* metadata,
                          unsigned metaSize);
-    void startCoordinator();
+    /** Sender side start point, the first function to be called */
+    void Start();
+    /** Sender side stop point */
+    void Stop();
     unsigned short getTcpPortNum();
 
 private:
@@ -116,15 +123,16 @@ private:
     /** sending application callback hook */
     SendAppNotifier* notifier;
     float                       retxTimeoutRatio;
-    /** first: socket fd;  second: pthread_t pointer */
-    std::map<int, pthread_t*>   retxSockThreadMap;
-    /** first: socket fd;  second: retransmission finished indicator */
-    std::map<int, bool>         retxSockFinishMap;
     /** first: socket fd;  second: pointer to the retxThreadInfo struct */
     std::map<int, StartRetxThreadInfo*> retxSockInfoMap;
     std::mutex                  exitMutex;
     std::exception              except;
     bool                        exceptIsSet;
+    ProdIndexDelayQueue         timerDelayQ;
+    pthread_t                   coor_t;
+    pthread_t                   timer_t;
+    /** help tracking all the dynamically created retx threads */
+    std::list<pthread_t>        retxThreadList;
 
     /**
      * Adds and entry for a data-product to the retransmission set.
@@ -155,13 +163,14 @@ private:
      */
     void setTimerParameters(RetxMetadata* const senderProdMeta);
     void StartNewRetxThread(int newtcpsockfd);
-    void startTimerThread(uint32_t prodindex);
+    /** a wrapper to call the actual vcmtpSendv3::timerThread() */
+    static void* timerWrapper(void* ptr);
+    void timerThread();
     /** new coordinator thread */
     static void* coordinator(void* ptr);
     /** new retranmission thread */
     static void* StartRetxThread(void* ptr);
     /** new timer thread */
-    static void* runTimerThread(void* ptr);
     void RunRetxThread(int retxsockfd);
     /**
      * Handles a retransmission request.
@@ -245,4 +254,5 @@ private:
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
 };
 
-#endif /* VCMTPSENDV3_H_ */
+
+#endif /* VCMTP_SENDER_VCMTPSENDV3_H_ */

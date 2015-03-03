@@ -27,11 +27,10 @@
  */
 
 
-
 #include "UdpSend.h"
+
 #include <stdexcept>
 #include <string.h>
-#include <sys/uio.h>
 
 
 #ifndef NULL

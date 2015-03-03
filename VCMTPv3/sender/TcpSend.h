@@ -28,14 +28,18 @@
 
 
 
-#ifndef TCPSEND_H_
-#define TCPSEND_H_
+#ifndef VCMTP_SENDER_TCPSEND_H_
+#define VCMTP_SENDER_TCPSEND_H_
 
-#include <string>
+
+#include <arpa/inet.h>
 #include <list>
 #include <mutex>
-#include "vcmtpBase.h"
 #include <pthread.h>
+#include <string>
+
+#include "vcmtpBase.h"
+
 
 class TcpSend
 {
@@ -62,4 +66,5 @@ private:
     std::mutex sockListMutex; /*!< protect operation on shared sockList */
 };
 
-#endif /* TCPSEND_H_ */
+
+#endif /* VCMTP_SENDER_TCPSEND_H_ */

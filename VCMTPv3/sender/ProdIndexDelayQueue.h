@@ -9,8 +9,9 @@
  * This file declares the API of a thread-safe delay-queue of product-indexes.
  */
 
-#ifndef PRODINDEXDELAYQUEUE_H_
-#define PRODINDEXDELAYQUEUE_H_
+#ifndef VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_
+#define VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_
+
 
 #include <chrono>
 #include <condition_variable>
@@ -19,6 +20,7 @@
 #include <queue>
 #include <sys/types.h>
 #include <vector>
+
 
 class ProdIndexDelayQueue {
 public:
@@ -34,7 +36,7 @@ public:
      *                     product-index (i.e., until the element can be
      *                     retrieved via `pop()`).
      */
-    void      push(u_int32_t index, double seconds);
+    void push(uint32_t index, double seconds);
     /**
      * Returns the product-index whose reveal-time is the earliest and not later
      * than the current time and removes it from the queue. Blocks until such a
@@ -43,7 +45,7 @@ public:
      * @return  The product-index with the earliest reveal-time that's not later
      *          than the current time.
      */
-    u_int32_t pop();
+    uint32_t pop();
     /**
      * Unconditionally returns the product-index whose reveal-time is the
      * earliest and removes it from the queue. Undefined behavior results if the
@@ -51,7 +53,7 @@ public:
      *
      * @return  The product-index with the earliest reveal-time.
      */
-    u_int32_t get();
+    uint32_t get();
     /**
      * Returns the number of product-indexes in the queue.
      *
@@ -88,7 +90,7 @@ private:
          *
          * @return  The product-index.
          */
-        u_int32_t getIndex() const {return index;}
+        uint32_t getIndex() const {return index;}
         /**
          * Returns the reveal-time.
          *
@@ -100,7 +102,7 @@ private:
         /**
          * The product-index.
          */
-        u_int32_t                             index;
+        uint32_t                             index;
         /**
          * The reveal-time.
          */
@@ -144,4 +146,4 @@ private:
             decltype(&isLowerPriority)> priQ;
 };
 
-#endif /* PRODINDEXDELAYQUEUE_H_ */
+#endif /* VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_ */

@@ -26,16 +26,17 @@
  */
 
 
+#ifndef VCMTP_SENDER_SENDERMETADATA_H_
+#define VCMTP_SENDER_SENDERMETADATA_H_
 
-#ifndef SENDERMETADATA_H_
-#define SENDERMETADATA_H_
 
-#include <set>
+#include <chrono>
 #include <map>
 #include <pthread.h>
+#include <set>
 #include <stdint.h>
-#include <chrono>
 #include <time.h>
+
 
 typedef std::chrono::high_resolution_clock myClock;
 
@@ -80,4 +81,5 @@ private:
     bool rmRetxMetadataNoLock(uint32_t prodindex);
 };
 
-#endif /* SENDERMETADATA_H_ */
+
+#endif /* VCMTP_SENDER_SENDERMETADATA_H_ */

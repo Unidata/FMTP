@@ -26,23 +26,18 @@
 
 
 #include "vcmtpRecvv3.h"
-#include <stdio.h>
-#include <iostream>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <strings.h>
-#include <memory.h>
-#include <pthread.h>
-#include <fcntl.h>
-#include <string>
-#include <string.h>
-#include <system_error>
-#include <unistd.h>
-#include <sys/uio.h>
-#include <math.h>
 
-using namespace std;
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <iostream>
+#include <math.h>
+#include <memory.h>
+#include <netinet/in.h>
+#include <system_error>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -55,9 +50,9 @@ using namespace std;
  *                          of incoming Begin-Of-Product messages.
  */
 vcmtpRecvv3::vcmtpRecvv3(
-    string               tcpAddr,
+    std::string          tcpAddr,
     const unsigned short tcpPort,
-    string               mcastAddr,
+    std::string          mcastAddr,
     const unsigned short mcastPort,
     RecvAppNotifier*     notifier)
 :
@@ -95,9 +90,9 @@ vcmtpRecvv3::vcmtpRecvv3(
  * @param[in] mcastPort     Udp multicast port for receiving data products.
  */
 vcmtpRecvv3::vcmtpRecvv3(
-    string               tcpAddr,
+    std::string          tcpAddr,
     const unsigned short tcpPort,
-    string               mcastAddr,
+    std::string          mcastAddr,
     const unsigned short mcastPort)
 :
     tcpAddr(tcpAddr),
@@ -162,6 +157,7 @@ void vcmtpRecvv3::Start()
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
     StartRetxProcedure();
+    // TODO: should consider use delay queue for timer.
     startTimerThread();
 
     int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
@@ -204,7 +200,7 @@ void vcmtpRecvv3::Stop()
  * @throw std::system_error  if the socket couldn't join the multicast group.
  */
 void vcmtpRecvv3::joinGroup(
-        string               mcastAddr,
+        std::string          mcastAddr,
         const unsigned short mcastPort)
 {
     (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
@@ -582,7 +578,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * packets.
      */
     {
-        unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+        std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
         vcmtpHeader = header;
         vcmtpHeader.seqnum     = 0;
         vcmtpHeader.payloadlen = 0;
@@ -638,8 +634,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
 bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
 {
     bool rmsuccess;
-    list<uint32_t>::iterator it;
-    unique_lock<std::mutex>  lock(BOPListMutex);
+    std::list<uint32_t>::iterator it;
+    std::unique_lock<std::mutex>  lock(BOPListMutex);
 
     for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
     {
@@ -666,8 +662,8 @@ bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
 bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
 {
     bool addsuccess;
-    list<uint32_t>::iterator it;
-    unique_lock<std::mutex>  lock(BOPListMutex);
+    std::list<uint32_t>::iterator it;
+    std::unique_lock<std::mutex>  lock(BOPListMutex);
     for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
     {
         if (*it == prodindex)
@@ -745,7 +741,7 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
 
         if (0 == prodptr) {
             #ifdef DEBUG2
-            std::cout << "No product queue. Data block is discarded." << endl;
+            std::cout << "No product queue. Data block is discarded." << std::endl;
             std::cout << "(Data) seqnum: " << header.seqnum;
             std::cout << "    paylen: " << header.payloadlen << std::endl;
             #endif
@@ -848,7 +844,7 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t mostRecent)
 void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
     // Careful! Product-indexes wrap around!
-    unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
         if (addUnrqBOPinList(i)) {
             pushMissingBopReq(i);

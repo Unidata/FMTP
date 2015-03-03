@@ -26,7 +26,6 @@
 
 #include "vcmtpBase.h"
 
-using namespace std;
 
 vcmtpBase::vcmtpBase()
 {

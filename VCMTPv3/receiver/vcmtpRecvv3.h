@@ -25,22 +25,25 @@
  */
 
 
-#ifndef VCMTPRECVV3_H_
-#define VCMTPRECVV3_H_
+#ifndef VCMTP_RECEIVER_VCMTPRECVV3_H_
+#define VCMTP_RECEIVER_VCMTPRECVV3_H_
+
 
 #include <condition_variable>
 #include <exception>
+#include <list>
 #include <mutex>
-#include "vcmtpBase.h"
-#include "RecvAppNotifier.h"
+#include <netinet/in.h>
+#include <pthread.h>
+#include <queue>
 #include <stdint.h>
 #include <string>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <queue>
-#include <list>
-#include "TcpRecv.h"
+
 #include "ProdBitMap.h"
+#include "RecvAppNotifier.h"
+#include "TcpRecv.h"
+#include "vcmtpBase.h"
+
 
 class vcmtpRecvv3;
 
@@ -97,10 +100,10 @@ private:
     /*!< the state of EOP, true: received false: missing */
     bool                    EOPStatus;
     std::mutex              EOPStatMtx;
-    pthread_t               retx_rq; ///< Retransmission request thread
-    pthread_t               retx_t;  ///< Retransmission receive thread
-    pthread_t               mcast_t; ///< Multicast receiver thread
-    pthread_t               timer_t; ///< BOP timer thread
+    pthread_t               retx_rq; /*!< Retransmission request thread */
+    pthread_t               retx_t;  /*!< Retransmission receive thread */
+    pthread_t               mcast_t; /*!< Multicast receiver thread     */
+    pthread_t               timer_t; /*!< BOP timer thread              */
     /** a queue containing timerParam structure for each product */
     std::queue<timerParam>  timerParamQ;
     std::condition_variable timerQfilled;
@@ -243,4 +246,5 @@ private:
     void taskExit(const std::exception&);
 };
 
-#endif /* VCMTPRECVV3_H_ */
+
+#endif /* VCMTP_RECEIVER_VCMTPRECVV3_H_ */

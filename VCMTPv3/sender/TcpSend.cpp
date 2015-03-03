@@ -27,30 +27,22 @@
  */
 
 
+#include "TcpSend.h"
 
 #include <errno.h>
-#include <iostream>
-#include <sys/socket.h>
-#include <mutex>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string>
-#include <system_error>
-#include "TcpSend.h"
-#include "vcmtpBase.h"
-#include <sys/uio.h>
 #include <stdexcept>
+#include <system_error>
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
 
 #ifndef NULL
     #define NULL 0
 #endif
 #define MAX_CONNECTION 50
 
-using namespace std;
 
 /**
  * Contructor for TcpSend class, taking tcp address and tcp port to establish a
@@ -66,7 +58,7 @@ using namespace std;
  * @throw  std::runtime_error    if socket creation fails.
  * @throw  std::runtime_error    if socket bind() operation fails.
  */
-TcpSend::TcpSend(string tcpAddr, unsigned short tcpPort)
+TcpSend::TcpSend(std::string tcpAddr, unsigned short tcpPort)
     : sockListMutex()
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -157,7 +149,7 @@ int TcpSend::acceptConn()
  * @param[in] none
  * @return    connSockList          connected socket list (a collection of
  */
-const list<int>& TcpSend::getConnSockList()
+const std::list<int>& TcpSend::getConnSockList()
 {
     return connSockList;
 }

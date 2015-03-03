@@ -26,9 +26,9 @@
  */
 
 
-#include <iostream>
-#include <string>
 #include "vcmtpRecvv3.h"
+
+#include <iostream>
 
 
 int main(int argc, char* argv[])

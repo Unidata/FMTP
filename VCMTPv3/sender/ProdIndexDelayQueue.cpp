@@ -9,8 +9,9 @@
  * This file implements a thread-safe delay-queue of product-indexes.
  */
 
+
 #include "ProdIndexDelayQueue.h"
-#include <chrono>
+
 
 /**
  * Constructs an instance.
@@ -20,7 +21,7 @@
  *                     reveal-time of the element. May be negative.
  */
 ProdIndexDelayQueue::Element::Element(
-        const u_int32_t index,
+        const uint32_t index,
         const double    seconds)
 :
     index(index),
@@ -29,6 +30,7 @@ ProdIndexDelayQueue::Element::Element(
             (std::chrono::duration<double>(seconds)))
 {
 }
+
 
 /**
  * Indicates if the time of the current element is later than another element.
@@ -42,6 +44,7 @@ bool ProdIndexDelayQueue::Element::isLaterThan(
 {
     return this->when > that.when;
 }
+
 
 /**
  * Indicates if the priority of an element is lower than the priority of another
@@ -59,6 +62,7 @@ bool ProdIndexDelayQueue::isLowerPriority(
     return a.isLaterThan(b);
 }
 
+
 /**
  * Constructs an instance.
  */
@@ -70,6 +74,7 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
 {
 }
 
+
 /**
  * Adds an element to the queue.
  *
@@ -79,13 +84,14 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
  *                     via `pop()`).
  */
 void ProdIndexDelayQueue::push(
-        const u_int32_t index,
+        const uint32_t index,
         const double    seconds)
 {
     std::unique_lock<std::mutex>(mutex);
     priQ.push(Element(index, seconds));
     cond.notify_one();
 }
+
 
 /**
  * Returns the time associated with the highest-priority element in the queue.
@@ -102,6 +108,7 @@ const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTim
     return priQ.top().getTime();
 }
 
+
 /**
  * Returns the product-index whose reveal-time is the earliest and not later
  * than the current time and removes it from the queue. Blocks until such a
@@ -110,16 +117,17 @@ const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTim
  * @return  The product-index with the earliest reveal-time that's not later
  *          than the current time.
  */
-u_int32_t ProdIndexDelayQueue::pop()
+uint32_t ProdIndexDelayQueue::pop()
 {
     std::unique_lock<std::mutex> lock(mutex);
     while (getEarliestTime(lock) > std::chrono::system_clock::now())
         cond.wait_until(lock, getEarliestTime(lock));
-    u_int32_t index = priQ.top().getIndex();
+    uint32_t index = priQ.top().getIndex();
     priQ.pop();
     cond.notify_one();
     return index;
 }
+
 
 /**
  * Unconditionally returns the product-index whose reveal-time is the earliest
@@ -128,14 +136,15 @@ u_int32_t ProdIndexDelayQueue::pop()
  *
  * @return  The product-index with the earliest reveal-time.
  */
-u_int32_t ProdIndexDelayQueue::get()
+uint32_t ProdIndexDelayQueue::get()
 {
     std::unique_lock<std::mutex> lock(mutex);
-    u_int32_t index = priQ.top().getIndex();
+    uint32_t index = priQ.top().getIndex();
     priQ.pop();
     cond.notify_one();
     return index;
 }
+
 
 /**
  * Returns the number of product-indexes in the queue.
