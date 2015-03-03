@@ -27,6 +27,7 @@
 
 #include "TcpRecv.h"
 
+#include <cstring>
 #include <errno.h>
 #include <iostream>
 #include <netdb.h>
