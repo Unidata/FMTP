@@ -27,8 +27,8 @@
 
 
 
-#ifndef SENDERMETADATA_H_
-#define SENDERMETADATA_H_
+#ifndef VCMTP_SENDER_SENDERMETADATA_H_
+#define VCMTP_SENDER_SENDERMETADATA_H_
 
 #include <set>
 #include <map>
@@ -80,4 +80,4 @@ private:
     bool rmRetxMetadataNoLock(uint32_t prodindex);
 };
 
-#endif /* SENDERMETADATA_H_ */
+#endif /* VCMTP_SENDER_SENDERMETADATA_H_ */

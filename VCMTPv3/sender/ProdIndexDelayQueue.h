@@ -9,8 +9,8 @@
  * This file declares the API of a thread-safe delay-queue of product-indexes.
  */
 
-#ifndef PRODINDEXDELAYQUEUE_H_
-#define PRODINDEXDELAYQUEUE_H_
+#ifndef VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_
+#define VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_
 
 #include <chrono>
 #include <condition_variable>
@@ -144,4 +144,4 @@ private:
             decltype(&isLowerPriority)> priQ;
 };
 
-#endif /* PRODINDEXDELAYQUEUE_H_ */
+#endif /* VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_ */

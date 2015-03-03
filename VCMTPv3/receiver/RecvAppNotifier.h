@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file ReceivingApplicationNotifier.h
+ * @file RecvAppNotifier.h
  *
  * This file declares the API for classes that notify a receiving application
  * about files.
@@ -11,8 +11,8 @@
  * @author: Steven R. Emmerson
  */
 
-#ifndef RECEIVING_APPLICATION_NOTIFIER_H_
-#define RECEIVING_APPLICATION_NOTIFIER_H_
+#ifndef VCMTP_RECEIVER_RECVAPPNOTIFIER_H_
+#define VCMTP_RECEIVER_RECVAPPNOTIFIER_H_
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -51,4 +51,4 @@ public:
     virtual void notify_of_missed_prod(uint32_t prodIndex) = 0;
 };
 
-#endif /* RECEIVING_APPLICATION_NOTIFIER_H_ */
+#endif /* VCMTP_RECEIVER_RECVAPPNOTIFIER_H_ */

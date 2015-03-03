@@ -28,8 +28,8 @@
 
 
 
-#ifndef UDPSOCKET_H_
-#define UDPSOCKET_H_
+#ifndef VCMTP_SENDER_UDPSOCKET_H_
+#define VCMTP_SENDER_UDPSOCKET_H_
 
 
 #include <sys/socket.h>
@@ -73,5 +73,5 @@ private:
 
 
 
-#endif /* UDPSOCKET_H_ */
+#endif /* VCMTP_SENDER_UDPSOCKET_H_ */
 

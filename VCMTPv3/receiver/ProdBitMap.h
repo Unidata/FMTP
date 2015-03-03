@@ -24,8 +24,8 @@
  */
 
 
-#ifndef PRODBITMAP_H_
-#define PRODBITMAP_H_
+#ifndef VCMTP_RECEIVER_PRODBITMAP_H_
+#define VCMTP_RECEIVER_PRODBITMAP_H_
 
 #include <vector>
 #include <stdint.h>
@@ -50,4 +50,4 @@ private:
 };
 
 
-#endif /* PRODBITMAP_H_ */
+#endif /* VCMTP_RECEIVER_PRODBITMAP_H_ */

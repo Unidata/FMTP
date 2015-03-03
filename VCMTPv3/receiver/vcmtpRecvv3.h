@@ -25,8 +25,8 @@
  */
 
 
-#ifndef VCMTPRECVV3_H_
-#define VCMTPRECVV3_H_
+#ifndef VCMTP_RECEIVER_VCMTPRECVV3_H_
+#define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
 #include <condition_variable>
 #include <exception>
@@ -243,4 +243,4 @@ private:
     void taskExit(const std::exception&);
 };
 
-#endif /* VCMTPRECVV3_H_ */
+#endif /* VCMTP_RECEIVER_VCMTPRECVV3_H_ */

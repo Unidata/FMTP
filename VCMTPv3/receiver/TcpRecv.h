@@ -25,8 +25,8 @@
  */
 
 
-#ifndef TCPRECV_H_
-#define TCPRECV_H_
+#ifndef VCMTP_RECEIVER_TCPRECV_H_
+#define VCMTP_RECEIVER_TCPRECV_H_
 
 #include <arpa/inet.h>
 #include <mutex>
@@ -88,4 +88,4 @@ inline std::string operator+(const std::string& lhs, const struct sockaddr_in& r
             std::to_string(static_cast<long long>(ntohs(rhs.sin_port)));
 }
 
-#endif /* TCPRECV_H_ */
+#endif /* VCMTP_RECEIVER_TCPRECV_H_ */

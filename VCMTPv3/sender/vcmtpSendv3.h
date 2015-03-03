@@ -26,8 +26,8 @@
  */
 
 
-#ifndef VCMTPSENDV3_H_
-#define VCMTPSENDV3_H_
+#ifndef VCMTP_SENDER_VCMTPSENDV3_H_
+#define VCMTP_SENDER_VCMTPSENDV3_H_
 
 
 #include <sys/types.h>
@@ -252,4 +252,4 @@ private:
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
 };
 
-#endif /* VCMTPSENDV3_H_ */
+#endif /* VCMTP_SENDER_VCMTPSENDV3_H_ */

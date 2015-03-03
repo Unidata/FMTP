@@ -24,8 +24,8 @@
  */
 
 
-#ifndef VCMTPBASE_H_
-#define VCMTPBASE_H_
+#ifndef VCMTP_VCMTPV3_VCMTPBASE_H_
+#define VCMTP_VCMTPV3_VCMTPBASE_H_
 
 
 #include <stdint.h>
@@ -107,4 +107,4 @@ public:
 private:
 };
 
-#endif /* VCMTPBASE_H_ */
+#endif /* VCMTP_VCMTPV3_VCMTPBASE_H_ */
