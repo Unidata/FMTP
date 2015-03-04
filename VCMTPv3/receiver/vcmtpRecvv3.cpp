@@ -476,8 +476,7 @@ void vcmtpRecvv3::retxHandler()
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
-        if (header.flags == VCMTP_RETX_BOP)
-        {
+        if (header.flags == VCMTP_RETX_BOP) {
             (void)pthread_setcancelstate(initState, &ignoredState);
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
@@ -496,8 +495,7 @@ void vcmtpRecvv3::retxHandler()
             requestAnyMissingData(BOPmsg.prodsize);
             pushMissingEopReq(header.prodindex);
         }
-        else if (header.flags == VCMTP_RETX_DATA)
-        {
+        else if (header.flags == VCMTP_RETX_DATA) {
             /**
              * directly writing unwanted data to NULL is not allowed. So here
              * uses a temp buffer as trash to dump the payload content.
@@ -538,8 +536,7 @@ void vcmtpRecvv3::retxHandler()
                 std::cout << "RETX Data block received" << std::endl;
             #endif
         }
-        else if (header.flags == VCMTP_RETX_EOP)
-        {
+        else if (header.flags == VCMTP_RETX_EOP) {
             retxEOPHandler(header);
         }
 
@@ -637,10 +634,8 @@ bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
     std::list<uint32_t>::iterator it;
     std::unique_lock<std::mutex>  lock(BOPListMutex);
 
-    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
-    {
-        if (*it == prodindex)
-        {
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it) {
+        if (*it == prodindex) {
             misBOPlist.erase(it);
             rmsuccess = true;
             break;
@@ -664,10 +659,8 @@ bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
     bool addsuccess;
     std::list<uint32_t>::iterator it;
     std::unique_lock<std::mutex>  lock(BOPListMutex);
-    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it)
-    {
-        if (*it == prodindex)
-        {
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it) {
+        if (*it == prodindex) {
             addsuccess = false;
             return addsuccess;
         }

@@ -62,8 +62,7 @@ ProdBitMap::~ProdBitMap()
 void ProdBitMap::set(uint32_t blockindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    if (!map->at(blockindex))
-    {
+    if (!map->at(blockindex)) {
         map->at(blockindex) = true;
         recvblocks++;
     }

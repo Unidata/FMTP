@@ -196,6 +196,7 @@ int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
     recvheader->seqnum     = ntohl(recvheader->seqnum);
     recvheader->payloadlen = ntohs(recvheader->payloadlen);
     recvheader->flags      = ntohs(recvheader->flags);
+
     return retval;
 }
 

@@ -85,7 +85,7 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
  */
 void ProdIndexDelayQueue::push(
         const uint32_t index,
-        const double    seconds)
+        const double   seconds)
 {
     std::unique_lock<std::mutex>(mutex);
     priQ.push(Element(index, seconds));

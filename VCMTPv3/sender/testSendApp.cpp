@@ -74,12 +74,10 @@ int main(int argc, char const* argv[])
     stat(filename.c_str(), &filestatus);
     size_t datasize = filestatus.st_size;
 
-    int fd;
-    fd = open(filename.c_str(), O_RDONLY);
+    int fd = open(filename.c_str(), O_RDONLY);
     if(fd>0)
     {
-        void* data;
-        data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+        void* data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
         if (data == MAP_FAILED)
             std::cerr << "file map failed" << std::endl;
 

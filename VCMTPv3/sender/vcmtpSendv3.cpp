@@ -489,8 +489,7 @@ void vcmtpSendv3::Stop()
     (void)pthread_cancel(coor_t);
 
     std::list<pthread_t>::iterator it;
-    for (it = retxThreadList.begin(); it != retxThreadList.end(); ++it)
-    {
+    for (it = retxThreadList.begin(); it != retxThreadList.end(); ++it) {
         (void)pthread_cancel(*it);
         retxThreadList.erase(it);
     }
@@ -509,8 +508,7 @@ void vcmtpSendv3::Stop()
 void* vcmtpSendv3::coordinator(void* ptr)
 {
     vcmtpSendv3* sendptr = static_cast<vcmtpSendv3*>(ptr);
-    while(1)
-    {
+    while(1) {
         int newtcpsockfd = sendptr->tcpsend->acceptConn();
         sendptr->StartNewRetxThread(newtcpsockfd);
     }
@@ -545,8 +543,6 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
     StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
     retxThreadInfo->retxmitterptr       = this;
     retxThreadInfo->retxsockfd          = newtcpsockfd;
-
-    retxSockInfoMap[newtcpsockfd] = retxThreadInfo;
 
     int retval = pthread_create(&t, NULL, &vcmtpSendv3::StartRetxThread,
                                 retxThreadInfo);

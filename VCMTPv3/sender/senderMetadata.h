@@ -41,18 +41,18 @@
 typedef std::chrono::high_resolution_clock myClock;
 
 struct RetxMetadata {
-    uint32_t  prodindex;
+    uint32_t       prodindex;
     /** recording the whole product size (for timeout factor use) */
-    uint32_t  prodLength;
-    uint16_t  metaSize;          /*!< metadata size */
-    void*     metadata;          /*!< metadata pointer */
-    clock_t   mcastStartTime;    /*!< multicasting start time */
-    clock_t   mcastEndTime;      /*!< multicasting end time */
-    //auto      mcastStartTime;    /*!< multicasting start time */
-    //auto      mcastEndTime;      /*!< multicasting end time */
-    float     retxTimeoutRatio;  /*!< ratio to scale timeout time */
-    float     retxTimeoutPeriod; /*!< timeout time in seconds */
-    void*     dataprod_p;        /*!< pointer to the data product */
+    uint32_t       prodLength;
+    uint16_t       metaSize;          /*!< metadata size               */
+    void*          metadata;          /*!< metadata pointer            */
+    clock_t        mcastStartTime;    /*!< multicasting start time     */
+    clock_t        mcastEndTime;      /*!< multicasting end time       */
+    //auto      mcastStartTime;    /*!< multicasting start time    */
+    //auto      mcastEndTime;      /*!< multicasting end time      */
+    float          retxTimeoutRatio;  /*!< ratio to scale timeout time */
+    float          retxTimeoutPeriod; /*!< timeout time in seconds     */
+    void*          dataprod_p;        /*!< pointer to the data product */
     /** unfinished receiver set indexed by socket id */
     std::set<int>  unfinReceivers;
 

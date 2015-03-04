@@ -123,8 +123,6 @@ private:
     /** sending application callback hook */
     SendAppNotifier* notifier;
     float                       retxTimeoutRatio;
-    /** first: socket fd;  second: pointer to the retxThreadInfo struct */
-    std::map<int, StartRetxThreadInfo*> retxSockInfoMap;
     std::mutex                  exitMutex;
     std::exception              except;
     bool                        exceptIsSet;
