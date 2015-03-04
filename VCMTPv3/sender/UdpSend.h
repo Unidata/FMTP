@@ -33,15 +33,18 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/uio.h>
 
 
 class UdpSend {
 public:
-    UdpSend(const char* recvAddr, unsigned short port);
-    UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl);
+    UdpSend(const std::string& recvaddr, unsigned short recvport);
+    UdpSend(const std::string& recvaddr, unsigned short recvport,
+            unsigned char ttl);
     ~UdpSend();
+    void Init();  /*!< start point which caller should call */
     /**
      * SendTo() sends a piece of message to a destination identified by a
      * socket file descriptor.
@@ -64,8 +67,11 @@ public:
                      const size_t dataLen);
 
 private:
-    int sock_fd;
+    int                sock_fd;
     struct sockaddr_in recv_addr;
+    std::string        recvAddr;
+    unsigned short     recvPort;
+    unsigned short     ttl;
 };
 
 

@@ -40,7 +40,7 @@ class TcpRecv
 public:
     TcpRecv(const std::string& tcpaddr, unsigned short tcpport);
     ~TcpRecv();
-    void Init();  /* the start point which upper layer should call */
+    void Init();  /*!< the start point which upper layer should call */
     /**
      * Sends a header and a payload on the TCP connection. Blocks until the packet
      * is sent or a severe error occurs. Re-establishes the TCP connection if

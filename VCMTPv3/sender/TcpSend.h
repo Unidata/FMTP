@@ -45,7 +45,7 @@ class TcpSend
 {
 public:
     /** source port would be initialized to 0 if not being specified. */
-    TcpSend(std::string tcpAddr, unsigned short tcpPort = 0);
+    TcpSend(std::string tcpaddr, unsigned short tcpport = 0);
     ~TcpSend();
     void Init(); /*!< start point that upper layer should call */
     int acceptConn();

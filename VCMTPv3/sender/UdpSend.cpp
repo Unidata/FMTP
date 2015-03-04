@@ -30,7 +30,7 @@
 #include "UdpSend.h"
 
 #include <stdexcept>
-#include <string.h>
+//#include <string.h>
 
 
 #ifndef NULL
@@ -39,42 +39,30 @@
 
 
 /**
- * Set the IP address and port of the receiver and connect to the udp socket.
+ * Constructor, set the IP address and port of the receiver.
  *
- * @param[in] recvAddr     IP address of the receiver.
- * @param[in] port         Port number of the receiver.
- * @throw  runtime_error  if socket creation fails.
+ * @param[in] recvaddr     IP address of the receiver.
+ * @param[in] recvport     Port number of the receiver.
  */
-UdpSend::UdpSend(const char* recvAddr, unsigned short port)
+UdpSend::UdpSend(const std::string& recvaddr, unsigned short recvport)
+    : recvAddr(recvaddr), recvPort(recvport)
 {
-    /** create a UDP datagram socket. */
-    if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        throw std::runtime_error("UdpSend::UdpSend() create socket error");
-    /** clear struct recv_addr. */
-    (void) memset(&recv_addr, 0, sizeof(recv_addr));
-    /** set connection type to IPv4 */
-    recv_addr.sin_family = AF_INET;
-    /** set the address to the receiver address passed to the constructor */
-    recv_addr.sin_addr.s_addr =inet_addr(recvAddr);
-    /** set the port number to the port number passed to the constructor */
-    recv_addr.sin_port = htons(port);
-    connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
 }
 
 
 /**
- * Set the IP address and port of the receiver and connect to the udp socket.
+ * Constructor, set the IP address and port of the receiver.
  * Override the default TTL value (which is 1) using the given ttl parameter.
  *
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] port         Port number of the receiver.
- * @param[in] ttl          Time to live.
- * @throw  runtime_error   if socket creation fails.
+ * @param[in] newTTL       Time to live.
  */
-UdpSend::UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl)
+UdpSend::UdpSend(const std::string& recvaddr, unsigned short recvport,
+        unsigned char newTTL)
+    : ttl(newTTL)
 {
-    UdpSend(recvAddr, port);
-    setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
+    UdpSend(recvaddr, recvport);
 }
 
 
@@ -85,6 +73,30 @@ UdpSend::UdpSend(const char* recvAddr, unsigned short port, unsigned char ttl)
  */
 UdpSend::~UdpSend()
 {
+}
+
+
+/**
+ * Connect to the UDP socket.
+ *
+ * @param[in] none
+ * @throw  runtime_error  if socket creation fails.
+ */
+void UdpSend::Init()
+{
+    /** create a UDP datagram socket. */
+    if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        throw std::runtime_error("UdpSend::UdpSend() create socket error");
+    /** clear struct recv_addr. */
+    (void) memset(&recv_addr, 0, sizeof(recv_addr));
+    /** set connection type to IPv4 */
+    recv_addr.sin_family = AF_INET;
+    /** set the address to the receiver address passed to the constructor */
+    recv_addr.sin_addr.s_addr =inet_addr(recvAddr.c_str());
+    /** set the port number to the port number passed to the constructor */
+    recv_addr.sin_port = htons(recvPort);
+    connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
+    setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
 }
 
 

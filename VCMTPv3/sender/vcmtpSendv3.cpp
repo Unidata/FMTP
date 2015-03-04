@@ -180,6 +180,8 @@ void vcmtpSendv3::Start()
 {
     /** start listening to incoming connections */
     tcpsend->Init();
+    /** initialize UDP connection */
+    udpsend->Init();
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
     if(retval != 0)

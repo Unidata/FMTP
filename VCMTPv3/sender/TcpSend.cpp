@@ -60,6 +60,22 @@ TcpSend::TcpSend(std::string tcpaddr, unsigned short tcpport)
 
 
 /**
+ * Destructor for TcpSend class. Release all the allocated resources, including
+ * mutex, socket lists and etc.
+ *
+ * @param[in] none
+ */
+TcpSend::~TcpSend()
+{
+    {
+        std::unique_lock<std::mutex> lock(sockListMutex); // cache coherence
+        connSockList.clear();
+    }
+    close(sockfd);
+}
+
+
+/**
  * Initializer for TcpSend class, taking tcp address and tcp port to establish
  * a tcp connection. When the connection is established, keep listen on it with
  * a maximum of MAX_CONNECTION allowed to connect.
@@ -96,20 +112,6 @@ void TcpSend::Init()
                 "\"");
     /** listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
-}
-
-
-/**
- * Destructor for TcpSend class. Release all the allocated resources, including
- * mutex, socket lists and etc.
- */
-TcpSend::~TcpSend()
-{
-    {
-        std::unique_lock<std::mutex> lock(sockListMutex); // cache coherence
-        connSockList.clear();
-    }
-    close(sockfd);
 }
 
 
