@@ -237,9 +237,20 @@ void vcmtpRecvv3::joinGroup(
  */
 void vcmtpRecvv3::StartRetxProcedure()
 {
-    pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler, this);
+    int retval = pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler,
+                                this);
+    if(retval != 0) {
+        throw std::system_error(retval, std::system_category(),
+            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
+    }
     pthread_detach(retx_t);
-    pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester, this);
+
+    retval = pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester,
+                            this);
+    if(retval != 0) {
+        throw std::system_error(retval, std::system_category(),
+            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
+    }
     pthread_detach(retx_rq);
 }
 
