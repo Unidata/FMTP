@@ -35,9 +35,9 @@
  * @param[in] bitmapsize        Number of bits that needs to be created in the
  *                              new bitmap.
  */
-ProdBitMap::ProdBitMap(const uint32_t bitmapsize) : recvblocks(0), mutex()
+ProdBitMap::ProdBitMap(const uint32_t bitmapsize) : recvblocks(0), mutex(),
+    mapsize(bitmapsize)
 {
-    mapsize = bitmapsize;
     map = new std::vector<bool>(bitmapsize, false);
 }
 

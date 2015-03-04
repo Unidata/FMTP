@@ -49,8 +49,6 @@
 TcpRecv::TcpRecv(const std::string& tcpaddr, unsigned short tcpport)
     : tcpAddr(tcpaddr), tcpPort(tcpport)
 {
-    //tcpAddr = tcpaddr;
-    //tcpPort = tcpport;
 }
 
 
