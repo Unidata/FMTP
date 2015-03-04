@@ -45,21 +45,32 @@
 
 
 /**
- * Contructor for TcpSend class, taking tcp address and tcp port to establish a
- * tcp connection. When the connection is established, keep listen on it with a
- * maximum of MAX_CONNECTION allowed to connect.
+ * Contructor for TcpSend class.
  *
- * @param[in] tcpAddr     Specification of the interface on which the TCP
+ * @param[in] tcpaddr     Specification of the interface on which the TCP
  *                        server will listen as a dotted-decimal IPv4 address.
- * @param[in] tcpPort     tcp port number (in host order) specified by sending
+ * @param[in] tcpport     tcp port number (in host order) specified by sending
  *                        application. (or 0, meaning system will use random
  *                        available port)
+ */
+TcpSend::TcpSend(std::string tcpaddr, unsigned short tcpport)
+    : tcpAddr(tcpaddr), tcpPort(tcpport), sockListMutex()
+{
+}
+
+
+/**
+ * Initializer for TcpSend class, taking tcp address and tcp port to establish
+ * a tcp connection. When the connection is established, keep listen on it with
+ * a maximum of MAX_CONNECTION allowed to connect.
+ *
+ * @param[in] none
+ *
  * @throw  std::invalid_argument if `tcpAddr` is invalid.
  * @throw  std::runtime_error    if socket creation fails.
  * @throw  std::runtime_error    if socket bind() operation fails.
  */
-TcpSend::TcpSend(std::string tcpAddr, unsigned short tcpPort)
-    : sockListMutex()
+void TcpSend::Init()
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)

@@ -168,6 +168,38 @@ vcmtpSendv3::~vcmtpSendv3()
 
 
 /**
+ * Starts the coordinator thread and timer thread from this function. And
+ * passes a vcmtpSendv3 type pointer to each newly created thread so that
+ * coordinator and timer can have access to all the resources inside this
+ * vcmtpSendv3 instance. Start() returns immediately.
+ *
+ * @throw  std::system_error  if pthread_create() fails.
+ * @throw  std::system_error  if pthread_create() fails.
+ */
+void vcmtpSendv3::Start()
+{
+    /** start listening to incoming connections */
+    tcpsend->Init();
+
+    int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
+    if(retval != 0)
+    {
+        throw std::system_error(retval, std::system_category(),
+                "vcmtpSendv3::Start() pthread_create() timerWrapper error");
+    }
+    pthread_detach(timer_t);
+
+    retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
+    if(retval != 0)
+    {
+        throw std::system_error(retval, std::system_category(),
+                "vcmtpSendv3::Start() pthread_create() coordinator error");
+    }
+    pthread_detach(coor_t);
+}
+
+
+/**
  * Sends the BOP message to the receiver. metadata and metaSize must always be
  * a valid value. These two parameters will be checked by the calling function
  * before being passed in.
@@ -446,35 +478,6 @@ void vcmtpSendv3::sendEOPMessage()
     if (udpsend->SendTo(&header, sizeof(header)) < 0)
         throw std::runtime_error("vcmtpSendv3::sendEOPMessage::SendTo error");
 #endif
-}
-
-
-/**
- * Starts the coordinator thread and timer thread from this function. And
- * passes a vcmtpSendv3 type pointer to each newly created thread so that
- * coordinator and timer can have access to all the resources inside this
- * vcmtpSendv3 instance. Start() returns immediately.
- *
- * @throw  std::system_error  if pthread_create() fails.
- * @throw  std::system_error  if pthread_create() fails.
- */
-void vcmtpSendv3::Start()
-{
-    int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
-    if(retval != 0)
-    {
-        throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::Start() pthread_create() timerWrapper error");
-    }
-    pthread_detach(timer_t);
-
-    retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
-    if(retval != 0)
-    {
-        throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::Start() pthread_create() coordinator error");
-    }
-    pthread_detach(coor_t);
 }
 
 

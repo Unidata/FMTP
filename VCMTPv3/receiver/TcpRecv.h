@@ -38,7 +38,7 @@
 class TcpRecv
 {
 public:
-    TcpRecv(const std::string& tcpAddr, unsigned short tcpPort);
+    TcpRecv(const std::string& tcpaddr, unsigned short tcpport);
     ~TcpRecv();
     void Init();  /* the start point which upper layer should call */
     /**

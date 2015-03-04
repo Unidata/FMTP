@@ -47,6 +47,7 @@ public:
     /** source port would be initialized to 0 if not being specified. */
     TcpSend(std::string tcpAddr, unsigned short tcpPort = 0);
     ~TcpSend();
+    void Init(); /*!< start point that upper layer should call */
     int acceptConn();
     /** return the reference of a socket list */
     const std::list<int>& getConnSockList();
@@ -60,10 +61,12 @@ public:
              size_t paylen);
 
 private:
-    int sockfd;
+    int                sockfd;
     struct sockaddr_in servAddr;
-    std::list<int> connSockList;
-    std::mutex sockListMutex; /*!< protect operation on shared sockList */
+    std::string        tcpAddr;
+    unsigned short     tcpPort;
+    std::list<int>     connSockList;
+    std::mutex         sockListMutex; /*!< to protect shared sockList */
 };
 
 
