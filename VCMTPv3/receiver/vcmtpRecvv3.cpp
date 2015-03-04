@@ -151,9 +151,12 @@ vcmtpRecvv3::~vcmtpRecvv3()
  */
 void vcmtpRecvv3::Start()
 {
-    /* set prodindex to max to avoid BOP missing for prodindex=0 */
+    /** connect to the sender */
+    tcprecv->Init();
+
+    /** set prodindex to max to avoid BOP missing for prodindex=0 */
     vcmtpHeader.prodindex = 0xFFFFFFFF;
-    /* clear EOPStatus for new product */
+    /** clear EOPStatus for new product */
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
     StartRetxProcedure();

@@ -40,6 +40,7 @@ class TcpRecv
 public:
     TcpRecv(const std::string& tcpAddr, unsigned short tcpPort);
     ~TcpRecv();
+    void Init();  /* the start point which upper layer should call */
     /**
      * Sends a header and a payload on the TCP connection. Blocks until the packet
      * is sent or a severe error occurs. Re-establishes the TCP connection if
@@ -72,6 +73,8 @@ public:
 private:
     int                     sockfd;
     struct sockaddr_in      servAddr;
+    std::string             tcpAddr;  /* a copy of the passed-in tcpAddr */
+    unsigned short          tcpPort;  /* a copy of the passed-in tcpPort */
 
     /**
      * Initializes the TCP connection. Blocks until the connection is established

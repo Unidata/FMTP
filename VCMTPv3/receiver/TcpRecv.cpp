@@ -38,17 +38,41 @@
 
 
 /**
- * Constructor of TcpRecv. It establishes a TCP connection to the sender.
+ * Constructor of TcpRecv.
  *
- * @param[in] tcpAddr           The address of the TCP server: either an IPv4
+ * @param[in] tcpaddr           The address of the TCP server: either an IPv4
  *                              address in dotted-decimal format or an Internet
  *                              host name.
- * @param[in] tcpPort           The port number of the TCP connection in host
+ * @param[in] tcpport           The port number of the TCP connection in host
  *                              byte-order.
+ */
+TcpRecv::TcpRecv(const std::string& tcpaddr, unsigned short tcpport)
+{
+    tcpAddr = tcpaddr;
+    tcpPort = tcpport;
+}
+
+
+/**
+ * Destructor of TcpRecv.
+ *
+ * @param[in] none
+ */
+TcpRecv::~TcpRecv()
+{
+    close(sockfd);
+}
+
+
+/**
+ * Establishes a TCP connection to the sender.
+ *
+ * @param[in] none
+ *
  * @throw std::invalid_argument if `tcpAddr` is invalid.
  * @throw std::system_error     if a TCP connection can't be established.
  */
-TcpRecv::TcpRecv(const std::string& tcpAddr, unsigned short tcpPort)
+void TcpRecv::Init()
 {
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
@@ -67,17 +91,6 @@ TcpRecv::TcpRecv(const std::string& tcpAddr, unsigned short tcpPort)
     servAddr.sin_addr.s_addr = inAddr;
     servAddr.sin_port = htons(tcpPort);
     initSocket();
-}
-
-
-/**
- * Destructor of TcpRecv.
- *
- * @param[in] none
- */
-TcpRecv::~TcpRecv()
-{
-    close(sockfd);
 }
 
 
