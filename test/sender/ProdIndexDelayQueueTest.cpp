@@ -88,9 +88,8 @@ TEST_F(ProdIndexDelayQueueTest, Performance) {
             std::chrono::system_clock::now();
     ASSERT_EQ(10000, q.size());
     std::chrono::system_clock::duration duration = stop - start;
-    double seconds = duration.count() *
-            (decltype(duration)::period::num /
-                    (double)decltype(duration)::period::den);
+    double seconds = (std::chrono::duration_cast
+            <std::chrono::duration<double>>(duration)).count();
     std::cerr << "10,000 push()/get()s in " << std::to_string(seconds) <<
             " seconds\n";
     std::cerr << std::to_string(10000/seconds) << " s-1\n";
