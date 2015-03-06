@@ -139,10 +139,12 @@ vcmtpRecvv3::~vcmtpRecvv3()
 
 
 /**
- * Join given multicast group (defined by mcastAddr:mcastPort) to receive
- * multicasting products and start receiving thread to listen on the socket.
- * Doesn't return until `vcmtpRecvv3::Stop` is called or an exception
- * is thrown.
+ * Connect to sender via TCP socket, join given multicast group (defined by
+ * mcastAddr:mcastPort) to receive multicasting products. Start retransmission
+ * handler and retransmission requester and also start multicast receiving
+ * thread. Doesn't return until `vcmtpRecvv3::Stop` is called or an exception
+ * is thrown. Exceptions will be caught and all the threads will be terminated
+ * by the exception handling code.
  *
  * @throw std::system_error  if the multicast group couldn't be joined.
  * @throw std::system_error  if an I/O error occurs.
@@ -160,11 +162,10 @@ void vcmtpRecvv3::Start()
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
     StartRetxProcedure();
-    // TODO: should consider use delay queue for timer.
     startTimerThread();
 
     int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
-            this);
+                                this);
     if (status) {
         Stop();
         throw std::system_error(status, std::system_category(),
