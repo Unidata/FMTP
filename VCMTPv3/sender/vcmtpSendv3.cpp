@@ -947,3 +947,10 @@ void vcmtpSendv3::timerThread()
             notifier->notify_of_eop(prodindex);
     }
 }
+
+
+void vcmtpSendv3::SetLinkSpeed(uint64_t speed)
+{
+    std::unique_lock<std::mutex> lock(linkmtx);
+    linkspeed = speed;
+}
