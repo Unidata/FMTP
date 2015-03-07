@@ -111,6 +111,7 @@ public:
     /** Sender side stop point */
     void Stop();
     unsigned short getTcpPortNum();
+    void SetLinkSpeed(uint64_t speed);
 
 private:
     uint32_t                    prodIndex;
@@ -131,6 +132,8 @@ private:
     pthread_t                   timer_t;
     /** help tracking all the dynamically created retx threads */
     std::list<pthread_t>        retxThreadList;
+    std::mutex                  linkmtx;
+    uint64_t                    linkspeed;
 
     /**
      * Adds and entry for a data-product to the retransmission set.
