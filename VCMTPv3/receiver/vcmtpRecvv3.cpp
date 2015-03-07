@@ -625,6 +625,21 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      */
     clearEOPState();
 
+    /**
+     * Set the amount of sleeping time. Based on a precise network delay model,
+     * total delay should include transmission delay, propogation delay,
+     * processing delay and queueing delay. From a pragmatic view, the queueing
+     * delay, processing delay of routers and switches, and propogation delay
+     * are all added into RTT. Thus only processing delay of the receiver and
+     * transmission delay need to be considered except for RTT. Processing
+     * delay is usually nanoseconds to microseconds, which can be ignored. And
+     * since the receiver timer starts after BOP is received, the RTT is not
+     * affecting the timer model. Sleeptime here means the estimated remaining
+     * time of the current product. Thus, the only thing needs to be considered
+     * is the transmission delay, which can be calculated as product size over
+     * link speed. Besides, a little more extra time would be favorable to
+     * tolerate possible fluctuation.
+     */
     float sleeptime = 1.5 * (BOPmsg.prodsize / linkspeed);
     /** add the new product into timer queue */
     {
