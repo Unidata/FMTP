@@ -67,6 +67,7 @@ public:
                 std::string mcastAddr,
                 const unsigned short mcastPort);
     ~vcmtpRecvv3();
+    void    SetLinkSpeed(uint64_t speed);
     void    Start();
     void    Stop();
 
@@ -113,6 +114,8 @@ private:
     std::mutex              exitMutex;
     std::exception          except;
     bool                    exceptIsSet;
+    std::mutex              linkmtx;
+    uint64_t                linkspeed;  /*!< max link speed up to 18000 Pbps */
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);

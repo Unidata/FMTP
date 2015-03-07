@@ -30,6 +30,7 @@
 #include "UdpSend.h"
 
 #include <stdexcept>
+#include <string.h>
 
 
 #ifndef NULL

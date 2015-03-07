@@ -625,11 +625,11 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      */
     clearEOPState();
 
+    float sleeptime = 1.5 * (BOPmsg.prodsize / linkspeed);
     /** add the new product into timer queue */
     {
         std::unique_lock<std::mutex> lock(timerQmtx);
-        // TODO: timer model need adjusting
-        timerParam timerparam = {vcmtpHeader.prodindex, 0.5};
+        timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
         timerParamQ.push(timerparam);
         timerQfilled.notify_all();
     }
@@ -1208,6 +1208,13 @@ bool vcmtpRecvv3::reqEOPifMiss(const uint32_t prodindex)
 }
 
 
+/**
+ * Task terminator. If an exception is caught, this function will be called.
+ * It consequently terminates all the other threads by calling the Stop(). This
+ * task exit call will not be blocking.
+ *
+ * @param[in] e                     Exception status
+ */
 void vcmtpRecvv3::taskExit(const std::exception& e)
 {
     {
@@ -1218,4 +1225,21 @@ void vcmtpRecvv3::taskExit(const std::exception& e)
         }
     }
     Stop();
+}
+
+
+/**
+ * A public setter of link speed. The setter is thread-safe, but a recommended
+ * way is to set the link speed before the receiver starts. Due to the feature
+ * of virtual circuits, the link speed won't change when it's set up. So the
+ * link speed remains for the whole life of the receiver. As the possible link
+ * speed nowadays could possibly be 10Gbps or even higher, a 64-bit unsigned
+ * integer is used to hold the value, which can be up to 18000 Pbps.
+ *
+ * @param[in] speed                 User-specified link speed
+ */
+void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
+{
+    std::unique_lock<std::mutex> lock(linkmtx);
+    linkspeed = speed;
 }
