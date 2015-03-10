@@ -1012,8 +1012,17 @@ void vcmtpSendv3::SetLinkSpeed(uint64_t speed)
  */
 void vcmtpSendv3::WriteToLog(const std::string& content)
 {
+    time_t rawtime;
+    struct tm *timeinfo;
+    char buf[30];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buf, 30, "%Y-%m-%d %I:%M:%S  ", timeinfo);
+    std::string time(buf);
+
     std::ofstream logfile("VCMTPv3_SENDER.log",
             std::ofstream::out | std::ofstream::app);
-    logfile << content;
+    logfile << time << content << std::endl;
     logfile.close();
 }
