@@ -31,6 +31,7 @@
 
 
 #include <ctime>
+#include <exception>
 #include <list>
 #include <map>
 #include <pthread.h>
@@ -124,9 +125,6 @@ private:
     /** sending application callback hook */
     SendAppNotifier* notifier;
     float                       retxTimeoutRatio;
-    std::mutex                  exitMutex;
-    std::exception              except;
-    bool                        exceptIsSet;
     ProdIndexDelayQueue         timerDelayQ;
     pthread_t                   coor_t;
     pthread_t                   timer_t;
@@ -134,6 +132,9 @@ private:
     std::list<pthread_t>        retxThreadList;
     std::mutex                  linkmtx;
     uint64_t                    linkspeed;
+    std::mutex                  exitMutex;
+    std::exception              except;
+    bool                        exceptIsSet;
 
     /**
      * Adds and entry for a data-product to the retransmission set.
@@ -253,6 +254,7 @@ private:
     vcmtpSendv3(vcmtpSendv3&);
     vcmtpSendv3& operator=(const vcmtpSendv3&);
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
+    void taskExit(const std::exception&);
 };
 
 

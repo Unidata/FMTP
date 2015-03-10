@@ -374,6 +374,8 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
  */
 void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
+    // TODO: RTT + RETX_REQ/RETX_END transmission delay + processing delay.
+    // TODO: should use + or * ?
     /* Get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
     //senderProdMeta->mcastEndTime = myClock::now();
@@ -392,7 +394,9 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
  * Transfers Application-specific metadata and a contiguous block of memory.
  * Construct sender side RetxMetadata and insert the new entry into a global
  * map. The retransmission timeout period should also be set by considering
- * the essential properties.
+ * the essential properties. If an exception is thrown inside this function,
+ * it will be caught by the handler. As a result, the exception will cause
+ * all the threads in this process to terminate.
  *
  * @param[in] data         Memory data to be sent.
  * @param[in] dataSize     Size of the memory data in bytes.
@@ -415,41 +419,42 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
                                   unsigned metaSize)
 {
-    if (data == NULL)
-        throw std::invalid_argument(
-                "vcmtpSendv3::sendProduct() data pointer is NULL");
-    if (dataSize > 0xFFFFFFFFu)
-        throw std::invalid_argument(
-                "vcmtpSendv3::sendProduct() dataSize out of range");
-    if (metadata) {
-        if (AVAIL_BOP_LEN < metaSize)
+    try {
+        if (data == NULL)
             throw std::invalid_argument(
-                    "vcmtpSendv3::SendBOPMessage(): metaSize too large");
-    }
-    else {
-        if (metaSize)
+                    "vcmtpSendv3::sendProduct() data pointer is NULL");
+        if (dataSize > 0xFFFFFFFFu)
             throw std::invalid_argument(
-                    "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
+                    "vcmtpSendv3::sendProduct() dataSize out of range");
+        if (metadata) {
+            if (AVAIL_BOP_LEN < metaSize)
+                throw std::invalid_argument(
+                        "vcmtpSendv3::SendBOPMessage(): metaSize too large");
+        }
+        else {
+            if (metaSize)
+                throw std::invalid_argument(
+                        "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
+        }
+
+        /* Add a retransmission metadata entry */
+        RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
+                                                       metadata, metaSize);
+        /* send out BOP message */
+        SendBOPMessage(dataSize, metadata, metaSize);
+        /* Send the data */
+        sendData(data, dataSize);
+        /* Send out EOP message */
+        sendEOPMessage();
+
+        /* Set the retransmission timeout parameters */
+        setTimerParameters(senderProdMeta);
+        /* start a new timer for this product in a separate thread */
+        timerDelayQ.push(prodIndex, 0.1);
     }
-
-    /* Add a retransmission metadata entry */
-    RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
-                                                   metadata, metaSize);
-
-    /* send out BOP message */
-    SendBOPMessage(dataSize, metadata, metaSize);
-
-    /* Send the data */
-    sendData(data, dataSize);
-
-    /* Send out EOP message */
-    sendEOPMessage();
-
-    /* Set the retransmission timeout parameters */
-    setTimerParameters(senderProdMeta);
-
-    /* start a new timer for this product in a separate thread */
-    timerDelayQ.push(prodIndex, 0.1);
+    catch (std::exception& e) {
+        taskExit(e);
+    }
 
 #ifdef DEBUG1
     std::cout << "Product #" << prodIndex << " has been sent." << std::endl;
@@ -567,13 +572,21 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
  * Use the passed-in pointer to extract parameters. The first pointer as a
  * pointer of vcmtpSendv3 instance can start vcmtpSendv3 member function.
  * The second parameter is sockfd, the third one is the prodindex-prodptr map.
+ * If the callee throws any exception, the try-catch structure will catch that
+ * and terminates the thread itself.
  *
  * @param[in] *ptr    a void type pointer that points to whatever data struct.
  */
 void* vcmtpSendv3::StartRetxThread(void* ptr)
 {
     StartRetxThreadInfo* newptr = static_cast<StartRetxThreadInfo*>(ptr);
-    newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
+    try {
+        newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
+    }
+    catch (std::exception& e) {
+        int exitStatus;
+        pthread_exit(&exitStatus);
+    }
     return NULL;
 }
 
@@ -911,8 +924,12 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
 void* vcmtpSendv3::timerWrapper(void* ptr)
 {
     vcmtpSendv3* const sender = static_cast<vcmtpSendv3*>(ptr);
-    sender->timerThread();
-
+    try {
+        sender->timerThread();
+    }
+    catch (std::exception& e) {
+        sender->taskExit(e);
+    }
     return NULL;
 }
 
@@ -949,6 +966,33 @@ void vcmtpSendv3::timerThread()
 }
 
 
+/**
+ * Task terminator. If an exception is caught, this function will be called.
+ * It consequently terminates all the other threads by calling the Stop(). This
+ * task exit call will not be blocking.
+ *
+ * @param[in] e                     Exception status
+ */
+void vcmtpSendv3::taskExit(const std::exception& e)
+{
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        if (!exceptIsSet) {
+            except = e;
+            exceptIsSet = true;
+        }
+    }
+    Stop();
+}
+
+
+/**
+ * Link speed setter. In a VC environment, link speed is always a fixed value
+ * which enables the link rate to be set in advance. The timer thread needs
+ * this link speed to calculate the sleep time.
+ *
+ * @param[in] speed         Given link speed, which supports up to 18000 Pbps
+ */
 void vcmtpSendv3::SetLinkSpeed(uint64_t speed)
 {
     std::unique_lock<std::mutex> lock(linkmtx);
