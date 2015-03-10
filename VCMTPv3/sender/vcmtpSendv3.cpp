@@ -28,6 +28,7 @@
 
 #include "vcmtpSendv3.h"
 
+#include <fstream>
 #include <iostream>
 #include <math.h>
 #include <stdexcept>
@@ -457,7 +458,10 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
     }
 
 #ifdef DEBUG1
-    std::cout << "Product #" << prodIndex << " has been sent." << std::endl;
+    std::string debugmsg = "Product #" + std::to_string(prodIndex);
+    debugmsg += " has been sent.";
+    std::cout << debugmsg << std::endl;
+    WriteToLog(debugmsg);
 #endif
 
     return prodIndex++;
@@ -997,4 +1001,19 @@ void vcmtpSendv3::SetLinkSpeed(uint64_t speed)
 {
     std::unique_lock<std::mutex> lock(linkmtx);
     linkspeed = speed;
+}
+
+
+/**
+ * Write a line of log record into the log file. If the log file doesn't exist,
+ * create a new one and then append to it.
+ *
+ * @param[in] content       The content of the log record to be written.
+ */
+void vcmtpSendv3::WriteToLog(const std::string& content)
+{
+    std::ofstream logfile("VCMTPv3_SENDER.log",
+            std::ofstream::out | std::ofstream::app);
+    logfile << content;
+    logfile.close();
 }

@@ -255,6 +255,7 @@ private:
     vcmtpSendv3& operator=(const vcmtpSendv3&);
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
     void taskExit(const std::exception&);
+    void WriteToLog(const std::string& content);
 };
 
 
