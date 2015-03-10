@@ -33,6 +33,7 @@
 #include <math.h>
 #include <stdexcept>
 #include <system_error>
+#include <unistd.h>
 
 
 #ifndef NULL
@@ -172,13 +173,16 @@ vcmtpSendv3::~vcmtpSendv3()
  * Starts the coordinator thread and timer thread from this function. And
  * passes a vcmtpSendv3 type pointer to each newly created thread so that
  * coordinator and timer can have access to all the resources inside this
- * vcmtpSendv3 instance. Start() returns immediately.
+ * vcmtpSendv3 instance. Only the exception from the acceptConn() will be
+ * caught and thrown here. Doesn't return until Stop() is called or an
+ * exception is thrown.
  *
- * @throw  std::system_error  if pthread_create() fails.
- * @throw  std::system_error  if pthread_create() fails.
+ * @throw  std::system_error  if a system error occurs.
+ * @throw  std::runtime_error if a runtime error occurs.
  */
 void vcmtpSendv3::Start()
 {
+	void *timerret, *coorret;
     /** start listening to incoming connections */
     tcpsend->Init();
     /** initialize UDP connection */
@@ -190,7 +194,6 @@ void vcmtpSendv3::Start()
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() timerWrapper error");
     }
-    pthread_detach(timer_t);
 
     retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0)
@@ -198,7 +201,15 @@ void vcmtpSendv3::Start()
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() coordinator error");
     }
-    pthread_detach(coor_t);
+    pthread_join(timer_t, &timerret);
+    pthread_join(coor_t, &coorret);
+
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        if (exceptIsSet) {
+                throw except;
+        }
+    }
 }
 
 
@@ -240,13 +251,21 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     ioVec[2].iov_base = metadata;
     ioVec[2].iov_len  = metaSize;
 
-#ifdef TEST_BOP
-    std::cout << "dropping BOP (not sent)" << std::endl;
+#if defined(TEST_BOP) && defined(DEBUG2)
+    std::string debugmsg = "Product #" + prodIndex +
+        ": Test BOP missing (BOP not sent)";
+    std::cout << debugmsg << std::endl;
+    WriteToLog(debugmsg);
 #else
     /* Send the BOP message on multicast socket */
     if (udpsend->SendTo(ioVec, 3) < 0)
         throw std::runtime_error(
                 "vcmtpSendv3::SendBOPMessage(): SendTo() error");
+
+    std::string debugmsg = "Product #" + prodIndex;
+    debugmsg += ": BOP sent out";
+    std::cout << debugmsg << std::endl;
+    WriteToLog(debugmsg);
 #endif
 }
 
@@ -397,7 +416,8 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
  * map. The retransmission timeout period should also be set by considering
  * the essential properties. If an exception is thrown inside this function,
  * it will be caught by the handler. As a result, the exception will cause
- * all the threads in this process to terminate.
+ * all the threads in this process to terminate. If any exception is thrown,
+ * the Stop() will be effectively called.
  *
  * @param[in] data         Memory data to be sent.
  * @param[in] dataSize     Size of the memory data in bytes.
@@ -414,8 +434,9 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
  * @throws std::invalid_argument  if `data == 0`.
  * @throws std::invalid_argument  if `dataSize` exceeds the maximum allowed
  *                                value.
- * @throw std::runtime_error      if a retransmission entry couldn't be created.
- * @throws std::runtime_error     if UdpSend::SendData() fails.
+ * @throws std::invalid_argument  if `metadata` != 0 and metaSize is too large
+ * @throws std::invalid_argument  if `metadata` == 0 and metaSize != 0
+ * @throws std::runtime_error     if a runtime error occurs.
  */
 uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
                                   unsigned metaSize)
@@ -455,6 +476,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
     }
     catch (std::exception& e) {
         taskExit(e);
+        throw e;
     }
 
 #ifdef DEBUG1
@@ -522,9 +544,18 @@ void vcmtpSendv3::Stop()
 void* vcmtpSendv3::coordinator(void* ptr)
 {
     vcmtpSendv3* sendptr = static_cast<vcmtpSendv3*>(ptr);
-    while(1) {
-        int newtcpsockfd = sendptr->tcpsend->acceptConn();
-        sendptr->StartNewRetxThread(newtcpsockfd);
+    try {
+        while(1) {
+            int newtcpsockfd = sendptr->tcpsend->acceptConn();
+            int initState;
+            pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
+            sendptr->StartNewRetxThread(newtcpsockfd);
+            int ignoredState;
+            pthread_setcancelstate(initState, &ignoredState);
+        }
+    }
+    catch (std::exception& e) {
+    	sendptr->taskExit(e);
     }
     return NULL;
 }
@@ -544,8 +575,9 @@ unsigned short vcmtpSendv3::getTcpPortNum()
 
 /**
  * Create all the necessary information and fill into the StartRetxThreadInfo
- * structure. Pass the pointer of this struture as a set of parameters to the
- * new thread.
+ * structure. Pass the pointer of this structure as a set of parameters to the
+ * new thread. Accepts responsibility for closing the socket in all
+ * circumstances.
  *
  * @param[in] newtcpsockfd
  * @throw     std::system_error  if pthread_create() fails.
@@ -562,13 +594,19 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
                                 retxThreadInfo);
     if(retval != 0)
     {
-        throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::StartNewRetxThread() error pthread_create()");
+    	/*
+    	 * If a new thread can't be created, the newly created socket needs to
+    	 * be closed and removed from the TcpSend::connSockList.
+    	 */
+    	tcpsend->rmSockInList(newtcpsockfd);
+    	close(newtcpsockfd);
+    	// TODO: log the exceptions
     }
-
-    /** track all the newly created retx threads for later termination */
-    retxThreadList.push_back(t);
-    pthread_detach(t);
+    else {
+        /** track all the newly created retx threads for later termination */
+        retxThreadList.push_back(t);
+        pthread_detach(t);
+    }
 }
 
 
@@ -589,6 +627,8 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
     }
     catch (std::exception& e) {
         int exitStatus;
+        newptr->retxmitterptr->tcpsend->rmSockInList(newptr->retxsockfd);
+    	close(newptr->retxsockfd);
         pthread_exit(&exitStatus);
     }
     return NULL;

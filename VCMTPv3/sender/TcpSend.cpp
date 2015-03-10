@@ -168,6 +168,13 @@ const std::list<int>& TcpSend::getConnSockList()
 }
 
 
+void TcpSend::rmSockInList(int sockfd)
+{
+	std::unique_lock<std::mutex> lock(sockListMutex);
+	connSockList.remove(sockfd);
+}
+
+
 /**
  * Read a given amount of bytes from the socket.
  *

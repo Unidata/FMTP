@@ -51,6 +51,7 @@ public:
     int acceptConn();
     /** return the reference of a socket list */
     const std::list<int>& getConnSockList();
+    void rmSockInList(int sockfd);
     unsigned short getPortNum();
     /** read any data coming into this given socket */
     int readSock(int retxsockfd, char* pktBuf, int bufSize);
