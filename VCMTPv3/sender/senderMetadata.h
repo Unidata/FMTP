@@ -38,7 +38,7 @@
 #include <time.h>
 
 
-typedef std::chrono::high_resolution_clock myClock;
+typedef std::chrono::high_resolution_clock HRclock;
 
 struct RetxMetadata {
     uint32_t       prodindex;
@@ -46,19 +46,19 @@ struct RetxMetadata {
     uint32_t       prodLength;
     uint16_t       metaSize;          /*!< metadata size               */
     void*          metadata;          /*!< metadata pointer            */
-    clock_t        mcastStartTime;    /*!< multicasting start time     */
-    clock_t        mcastEndTime;      /*!< multicasting end time       */
-    //auto      mcastStartTime;    /*!< multicasting start time    */
-    //auto      mcastEndTime;      /*!< multicasting end time      */
+    //clock_t        mcastStartTime;    /*!< multicasting start time     */
+    //clock_t        mcastEndTime;      /*!< multicasting end time       */
+    HRclock::time_point mcastStartTime;    /*!< multicasting start time    */
+    HRclock::time_point mcastEndTime;      /*!< multicasting end time      */
     float          retxTimeoutRatio;  /*!< ratio to scale timeout time */
-    float          retxTimeoutPeriod; /*!< timeout time in seconds     */
+    double         retxTimeoutPeriod; /*!< timeout time in seconds     */
     void*          dataprod_p;        /*!< pointer to the data product */
     /** unfinished receiver set indexed by socket id */
     std::set<int>  unfinReceivers;
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
-                    metadata(NULL), mcastStartTime(0.0),
-                    mcastEndTime(0.0), retxTimeoutRatio(20.0),
+                    metadata(NULL), mcastStartTime(HRclock::now()),
+                    mcastEndTime(HRclock::now()), retxTimeoutRatio(20.0),
                     retxTimeoutPeriod(99999999999.0), dataprod_p(NULL) {}
     virtual ~RetxMetadata() {}
 };
