@@ -58,7 +58,7 @@ struct RetxMetadata {
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
                     metadata(NULL), mcastStartTime(HRclock::now()),
-                    mcastEndTime(HRclock::now()), retxTimeoutRatio(20.0),
+                    mcastEndTime(mcastStartTime), retxTimeoutRatio(20.0),
                     retxTimeoutPeriod(99999999999.0), dataprod_p(NULL) {}
     virtual ~RetxMetadata() {}
 };
