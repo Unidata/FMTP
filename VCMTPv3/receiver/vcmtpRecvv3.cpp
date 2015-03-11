@@ -539,12 +539,17 @@ void vcmtpRecvv3::retxHandler()
                 if (notifier)
                     notifier->notify_of_eop();
 
-                #if defined(DEBUG1) || defined(DEBUG2)
+                #ifdef DEBUG2
                     std::string debugmsg = "Product #" +
                         std::to_string(header.prodindex);
                     debugmsg += " has been completely received";
                     std::cout << debugmsg << std::endl;
                     WriteToLog(debugmsg);
+                #elif DEBUG1
+                    std::string debugmsg = "Product #" +
+                        std::to_string(header.prodindex);
+                    debugmsg += " has been completely received";
+                    std::cout << debugmsg << std::endl;
                 #endif
             }
 
@@ -1003,12 +1008,17 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             if (notifier)
                 notifier->notify_of_eop();
 
-            #if defined(DEBUG1) || defined(DEBUG2)
+            #ifdef DEBUG2
                 std::string debugmsg = "Product #" +
                     std::to_string(header.prodindex);
                 debugmsg += " has been completely received";
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
+            #elif DEBUG1
+                std::string debugmsg = "Product #" +
+                    std::to_string(header.prodindex);
+                debugmsg += " has been completely received";
+                std::cout << debugmsg << std::endl;
             #endif
         }
         else {
