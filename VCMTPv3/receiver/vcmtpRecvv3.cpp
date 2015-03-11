@@ -29,6 +29,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
 #include <math.h>
 #include <memory.h>
@@ -169,7 +170,7 @@ void vcmtpRecvv3::Start()
     if (status) {
         Stop();
         throw std::system_error(status, std::system_category(),
-                "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
+            "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
     }
     (void)pthread_join(mcast_t, NULL);
     {
@@ -187,10 +188,10 @@ void vcmtpRecvv3::Start()
  */
 void vcmtpRecvv3::Stop()
 {
-    (void)pthread_cancel(timer_t); // failure is irrelevant
-    (void)pthread_cancel(mcast_t); // failure is irrelevant
-    (void)pthread_cancel(retx_rq); // failure is irrelevant
-    (void)pthread_cancel(retx_t);  // failure is irrelevant
+    (void)pthread_cancel(timer_t); /* failure is irrelevant */
+    (void)pthread_cancel(mcast_t); /* failure is irrelevant */
+    (void)pthread_cancel(retx_rq); /* failure is irrelevant */
+    (void)pthread_cancel(retx_t);  /* failure is irrelevant */
 }
 
 
@@ -537,18 +538,26 @@ void vcmtpRecvv3::retxHandler()
                 sendRetxEnd(header.prodindex);
                 if (notifier)
                     notifier->notify_of_eop();
-                else
-                    std::cout << "RETX completed" << std::endl;
 
-                #ifdef DEBUG1
-                    std::cout << "Product #" << header.prodindex <<
-                        " has been received." << std::endl;
+                #if defined(DEBUG1) || defined(DEBUG2)
+                    std::string debugmsg = "Product #" +
+                        std::to_string(header.prodindex);
+                    debugmsg += " has been completely received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
                 #endif
             }
 
             #ifdef DEBUG2
-            if (bitmap && !bitmap->isComplete())
-                std::cout << "RETX Data block received" << std::endl;
+                if (bitmap && !bitmap->isComplete()) {
+                    std::string debugmsg = "Product #" +
+                        std::to_string(header.prodindex);
+                    debugmsg += ": RETX data block (SeqNum = ";
+                    debugmsg += std::to_string(header.seqnum);
+                    debugmsg += ") is received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
+                }
             #endif
         }
         else if (header.flags == VCMTP_RETX_EOP) {
@@ -597,9 +606,14 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     }
 
     #ifdef DEBUG2
-    std::cout << "(BOP) prodindex: " << vcmtpHeader.prodindex;
-    std::cout << "    prodsize: " << BOPmsg.prodsize;
-    std::cout << "    metasize: " << BOPmsg.metasize << std::endl;
+        std::string debugmsg = "Product #" +
+            std::to_string(vcmtpHeader.prodindex);
+        debugmsg += ": BOP is received. Product size = ";
+        debugmsg += std::to_string(BOPmsg.prodsize);
+        debugmsg += ", Metadata size = ";
+        debugmsg += std::to_string(BOPmsg.metasize);
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
     #endif
 
     /** forcibly terminate the previous timer */
@@ -644,7 +658,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     /** add the new product into timer queue */
     {
         std::unique_lock<std::mutex> lock(timerQmtx);
-        timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
+        //timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
+        timerParam timerparam = {vcmtpHeader.prodindex, 0.2};
         timerParamQ.push(timerparam);
         timerQfilled.notify_all();
     }
@@ -764,9 +779,14 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
 
         if (0 == prodptr) {
             #ifdef DEBUG2
-            std::cout << "No product queue. Data block is discarded." << std::endl;
-            std::cout << "(Data) seqnum: " << header.seqnum;
-            std::cout << "    paylen: " << header.payloadlen << std::endl;
+                std::string debugmsg = "Product #" +
+                    std::to_string(header.prodindex);
+                debugmsg += ": Data block is received. SeqNum = ";
+                debugmsg += std::to_string(header.seqnum);
+                debugmsg += ", Paylen = ";
+                debugmsg += std::to_string(header.payloadlen);
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
         }
         /** receiver should trust the packet from sender is legal */
@@ -846,12 +866,18 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t mostRecent)
 
         for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN) {
             pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
-        }
 
+            #ifdef DEBUG2
+                std::string debugmsg = "Product #" +
+                    std::to_string(prodindex);
+                debugmsg += ": Data block is missing. SeqNum = ";
+                debugmsg += std::to_string(seqnum);
+                debugmsg += ". Requesting retx";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+            #endif
+        }
         msgQfilled.notify_one();
-        #ifdef DEBUG2
-        std::cout << "data block missing, requesting retx" << std::endl;
-        #endif
     }
 }
 
@@ -959,6 +985,13 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
      */
     setEOPReceived();
 
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(header.prodindex);
+        debugmsg += ": EOP is received";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
     if (bitmap) {
         /**
          * if bitmap check tells everything is completed, then sends the
@@ -969,15 +1002,13 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             sendRetxEnd(header.prodindex);
             if (notifier)
                 notifier->notify_of_eop();
-            else {
-                #ifdef DEBUG2
-                    std::cout << "(EOP) data-product completely received."
-                              << std::endl;
-                #endif
-            }
-            #ifdef DEBUG1
-                std::cout << "Product #" << header.prodindex <<
-                    " has been received." << std::endl;
+
+            #if defined(DEBUG1) || defined(DEBUG2)
+                std::string debugmsg = "Product #" +
+                    std::to_string(header.prodindex);
+                debugmsg += " has been completely received";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
         }
         else {
@@ -1160,7 +1191,11 @@ void vcmtpRecvv3::timerThread()
         /** if EOP has not been received yet, issue a request for retx */
         if (reqEOPifMiss(timerparam.prodindex)) {
             #ifdef DEBUG2
-            std::cout << "timer wakes up, requesting retx EOP" << std::endl;
+                std::string debugmsg = "Timer has waken up. Product #" +
+                    std::to_string(timerparam.prodindex);
+                debugmsg += " is still missing EOP. Reuquest retx";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
         }
     }
@@ -1257,4 +1292,28 @@ void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
 {
     std::unique_lock<std::mutex> lock(linkmtx);
     linkspeed = speed;
+}
+
+
+/**
+ * Write a line of log record into the log file. If the log file doesn't exist,
+ * create a new one and then append to it.
+ *
+ * @param[in] content       The content of the log record to be written.
+ */
+void vcmtpRecvv3::WriteToLog(const std::string& content)
+{
+    time_t rawtime;
+    struct tm *timeinfo;
+    char buf[30];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buf, 30, "%Y-%m-%d %I:%M:%S  ", timeinfo);
+    std::string time(buf);
+
+    std::ofstream logfile("VCMTPv3_RECEIVER.log",
+            std::ofstream::out | std::ofstream::app);
+    logfile << time << content << std::endl;
+    logfile.close();
 }

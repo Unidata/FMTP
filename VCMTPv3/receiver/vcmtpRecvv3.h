@@ -247,6 +247,7 @@ private:
     void clearEOPState();
     bool isEOPReceived();
     void taskExit(const std::exception&);
+    void WriteToLog(const std::string& content);
 };
 
 
