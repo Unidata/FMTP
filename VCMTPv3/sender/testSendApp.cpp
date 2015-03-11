@@ -30,10 +30,41 @@
 
 #include <fcntl.h>
 #include <iostream>
+#include <pthread.h>
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+
+typedef struct NewThreadInfo
+{
+    vcmtpSendv3* sender;
+    void*        prodptr;
+    size_t       prodsize;
+    char*        metaptr;
+    unsigned int metasize;
+} tInfo;
+
+
+/**
+ * Calls vcmtpSendv3::sendProduct() to send the product. Since
+ * vcmtpSendv3::Start() is a blocking call which joins all the other threads,
+ * main() can not call sendProduct() after Start() is called. Thus a new thread
+ * is created to run the sendProduct() separately.
+ *
+ * @param[in] ptr           A pointer to the tInfo structure.
+ */
+void* sendprod(void* ptr)
+{
+    tInfo* tinfo = (tInfo*) ptr;
+    sleep(2);
+    tinfo->sender->sendProduct(tinfo->prodptr, tinfo->prodsize, tinfo->metaptr,
+                               tinfo->metasize);
+
+    pthread_exit(0);
+    return NULL;
+}
 
 
 /**
@@ -61,33 +92,45 @@ int main(int argc, char const* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string filename(argv[5]);
 
+    tInfo tinfo;
+
     char tmp[] = "test metadata";
     char* metadata = tmp;
     unsigned int metaSize = sizeof(tmp);
 
+    tinfo.metaptr  = metadata;
+    tinfo.metasize = metaSize;
+
     vcmtpSendv3* sender =
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 0);
+
+    tinfo.sender = sender;
 
     /** use the filename to get filesize */
     struct stat filestatus;
     stat(filename.c_str(), &filestatus);
     size_t datasize = filestatus.st_size;
 
+    tinfo.prodsize = datasize;
+
     int fd = open(filename.c_str(), O_RDONLY);
     if(fd>0)
     {
-        void* data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+        void* data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED,
+                                  fd, 0);
         if (data == MAP_FAILED)
             std::cerr << "file map failed" << std::endl;
 
-        sender->Start();
-        sleep(2);
-        //for(int i=0; i<100; ++i) {
-            sender->sendProduct(data, datasize, metadata, metaSize);
-        //}
+        tinfo.prodptr = data;
 
-        while(1);
+        pthread_t t;
+        pthread_create(&t, NULL, sendprod, (void *) &tinfo);
+
+        sender->Start();
+
+        pthread_join(t, NULL);
+
         munmap(data, datasize);
         close(fd);
     }
