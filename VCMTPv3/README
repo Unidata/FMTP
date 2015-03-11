@@ -76,9 +76,14 @@ you can see. DEBUG flags are used with testing applications to print some
 helpful statements for diagnosis. There are two different DEBUG flags which
 is called the 2-level debug statements. If setting to DEBUG1, which means
 DEBUG level 1 is enabled, only a statement indicating the sending and receiving
-status will be printed. If setting to DEBUG2, which means DEBUG level 2 is
-enabled, detailed statements will be printed to indicate the multicast status
-and retransmission status of each block.
+status on a per-product basis will be printed. If setting to DEBUG2, which means
+DEBUG level 2 is enabled, detailed statements on a per-packet basis will be
+printed to indicate the multicast and retransmission status of each block.
+DEBUG1 flag will not generate log files, all the statements will only be
+printed on the standard output. DEBUG2 flag will generate a log file as well
+as posting all the statements to the standard output. A VCMTPv3_SENDER.log will
+be generated in vcmtp/VCMTPv3/sender/, a VCMTPv3_RECEIVER.log will be generated
+in vcmtp/VCMTPv3/receiver/
 TEST flags are used to switch between different test cases. For example, if
 TEST_BOP flag is set, the testSendApp will emulate the BOP-missing case.
 Similarly, TEST_DATA_MISS enables emulation for data block missing case and
