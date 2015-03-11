@@ -412,7 +412,7 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
     //senderProdMeta->mcastEndTime = clock();
     senderProdMeta->mcastEndTime = HRclock::now();
 
-    /* Cast clock_t type value into float type seconds */
+    /* Cast chrono::time_point type value into double duration type */
     /*
     float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
                         senderProdMeta->mcastStartTime)) / CLOCKS_PER_SEC;
@@ -421,10 +421,11 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
         std::chrono::duration_cast<std::chrono::duration<double>>
         (senderProdMeta->mcastEndTime - senderProdMeta->mcastStartTime);
 
-    senderProdMeta->retxTimeoutRatio = 10.0;
+    std::cout << "mcastPeriod = " << mcastPeriod.count() << std::endl;
     /* Set up timer timeout period */
     senderProdMeta->retxTimeoutPeriod = mcastPeriod.count() *
                                         senderProdMeta->retxTimeoutRatio;
+    std::cout << "TimeoutPeriod = " << senderProdMeta->retxTimeoutPeriod << std::endl;
 }
 
 
@@ -490,7 +491,8 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
         /* Set the retransmission timeout parameters */
         setTimerParameters(senderProdMeta);
         /* start a new timer for this product in a separate thread */
-        timerDelayQ.push(prodIndex, 0.1);
+        //timerDelayQ.push(prodIndex, 0.1);
+        timerDelayQ.push(prodIndex, senderProdMeta->retxTimeoutPeriod);
     }
     catch (std::exception& e) {
         taskExit(e);
