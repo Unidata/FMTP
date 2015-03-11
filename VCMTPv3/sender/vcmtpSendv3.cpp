@@ -182,22 +182,20 @@ vcmtpSendv3::~vcmtpSendv3()
  */
 void vcmtpSendv3::Start()
 {
-	void *timerret, *coorret;
+    void *timerret, *coorret;
     /** start listening to incoming connections */
     tcpsend->Init();
     /** initialize UDP connection */
     udpsend->Init();
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
-    if(retval != 0)
-    {
+    if(retval != 0) {
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() timerWrapper error");
     }
 
     retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
-    if(retval != 0)
-    {
+    if(retval != 0) {
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() coordinator error");
     }
@@ -359,8 +357,7 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
     header.flags     = htons(VCMTP_MEM_DATA);
 
     /* check if there is more data to send */
-    while (dataSize > 0)
-    {
+    while (dataSize > 0) {
         unsigned int payloadlen = dataSize < VCMTP_DATA_LEN ?
                                   dataSize : VCMTP_DATA_LEN;
 
@@ -555,7 +552,7 @@ void* vcmtpSendv3::coordinator(void* ptr)
         }
     }
     catch (std::exception& e) {
-    	sendptr->taskExit(e);
+        sendptr->taskExit(e);
     }
     return NULL;
 }
@@ -594,13 +591,13 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
                                 retxThreadInfo);
     if(retval != 0)
     {
-    	/*
-    	 * If a new thread can't be created, the newly created socket needs to
-    	 * be closed and removed from the TcpSend::connSockList.
-    	 */
-    	tcpsend->rmSockInList(newtcpsockfd);
-    	close(newtcpsockfd);
-    	// TODO: log the exceptions
+        /*
+         * If a new thread can't be created, the newly created socket needs to
+         * be closed and removed from the TcpSend::connSockList.
+         */
+        tcpsend->rmSockInList(newtcpsockfd);
+        close(newtcpsockfd);
+        // TODO: log the exceptions
     }
     else {
         /** track all the newly created retx threads for later termination */
@@ -628,7 +625,7 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
     catch (std::exception& e) {
         int exitStatus;
         newptr->retxmitterptr->tcpsend->rmSockInList(newptr->retxsockfd);
-    	close(newptr->retxsockfd);
+        close(newptr->retxsockfd);
         pthread_exit(&exitStatus);
     }
     return NULL;
