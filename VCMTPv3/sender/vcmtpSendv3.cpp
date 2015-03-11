@@ -249,21 +249,25 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     ioVec[2].iov_base = metadata;
     ioVec[2].iov_len  = metaSize;
 
-#if defined(TEST_BOP) && defined(DEBUG2)
-    std::string debugmsg = "Product #" + prodIndex +
-        ": Test BOP missing (BOP not sent)";
-    std::cout << debugmsg << std::endl;
-    WriteToLog(debugmsg);
+#ifdef TEST_BOP
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        debugmsg += ": Test BOP missing (BOP not sent)";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 #else
     /* Send the BOP message on multicast socket */
     if (udpsend->SendTo(ioVec, 3) < 0)
         throw std::runtime_error(
                 "vcmtpSendv3::SendBOPMessage(): SendTo() error");
 
-    std::string debugmsg = "Product #" + prodIndex;
-    debugmsg += ": BOP sent out";
-    std::cout << debugmsg << std::endl;
-    WriteToLog(debugmsg);
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        debugmsg += ": BOP has been sent";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 #endif
 }
 
@@ -372,6 +376,16 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
         if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
             throw std::runtime_error(
                     "vcmtpSendv3::sendProduct::SendData() error");
+
+#ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        debugmsg += ": Data block (SeqNum = ";
+        debugmsg += std::to_string(seqNum);
+        debugmsg += ") has been sent.";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+#endif
+
 #ifdef TEST_DATA_MISS
         }
 #endif
@@ -391,8 +405,6 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
  */
 void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
-    // TODO: RTT + RETX_REQ/RETX_END transmission delay + processing delay.
-    // TODO: should use + or * ?
     /* Get end time of multicasting for measuring product transmit time */
     senderProdMeta->mcastEndTime = clock();
     //senderProdMeta->mcastEndTime = myClock::now();
@@ -480,7 +492,6 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
     std::string debugmsg = "Product #" + std::to_string(prodIndex);
     debugmsg += " has been sent.";
     std::cout << debugmsg << std::endl;
-    WriteToLog(debugmsg);
 #endif
 
     return prodIndex++;
@@ -504,9 +515,22 @@ void vcmtpSendv3::sendEOPMessage()
     header.flags      = htons(VCMTP_EOP);
 
 #ifdef TEST_EOP
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        debugmsg += ": EOP missing case (EOP not sent).";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 #else
     if (udpsend->SendTo(&header, sizeof(header)) < 0)
         throw std::runtime_error("vcmtpSendv3::sendEOPMessage::SendTo error");
+
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        debugmsg += ": EOP has been sent.";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 #endif
 }
 
@@ -597,7 +621,13 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
          */
         tcpsend->rmSockInList(newtcpsockfd);
         close(newtcpsockfd);
-        // TODO: log the exceptions
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Error: vcmtpSendv3::StartNewRetxThread() \
+                                    creating new thread failed";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
     else {
         /** track all the newly created retx threads for later termination */
@@ -699,6 +729,16 @@ void vcmtpSendv3::retransmit(
             if (retval < 0)
                 throw std::runtime_error(
                         "vcmtpSendv3::retransmit() TcpSend::send() error");
+
+            #ifdef DEBUG2
+                std::string debugmsg = "Product #" +
+                    std::to_string(recvheader->prodindex);
+                debugmsg += ": Data block (SeqNum = ";
+                debugmsg += std::to_string(start);
+                debugmsg += ") has been retransmitted";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+            #endif
         }
     }
 }
@@ -742,6 +782,14 @@ void vcmtpSendv3::retransBOP(
     if (retval < 0)
         throw std::runtime_error(
                 "vcmtpSendv3::retransBOP() TcpSend::send() error");
+
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" +
+            std::to_string(recvheader->prodindex);
+        debugmsg += ": BOP has been retransmitted";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 }
 
 
@@ -770,6 +818,14 @@ void vcmtpSendv3::retransEOP(
     if (retval < 0)
         throw std::runtime_error(
                 "vcmtpSendv3::retransEOP() TcpSend::send() error");
+
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" +
+            std::to_string(recvheader->prodindex);
+        debugmsg += ": EOP has been retransmitted";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 }
 
 
@@ -870,17 +926,9 @@ void vcmtpSendv3::handleEopReq(VcmtpHeader* const  recvheader,
                                const int           sock)
 {
     if (retxMeta) {
-        #ifdef DEBUG2
-            std::cout << "retxMetadata for product #"
-                << recvheader->prodindex << " found." << std::endl;
-        #endif
         retransEOP(recvheader, sock);
     }
     else {
-        #ifdef DEBUG2
-            std::cout << "retxMetadata for product #"
-                << recvheader->prodindex << " not found." << std::endl;
-        #endif
         /**
          * Reject the request because the retransmission entry was removed by
          * the per-product timer thread.
@@ -924,29 +972,41 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
 
         if (recvheader.flags == VCMTP_RETX_REQ) {
             #ifdef DEBUG2
-                std::cout << "RETX_REQ for Product #"
-                    << recvheader.prodindex << std::endl;
+                std::string debugmsg = "Product #" +
+                    std::to_string(recvheader.prodindex);
+                debugmsg += ": RETX_REQ received";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
             handleRetxReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_RETX_END) {
             #ifdef DEBUG2
-                std::cout << "RETX_END for Product #"
-                    << recvheader.prodindex << std::endl;
+                std::string debugmsg = "Product #" +
+                    std::to_string(recvheader.prodindex);
+                debugmsg += ": RETX_END received";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
             handleRetxEnd(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_BOP_REQ) {
             #ifdef DEBUG2
-                std::cout << "BOP_REQ for Product #"
-                    << recvheader.prodindex << std::endl;
+                std::string debugmsg = "Product #" +
+                    std::to_string(recvheader.prodindex);
+                debugmsg += ": BOP_REQ received";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
             #ifdef DEBUG2
-                std::cout << "EOP_REQ for Product #"
-                    << recvheader.prodindex << std::endl;
+                std::string debugmsg = "Product #" +
+                    std::to_string(recvheader.prodindex);
+                debugmsg += ": EOP_REQ received";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
             handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
@@ -993,8 +1053,11 @@ void vcmtpSendv3::timerThread()
     while (1) {
         uint32_t prodindex = timerDelayQ.pop();
         #ifdef DEBUG2
-            std::cout << "Timer: Product #" << prodindex
-                << " wakes up" << std::endl;
+            std::string debugmsg = "Timer: Product #" +
+                std::to_string(prodindex);
+            debugmsg += " has waken up";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
         #endif
         const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
