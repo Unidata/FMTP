@@ -22,7 +22,8 @@ public:
      * Adds a thread.
      *
      * @param[in] thread          The thread to be added.
-     * @throw     std::bad_alloc  If necessary space couldn't be allocated.
+     * @throws    std::bad_alloc  If necessary space couldn't be allocated.
+     *                            The instance is unmodified.
      */
     void add(pthread_t& thread);
     /**
@@ -30,12 +31,12 @@ public:
      *
      * @param[in] thread  The thread to be removed.
      */
-    void remove(pthread_t& thread);
+    void remove(pthread_t& thread) noexcept;
     /**
      * Shuts down all threads by calling `pthread_cancel()` on each one and
      * empties the container.
      */
-    void shutdown();
+    void shutdown() noexcept;
 
 private:
     std::mutex                   mutex;

@@ -19,7 +19,7 @@ void RetxThreads::add(pthread_t& thread)
     threads.push_front(thread);
 }
 
-void RetxThreads::remove(pthread_t& thread)
+void RetxThreads::remove(pthread_t& thread) noexcept
 {
     class Equals {
     public:
@@ -34,10 +34,10 @@ void RetxThreads::remove(pthread_t& thread)
     threads.remove_if(Equals(thread));
 }
 
-void RetxThreads::shutdown()
+void RetxThreads::shutdown() noexcept
 {
     std::unique_lock<std::mutex> lock(mutex);
     for (pthread_t& thread: threads)
         (void)pthread_cancel(thread);
-    (void)threads.empty();
+    threads.clear();
 }
