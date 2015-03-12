@@ -31,6 +31,7 @@
 
 #include <errno.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdexcept>
 #include <system_error>
 #include <sys/socket.h>
@@ -88,9 +89,24 @@ TcpSend::~TcpSend()
  */
 void TcpSend::Init()
 {
+    int alive = 1;
+    int aliveidle = 10; /* keep alive time = 10 sec */
+
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if(sockfd < 0)
+    if (sockfd < 0)
         throw std::runtime_error("TcpSend::TcpSend() error creating socket");
+    /* set keep alive flag */
+    if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &alive, sizeof(int)) < 0) {
+        close(sockfd);
+        throw std::runtime_error(
+                "TcpSend::TcpSend() error setting SO_KEEPALIVE");
+    }
+    /* set TCP keep alive time */
+    if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, &aliveidle, sizeof(int)) < 0) {
+        close(sockfd);
+        throw std::runtime_error(
+                "TcpSend::TcpSend() error setting keep alive time");
+    }
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
     in_addr_t inAddr = inet_addr(tcpAddr.c_str());
@@ -98,7 +114,7 @@ void TcpSend::Init()
         throw std::invalid_argument(std::string("Invalid interface: ") +
                 tcpAddr);
     servAddr.sin_addr.s_addr = inAddr;
-    /** If tcpPort = 0, OS will automatically choose an available port number. */
+    /* If tcpPort = 0, OS will automatically choose an available port number. */
     servAddr.sin_port = htons(tcpPort);
 #if 0
     cerr << std::string("TcpSend::TcpSend() Binding TCP socket to ").
@@ -110,7 +126,7 @@ void TcpSend::Init()
                 "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
                 std::to_string(static_cast<long long unsigned int>(tcpPort)) +
                 "\"");
-    /** listen() returns right away, it's non-blocking */
+    /* listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
 }
 
