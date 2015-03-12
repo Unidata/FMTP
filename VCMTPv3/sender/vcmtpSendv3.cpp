@@ -340,7 +340,6 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
     sendMeta->addRetxMetadata(senderProdMeta);
 
     /* Update multicast start time in RetxMetadata */
-    //senderProdMeta->mcastStartTime = clock();
     senderProdMeta->mcastStartTime = HRclock::now();
 
     return senderProdMeta;
@@ -409,23 +408,16 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
 void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
     /* Get end time of multicasting for measuring product transmit time */
-    //senderProdMeta->mcastEndTime = clock();
     senderProdMeta->mcastEndTime = HRclock::now();
 
     /* Cast chrono::time_point type value into double duration type */
-    /*
-    float mcastPeriod = ((float) (senderProdMeta->mcastEndTime -
-                        senderProdMeta->mcastStartTime)) / CLOCKS_PER_SEC;
-    */
     std::chrono::duration<double> mcastPeriod =
         std::chrono::duration_cast<std::chrono::duration<double>>
         (senderProdMeta->mcastEndTime - senderProdMeta->mcastStartTime);
 
-    std::cout << "mcastPeriod = " << mcastPeriod.count() << std::endl;
     /* Set up timer timeout period */
     senderProdMeta->retxTimeoutPeriod = mcastPeriod.count() *
                                         senderProdMeta->retxTimeoutRatio;
-    std::cout << "TimeoutPeriod = " << senderProdMeta->retxTimeoutPeriod << std::endl;
 }
 
 

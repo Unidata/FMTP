@@ -46,8 +46,6 @@ struct RetxMetadata {
     uint32_t       prodLength;
     uint16_t       metaSize;          /*!< metadata size               */
     void*          metadata;          /*!< metadata pointer            */
-    //clock_t        mcastStartTime;    /*!< multicasting start time     */
-    //clock_t        mcastEndTime;      /*!< multicasting end time       */
     HRclock::time_point mcastStartTime;    /*!< multicasting start time    */
     HRclock::time_point mcastEndTime;      /*!< multicasting end time      */
     float          retxTimeoutRatio;  /*!< ratio to scale timeout time */
