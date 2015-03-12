@@ -3,16 +3,17 @@ CC = g++
 INCLUDE = ../
 LIB =
 ELFFILE = testSendApp
-#DEBUG_FLAG = DEBUG1
-DEBUG_FLAG = DEBUG2
+DEBUG_FLAG = DEBUG1
+#DEBUG_FLAG = DEBUG2
 #TEST_FLAG = TEST_BOP
 #TEST_FLAG = TEST_DATA_MISS
-TEST_FLAG = TEST_EOP
-#TEST_FLAG = NONE
+#TEST_FLAG = TEST_EOP
+TEST_FLAG = NONE
 
-$(ELFFILE): testSendApp.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp
+$(ELFFILE): testSendApp.cpp
 	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
-		testSendApp.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp ProdIndexDelayQueue.cpp
+		testSendApp.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp \
+		ProdIndexDelayQueue.cpp RetxThreads.cpp
 
 .PHONY : clean
 clean:

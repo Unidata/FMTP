@@ -547,12 +547,8 @@ void vcmtpSendv3::Stop()
 {
     (void)pthread_cancel(timer_t);
     (void)pthread_cancel(coor_t);
-
-    std::list<pthread_t>::iterator it;
-    for (it = retxThreadList.begin(); it != retxThreadList.end(); ++it) {
-        (void)pthread_cancel(*it);
-        retxThreadList.erase(it);
-    }
+    /* cancels all the threads in list and empties the list */
+    retxThreadList.shutdown();
 }
 
 
@@ -634,7 +630,7 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
     }
     else {
         /** track all the newly created retx threads for later termination */
-        retxThreadList.push_back(t);
+        retxThreadList.add(t);
         pthread_detach(t);
     }
 }
