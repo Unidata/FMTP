@@ -641,7 +641,7 @@ void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
  * pointer of vcmtpSendv3 instance can start vcmtpSendv3 member function.
  * The second parameter is sockfd, the third one is the prodindex-prodptr map.
  * If the callee throws any exception, the try-catch structure will catch that
- * and terminates the thread itself.
+ * and terminates the thread itself as well as other associated resources.
  *
  * @param[in] *ptr    a void type pointer that points to whatever data struct.
  */
@@ -653,8 +653,11 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
     }
     catch (std::exception& e) {
         int exitStatus;
+        pthread_t t = pthread_self();
+
         newptr->retxmitterptr->tcpsend->rmSockInList(newptr->retxsockfd);
         close(newptr->retxsockfd);
+        newptr->retxmitterptr->retxThreadList.remove(t);
         pthread_exit(&exitStatus);
     }
     return NULL;
