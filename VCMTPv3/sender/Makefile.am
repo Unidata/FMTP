@@ -7,9 +7,11 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= TcpSend.cpp TcpSend.h vcmtpSendv3.cpp vcmtpSendv3.h \
-			  UdpSend.cpp UdpSend.h \
+lib_la_SOURCES		= ProdIndexDelayQueue.cpp ProdIndexDelayQueue.h \
+                          RetxThreads.cpp RetxThreads.h \
 			  senderMetadata.cpp senderMetadata.h \
 			  SendAppNotifier.h \
-			  ProdIndexDelayQueue.cpp ProdIndexDelayQueue.h
+			  TcpSend.cpp TcpSend.h \
+			  UdpSend.cpp UdpSend.h \
+			  vcmtpSendv3.cpp vcmtpSendv3.h
 lib_la_CPPFLAGS		= -I$(srcdir)/..
