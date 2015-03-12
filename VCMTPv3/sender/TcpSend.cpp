@@ -85,12 +85,16 @@ TcpSend::~TcpSend()
  *
  * @throw  std::invalid_argument if `tcpAddr` is invalid.
  * @throw  std::runtime_error    if socket creation fails.
+ * @throw  std::runtime_error    if enabling keepalive fails.
+ * @throw  std::runtime_error    if setting keepalive time fails.
+ * @throw  std::runtime_error    if setting keepalive interval fails.
  * @throw  std::runtime_error    if socket bind() operation fails.
  */
 void TcpSend::Init()
 {
     int alive = 1;
     //int aliveidle = 10; /* keep alive time = 10 sec */
+    int aliveintvl = 30; /* keep alive interval = 30 sec */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -101,7 +105,8 @@ void TcpSend::Init()
         throw std::runtime_error(
                 "TcpSend::TcpSend() error setting SO_KEEPALIVE");
     }
-    /* set TCP keep alive time */
+    /* set TCP keep alive time, default is 2 hours */
+    // TODO: determine a proper alive time value if mixed feedtypes are sent.
     /*
 #ifdef __linux__
     if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, &aliveidle, sizeof(int)) < 0) {
@@ -113,6 +118,18 @@ void TcpSend::Init()
                 "TcpSend::TcpSend() error setting keep alive time");
     }
     */
+    /* set TCP keep alive interval, default 1 sec */
+    // TODO: determine a proper alive interval value
+#ifdef __linux__
+    if (setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, &aliveintvl, sizeof(int)) < 0) {
+#elif __APPLE__
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &aliveintvl, sizeof(int)) < 0) {
+#endif
+        close(sockfd);
+        throw std::runtime_error(
+                "TcpSend::TcpSend() error setting keep alive interval");
+    }
+
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
     in_addr_t inAddr = inet_addr(tcpAddr.c_str());
