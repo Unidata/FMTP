@@ -37,7 +37,7 @@ void RetxThreads::remove(pthread_t& thread)
 void RetxThreads::shutdown()
 {
     std::unique_lock<std::mutex> lock(mutex);
-    for (auto it = threads.begin(); it != threads.end(); ++it)
-        (void)pthread_cancel(*it);
+    for (pthread_t& thread: threads)
+        (void)pthread_cancel(thread);
     (void)threads.empty();
 }
