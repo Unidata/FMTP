@@ -39,6 +39,7 @@
 #include <sys/types.h>
 
 #include "ProdIndexDelayQueue.h"
+#include "RetxThreads.h"
 #include "SendAppNotifier.h"
 #include "senderMetadata.h"
 #include "TcpSend.h"
@@ -128,8 +129,8 @@ private:
     ProdIndexDelayQueue         timerDelayQ;
     pthread_t                   coor_t;
     pthread_t                   timer_t;
-    /** help tracking all the dynamically created retx threads */
-    std::list<pthread_t>        retxThreadList;
+    /** tracks all the dynamically created retx threads */
+    RetxThreads                 retxThreadList;
     std::mutex                  linkmtx;
     uint64_t                    linkspeed;
     std::mutex                  exitMutex;
