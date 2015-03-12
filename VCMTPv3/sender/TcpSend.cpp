@@ -90,7 +90,7 @@ TcpSend::~TcpSend()
 void TcpSend::Init()
 {
     int alive = 1;
-    int aliveidle = 10; /* keep alive time = 10 sec */
+    //int aliveidle = 10; /* keep alive time = 10 sec */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -102,11 +102,17 @@ void TcpSend::Init()
                 "TcpSend::TcpSend() error setting SO_KEEPALIVE");
     }
     /* set TCP keep alive time */
+    /*
+#ifdef __linux__
     if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, &aliveidle, sizeof(int)) < 0) {
+#elif __APPLE__
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveidle, sizeof(int)) < 0) {
+#endif
         close(sockfd);
         throw std::runtime_error(
                 "TcpSend::TcpSend() error setting keep alive time");
     }
+    */
     (void) memset((char *) &servAddr, 0, sizeof(servAddr));
     servAddr.sin_family = AF_INET;
     in_addr_t inAddr = inet_addr(tcpAddr.c_str());
