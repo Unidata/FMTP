@@ -101,7 +101,7 @@ void ProdIndexDelayQueue::push(
  * @return     The time at which the earliest element will be ready.
  */
 const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTime(
-        std::unique_lock<std::mutex>& lock)
+        std::unique_lock<std::mutex>& lock) noexcept
 {
     while (priQ.size() == 0)
         cond.wait(lock);
@@ -113,6 +113,8 @@ const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTim
  * Returns the product-index whose reveal-time is the earliest and not later
  * than the current time and removes it from the queue. Blocks until such a
  * product-index exists.
+ *
+ * **Exception Safety:** Basic guarantee
  *
  * @return  The product-index with the earliest reveal-time that's not later
  *          than the current time.
@@ -151,7 +153,7 @@ uint32_t ProdIndexDelayQueue::get()
  *
  * @return  The number of product-indexes in the queue.
  */
-size_t ProdIndexDelayQueue::size()
+size_t ProdIndexDelayQueue::size() noexcept
 {
     std::unique_lock<std::mutex> lock(mutex);
     return priQ.size();

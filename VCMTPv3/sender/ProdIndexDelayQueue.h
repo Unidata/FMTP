@@ -26,10 +26,17 @@ class ProdIndexDelayQueue {
 public:
     /**
      * Constructs an instance.
+     *
+     * **Exception Safety:** Strong guarantee
+     *
+     * @throws std::bad_alloc     If necessary memory can't be allocated.
+     * @throws std::system_error  If a system error occurs.
      */
     ProdIndexDelayQueue();
     /**
      * Adds an element to the queue.
+     *
+     * **Exception Safety:** Strong guarantee
      *
      * @param[in] index    The product-index.
      * @param[in] seconds  The duration, in seconds, to the reveal-time of the
@@ -42,6 +49,8 @@ public:
      * than the current time and removes it from the queue. Blocks until such a
      * product-index exists.
      *
+     * **Exception Safety:** Basic guarantee
+     *
      * @return  The product-index with the earliest reveal-time that's not later
      *          than the current time.
      */
@@ -51,6 +60,8 @@ public:
      * earliest and removes it from the queue. Undefined behavior results if the
      * queue is empty.
      *
+     * **Exception Safety:** Basic guarantee
+     *
      * @return  The product-index with the earliest reveal-time.
      */
     uint32_t get();
@@ -59,7 +70,7 @@ public:
      *
      * @return  The number of product-indexes in the queue.
      */
-    size_t size();
+    size_t size() noexcept;
 
 private:
     /**
@@ -128,7 +139,7 @@ private:
      * @return     The time at which the earliest element will be ready.
      */
     const std::chrono::system_clock::time_point&
-            getEarliestTime(std::unique_lock<std::mutex>& lock);
+            getEarliestTime(std::unique_lock<std::mutex>& lock) noexcept;
 
     /**
      * The mutex for protecting the priority-queue.

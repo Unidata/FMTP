@@ -21,6 +21,8 @@ public:
     /**
      * Adds a thread.
      *
+     * **Exception Safety:** Strong guarantee
+     *
      * @param[in] thread          The thread to be added.
      * @throws    std::bad_alloc  If necessary space couldn't be allocated.
      *                            The instance is unmodified.
