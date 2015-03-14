@@ -27,6 +27,11 @@ The sender timer is used to form a window for legal retransmission and release
 resources after the window is closed. And the receiver timer is used to watch
 the EOPs. If it finds missing EOP, a requested will be sent back immediately.
 The whole program is written in C++.
+VCMTPv3 is supposed to be integrated into LDM7 as an underlying layer. Also, a
+testing application suite is provided as a simple replacement for LDM. The test
+application only provides single product transmission so far. But later a
+product-queue-like structure will be added. Besides, another unit will be added
+to create random sized data to mock real idd feedtypes.
 
 
 
