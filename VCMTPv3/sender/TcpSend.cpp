@@ -99,56 +99,64 @@ void TcpSend::Init()
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
         throw std::runtime_error("TcpSend::TcpSend() error creating socket");
-    /* set keep alive flag */
-    if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &alive, sizeof(int)) < 0) {
-        close(sockfd);
-        throw std::runtime_error(
-                "TcpSend::TcpSend() error setting SO_KEEPALIVE");
-    }
-    /* set TCP keep alive time, default is 2 hours */
-    // TODO: determine a proper alive time value if mixed feedtypes are sent.
-    /*
-#ifdef __linux__
-    if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, &aliveidle, sizeof(int)) < 0) {
-#elif __APPLE__
-    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveidle, sizeof(int)) < 0) {
-#endif
-        close(sockfd);
-        throw std::runtime_error(
-                "TcpSend::TcpSend() error setting keep alive time");
-    }
-    */
-    /* set TCP keep alive interval, default 1 sec */
-    // TODO: determine a proper alive interval value
-#ifdef __linux__
-    if (setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, &aliveintvl, sizeof(int)) < 0) {
-#elif __APPLE__
-    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &aliveintvl, sizeof(int)) < 0) {
-#endif
-        close(sockfd);
-        throw std::runtime_error(
-                "TcpSend::TcpSend() error setting keep alive interval");
-    }
 
-    (void) memset((char *) &servAddr, 0, sizeof(servAddr));
-    servAddr.sin_family = AF_INET;
-    in_addr_t inAddr = inet_addr(tcpAddr.c_str());
-    if ((in_addr_t)(-1) == inAddr)
-        throw std::invalid_argument(std::string("Invalid interface: ") +
-                tcpAddr);
-    servAddr.sin_addr.s_addr = inAddr;
-    /* If tcpPort = 0, OS will automatically choose an available port number. */
-    servAddr.sin_port = htons(tcpPort);
+    try {
+        /* set keep alive flag */
+        if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &alive,
+                       sizeof(int)) < 0) {
+            throw std::runtime_error(
+                    "TcpSend::TcpSend() error setting SO_KEEPALIVE");
+        }
+        /* set TCP keep alive time, default is 2 hours */
+        // TODO: determine a proper alive time value if mixed feedtypes are sent.
+        /*
+        #ifdef __linux__
+            if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, &aliveidle,
+                           sizeof(int)) < 0) {
+        #elif __APPLE__
+            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveidle,
+                           sizeof(int)) < 0) {
+        #endif
+            throw std::runtime_error(
+                    "TcpSend::TcpSend() error setting keep alive time");
+        }
+        */
+        /* set TCP keep alive interval, default 1 sec */
+        // TODO: determine a proper alive interval value
+        #ifdef __linux__
+            if (setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, &aliveintvl,
+                           sizeof(int)) < 0) {
+        #elif __APPLE__
+            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &aliveintvl,
+                           sizeof(int)) < 0) {
+        #endif
+            throw std::runtime_error(
+                    "TcpSend::TcpSend() error setting keep alive interval");
+        }
+
+        (void) memset((char *) &servAddr, 0, sizeof(servAddr));
+        servAddr.sin_family = AF_INET;
+        in_addr_t inAddr = inet_addr(tcpAddr.c_str());
+        if ((in_addr_t)(-1) == inAddr)
+            throw std::invalid_argument(std::string("Invalid interface: ") +
+                    tcpAddr);
+        servAddr.sin_addr.s_addr = inAddr;
+        /* If tcpPort = 0, OS will automatically choose an available port number. */
+        servAddr.sin_port = htons(tcpPort);
 #if 0
-    cerr << std::string("TcpSend::TcpSend() Binding TCP socket to ").
-            append(tcpAddr).append(":").append(std::to_string(tcpPort)).
-            append("\n");
+        cerr << std::string("TcpSend::TcpSend() Binding TCP socket to ").
+                append(tcpAddr).append(":").append(std::to_string(tcpPort)).
+                append("\n");
 #endif
-    if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
-        throw std::system_error(errno, std::system_category(),
-                "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
-                std::to_string(static_cast<long long unsigned int>(tcpPort)) +
-                "\"");
+        if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
+            throw std::system_error(errno, std::system_category(),
+                    "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
+                    std::to_string(static_cast<long long unsigned int>(tcpPort)) +
+                    "\"");
+    }
+    catch (std::exception& e) {
+        close(sockfd);
+    }
     /* listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
 }
