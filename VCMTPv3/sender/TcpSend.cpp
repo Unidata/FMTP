@@ -79,7 +79,8 @@ TcpSend::~TcpSend()
 /**
  * Initializer for TcpSend class, taking tcp address and tcp port to establish
  * a tcp connection. When the connection is established, keep listen on it with
- * a maximum of MAX_CONNECTION allowed to connect.
+ * a maximum of MAX_CONNECTION allowed to connect. Consistency is strongly
+ * ensured by cancelling whatever has been done before exceptions are thrown.
  *
  * @param[in] none
  *
@@ -217,8 +218,8 @@ const std::list<int>& TcpSend::getConnSockList()
 
 void TcpSend::rmSockInList(int sockfd)
 {
-	std::unique_lock<std::mutex> lock(sockListMutex);
-	connSockList.remove(sockfd);
+    std::unique_lock<std::mutex> lock(sockListMutex);
+    connSockList.remove(sockfd);
 }
 
 
