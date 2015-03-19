@@ -73,7 +73,8 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t()
+    timer_t(),
+    threadsStarted(false)
 {
 }
 
@@ -109,7 +110,8 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t()
+    timer_t(),
+    threadsStarted(false)
 {
 }
 
@@ -127,7 +129,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
  * @param[in] mcastAddr       Multicast group address.
  * @param[in] mcastPort       Multicast group port.
  * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
- * @param[in] timeoutRatio    retranmission timeout factor to tradeoff between
+ * @param[in] timeoutRatio    retransmission timeout factor to tradeoff between
  *                            performance and robustness.
  * @param[in] ttl             Time to live, if not specified, default value is 1.
  * @param[in] notifier        Sending application notifier.
@@ -152,7 +154,8 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t()
+    timer_t(),
+    threadsStarted(false)
 {
 }
 
@@ -164,7 +167,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
  */
 vcmtpSendv3::~vcmtpSendv3()
 {
-    /** Stop() will not be impedient */
+    /** Stop() will not be impediment */
     Stop();
     delete udpsend;
     delete tcpsend;
@@ -180,6 +183,8 @@ vcmtpSendv3::~vcmtpSendv3()
  * caught and thrown here. Doesn't return until Stop() is called or an
  * exception is thrown.
  *
+ * **Exception Safety:** No guarantee
+ *
  * @throw  std::system_error  if a system error occurs.
  * @throw  std::runtime_error if a runtime error occurs.
  */
@@ -192,24 +197,26 @@ void vcmtpSendv3::Start()
     udpsend->Init();
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
-    if(retval != 0) {
+    if(retval != 0)
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() timerWrapper error");
-    }
 
     retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0) {
+        (void)pthread_cancel(timer_t);
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() coordinator error");
     }
+
+    threadsStarted.store(true, std::memory_order_relaxed);
+
     pthread_join(timer_t, &timerret);
     pthread_join(coor_t, &coorret);
 
     {
         std::unique_lock<std::mutex> lock(exitMutex);
-        if (exceptIsSet) {
-                throw except;
-        }
+        if (exceptIsSet)
+            throw except;
     }
 }
 
@@ -545,8 +552,11 @@ void vcmtpSendv3::sendEOPMessage()
  */
 void vcmtpSendv3::Stop()
 {
-    (void)pthread_cancel(timer_t);
-    (void)pthread_cancel(coor_t);
+    if (threadsStarted.load(std::memory_order_relaxed)) {
+        (void)pthread_cancel(timer_t);
+        (void)pthread_cancel(coor_t);
+        threadsStarted.store(false, std::memory_order_relaxed);
+    }
     /* cancels all the threads in list and empties the list */
     retxThreadList.shutdown();
 }

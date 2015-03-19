@@ -30,6 +30,7 @@
 #define VCMTP_SENDER_VCMTPSENDV3_H_
 
 
+#include <atomic>
 #include <ctime>
 #include <exception>
 #include <list>
@@ -136,6 +137,7 @@ private:
     std::mutex                  exitMutex;
     std::exception              except;
     bool                        exceptIsSet;
+    std::atomic<bool>           threadsStarted;
 
     /**
      * Adds and entry for a data-product to the retransmission set.
