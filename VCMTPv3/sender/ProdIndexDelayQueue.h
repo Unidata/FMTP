@@ -71,6 +71,10 @@ public:
      * @return  The number of product-indexes in the queue.
      */
     size_t size() noexcept;
+    /**
+     * Disables the queue. After this call, both `push()` and `pop` will fail.
+     */
+    void disable() noexcept;
 
 private:
     /**
@@ -101,7 +105,7 @@ private:
          *
          * @return  The product-index.
          */
-        uint32_t getIndex() const {return index;}
+        uint32_t getIndex() const noexcept {return index;}
         /**
          * Returns the reveal-time.
          *
@@ -139,7 +143,17 @@ private:
      * @return     The time at which the earliest element will be ready.
      */
     const std::chrono::system_clock::time_point&
-            getEarliestTime(std::unique_lock<std::mutex>& lock) noexcept;
+            getEarliestTime(std::unique_lock<std::mutex>& lock);
+    /**
+     * Throws the appropriate exception if the queue is disabled.
+     *
+     * @pre                        The queue is locked.
+     * @throws std::runtime_error  if the queue is disabled.
+     */
+    void throwIfDisabled() const {
+        if (disabled)
+            throw std::runtime_error("Product-index delay-queue is disabled");
+    }
 
     /**
      * The mutex for protecting the priority-queue.
@@ -155,6 +169,10 @@ private:
      */
     std::priority_queue<Element, std::vector<Element>,
             decltype(&isLowerPriority)> priQ;
+    /**
+     * Whether or not the queue is disabled.
+     */
+    bool                                disabled;
 };
 
 #endif /* VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_ */

@@ -15,6 +15,7 @@
 #include <chrono>
 #include <iostream>
 #include <random>
+#include <stdexcept>
 
 namespace {
 
@@ -71,6 +72,16 @@ TEST_F(ProdIndexDelayQueueTest, NegativeDuration) {
     ASSERT_EQ(2, q.pop());
     ASSERT_EQ(1, q.pop());
     ASSERT_EQ(0, q.size());
+}
+
+TEST_F(ProdIndexDelayQueueTest, DisablingCausesPushException) {
+    q.disable();
+    ASSERT_THROW(q.push(1, 0.5), std::runtime_error);
+}
+
+TEST_F(ProdIndexDelayQueueTest, DisablingCausesPopException) {
+    q.disable();
+    EXPECT_THROW((void)q.pop(), std::runtime_error);
 }
 
 TEST_F(ProdIndexDelayQueueTest, Performance) {

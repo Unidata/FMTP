@@ -137,7 +137,6 @@ private:
     std::mutex                  exitMutex;
     std::exception              except;
     bool                        exceptIsSet;
-    std::atomic<bool>           threadsStarted;
 
     /**
      * Adds and entry for a data-product to the retransmission set.

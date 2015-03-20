@@ -73,8 +73,7 @@ vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t(),
-    threadsStarted(false)
+    timer_t()
 {
 }
 
@@ -110,8 +109,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t(),
-    threadsStarted(false)
+    timer_t()
 {
 }
 
@@ -154,8 +152,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t(),
-    threadsStarted(false)
+    timer_t()
 {
 }
 
@@ -179,18 +176,15 @@ vcmtpSendv3::~vcmtpSendv3()
  * Starts the coordinator thread and timer thread from this function. And
  * passes a vcmtpSendv3 type pointer to each newly created thread so that
  * coordinator and timer can have access to all the resources inside this
- * vcmtpSendv3 instance. Only the exception from the acceptConn() will be
- * caught and thrown here. Doesn't return until Stop() is called or an
- * exception is thrown.
+ * vcmtpSendv3 instance. Returns immediately.
  *
  * **Exception Safety:** No guarantee
  *
- * @throw  std::system_error  if a system error occurs.
  * @throw  std::runtime_error if a runtime error occurs.
+ * @throw  std::system_error  if a system error occurs.
  */
 void vcmtpSendv3::Start()
 {
-    void *timerret, *coorret;
     /** start listening to incoming connections */
     tcpsend->Init();
     /** initialize UDP connection */
@@ -206,17 +200,6 @@ void vcmtpSendv3::Start()
         (void)pthread_cancel(timer_t);
         throw std::system_error(retval, std::system_category(),
                 "vcmtpSendv3::Start() pthread_create() coordinator error");
-    }
-
-    threadsStarted.store(true, std::memory_order_relaxed);
-
-    pthread_join(timer_t, &timerret);
-    pthread_join(coor_t, &coorret);
-
-    {
-        std::unique_lock<std::mutex> lock(exitMutex);
-        if (exceptIsSet)
-            throw except;
     }
 }
 
@@ -546,19 +529,26 @@ void vcmtpSendv3::sendEOPMessage()
 
 
 /**
- * Stop all the created threads.
+ * Stops this instance. Must be called *after* Start(). Doesn't return until
+ * all threads have stopped.
  *
- * @param[in] none
+ * @throws std::exception  If an exception was thrown on a thread.
  */
 void vcmtpSendv3::Stop()
 {
-    if (threadsStarted.load(std::memory_order_relaxed)) {
-        (void)pthread_cancel(timer_t);
-        (void)pthread_cancel(coor_t);
-        threadsStarted.store(false, std::memory_order_relaxed);
-    }
+    timerDelayQ.disable(); // will cause timer thread to exit
+    (void)pthread_cancel(coor_t);
     /* cancels all the threads in list and empties the list */
     retxThreadList.shutdown();
+
+    (void)pthread_join(timer_t, NULL);
+    (void)pthread_join(coor_t, NULL);
+
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        if (exceptIsSet)
+            throw except;
+    }
 }
 
 
@@ -1063,7 +1053,14 @@ void* vcmtpSendv3::timerWrapper(void* ptr)
 void vcmtpSendv3::timerThread()
 {
     while (1) {
-        uint32_t prodindex = timerDelayQ.pop();
+        uint32_t prodindex;
+        try {
+            uint32_t prodindex = timerDelayQ.pop();
+        }
+        catch (std::runtime_error& e) {
+            // Product-index delay-queue, `timerDelayQ`, was externally disabled
+            return;
+        }
         #ifdef DEBUG2
             std::string debugmsg = "Timer: Product #" +
                 std::to_string(prodindex);

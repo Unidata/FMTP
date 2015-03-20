@@ -70,7 +70,8 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
 :
     mutex(),
     cond(),
-    priQ(&isLowerPriority)
+    priQ(&isLowerPriority),
+    disabled(false)
 {
 }
 
@@ -82,12 +83,14 @@ ProdIndexDelayQueue::ProdIndexDelayQueue()
  * @param[in] seconds  The duration, in seconds, to the reveal-time of the
  *                     product-index (i.e., until the element can be retrieved
  *                     via `pop()`).
+ * @throws std::runtime_error  If `disable()` has been called.
  */
 void ProdIndexDelayQueue::push(
         const uint32_t index,
         const double   seconds)
 {
     std::unique_lock<std::mutex>(mutex);
+    throwIfDisabled();
     priQ.push(Element(index, seconds));
     cond.notify_one();
 }
@@ -96,15 +99,20 @@ void ProdIndexDelayQueue::push(
 /**
  * Returns the time associated with the highest-priority element in the queue.
  *
+ * **Exception Safety:** Basic guarantee
+ *
  * @pre        The instance is locked.
  * @param[in]  The lock on the instance.
  * @return     The time at which the earliest element will be ready.
+ * @throws std::runtime_error  if `disable()` has been called.
  */
-const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTime(
-        std::unique_lock<std::mutex>& lock) noexcept
+const std::chrono::system_clock::time_point&
+ProdIndexDelayQueue::getEarliestTime(
+        std::unique_lock<std::mutex>& lock)
 {
-    while (priQ.size() == 0)
+    while (!disabled && priQ.size() == 0)
         cond.wait(lock);
+    throwIfDisabled();
     return priQ.top().getTime();
 }
 
@@ -118,12 +126,15 @@ const std::chrono::system_clock::time_point& ProdIndexDelayQueue::getEarliestTim
  *
  * @return  The product-index with the earliest reveal-time that's not later
  *          than the current time.
+ * @throws std::runtime_error  if `disable()` has been called.
  */
 uint32_t ProdIndexDelayQueue::pop()
 {
     std::unique_lock<std::mutex> lock(mutex);
-    while (getEarliestTime(lock) > std::chrono::system_clock::now())
-        cond.wait_until(lock, getEarliestTime(lock));
+    for (std::chrono::system_clock::time_point time = getEarliestTime(lock);
+            time > std::chrono::system_clock::now();
+            time = getEarliestTime(lock))
+        cond.wait_until(lock, time);
     uint32_t index = priQ.top().getIndex();
     priQ.pop();
     cond.notify_one();
@@ -135,6 +146,8 @@ uint32_t ProdIndexDelayQueue::pop()
  * Unconditionally returns the product-index whose reveal-time is the earliest
  * and removes it from the queue. Undefined behavior results if the queue is
  * empty.
+ *
+ * **Exception Safety:** None
  *
  * @return  The product-index with the earliest reveal-time.
  */
@@ -157,4 +170,11 @@ size_t ProdIndexDelayQueue::size() noexcept
 {
     std::unique_lock<std::mutex> lock(mutex);
     return priQ.size();
+}
+
+void ProdIndexDelayQueue::disable() noexcept
+{
+    std::unique_lock<std::mutex> lock(mutex);
+    disabled = true;
+    cond.notify_all();
 }
