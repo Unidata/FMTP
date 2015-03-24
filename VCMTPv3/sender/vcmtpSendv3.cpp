@@ -164,8 +164,6 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
  */
 vcmtpSendv3::~vcmtpSendv3()
 {
-    /** Stop() will not be impediment */
-    Stop();
     delete udpsend;
     delete tcpsend;
     delete sendMeta;
@@ -176,7 +174,8 @@ vcmtpSendv3::~vcmtpSendv3()
  * Starts the coordinator thread and timer thread from this function. And
  * passes a vcmtpSendv3 type pointer to each newly created thread so that
  * coordinator and timer can have access to all the resources inside this
- * vcmtpSendv3 instance. Returns immediately.
+ * vcmtpSendv3 instance. If this method succeeds, then the caller must call
+ * `Stop()` before this instance is destroyed. Returns immediately.
  *
  * **Exception Safety:** No guarantee
  *
@@ -529,8 +528,8 @@ void vcmtpSendv3::sendEOPMessage()
 
 
 /**
- * Stops this instance. Must be called *after* Start(). Doesn't return until
- * all threads have stopped.
+ * Stops this instance. Must be called if `Start()` succeeds. Doesn't return
+ * until all threads have stopped.
  *
  * @throws std::exception  If an exception was thrown on a thread.
  */

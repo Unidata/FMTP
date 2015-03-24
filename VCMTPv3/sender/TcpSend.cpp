@@ -302,7 +302,7 @@ int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
 /**
  * Return the local port number.
  *
- * @return                The local port number in host byte-order.
+ * @return                   The local port number in host byte-order.
  * @throw std::system_error  The port number cannot be obtained.
  */
 unsigned short TcpSend::getPortNum()
@@ -311,8 +311,8 @@ unsigned short TcpSend::getPortNum()
     socklen_t          tmpAddrLen = sizeof(tmpAddr);
 
     if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
-        throw std::runtime_error("TcpSend::getPortNum() error getting port \
-                                 number");
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::getPortNum() error getting port number");
 
     return ntohs(tmpAddr.sin_port);
 }
