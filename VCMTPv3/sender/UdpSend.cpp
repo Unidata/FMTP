@@ -29,8 +29,11 @@
 
 #include "UdpSend.h"
 
+#include <arpa/inet.h>
+#include <errno.h>
 #include <stdexcept>
 #include <string.h>
+#include <system_error>
 
 
 #ifndef NULL
@@ -60,9 +63,8 @@ UdpSend::UdpSend(const std::string& recvaddr, unsigned short recvport)
  */
 UdpSend::UdpSend(const std::string& recvaddr, unsigned short recvport,
         unsigned char newTTL)
-    : ttl(newTTL)
+    : recvAddr(recvaddr), recvPort(recvport), ttl(newTTL)
 {
-    UdpSend(recvaddr, recvport);
 }
 
 
@@ -79,14 +81,14 @@ UdpSend::~UdpSend()
 /**
  * Connect to the UDP socket.
  *
- * @param[in] none
- * @throw  runtime_error  if socket creation fails.
+ * @throws std::system_error  if socket creation fails.
  */
 void UdpSend::Init()
 {
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        throw std::runtime_error("UdpSend::UdpSend() create socket error");
+        throw std::system_error(errno, std::system_category(),
+                "UdpSend::UdpSend() Couldn't create UDP socket");
     /** clear struct recv_addr. */
     (void) memset(&recv_addr, 0, sizeof(recv_addr));
     /** set connection type to IPv4 */
@@ -95,8 +97,17 @@ void UdpSend::Init()
     recv_addr.sin_addr.s_addr =inet_addr(recvAddr.c_str());
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
-    connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr));
-    setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
+    if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr)) ==
+            -1)
+        throw std::system_error(errno, std::system_category(),
+                std::string("UdpSend::UdpSend() Couldn't connect UDP socket to "
+                        "IP address ") + inet_ntoa(recv_addr.sin_addr) +
+                        ", port " + std::to_string(recvPort));
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) ==
+            -1)
+        throw std::system_error(errno, std::system_category(),
+                "UdpSend::UdpSend() Couldn't set UDP socket time-to-live "
+                "option to " + ttl);
 }
 
 
@@ -104,27 +115,43 @@ void UdpSend::Init()
  * Send a piece of memory data given by the buff pointer and len length to the
  * already set destination which is identified by a socket file descriptor.
  *
- * @param[in] *buff         a constant void type pointer that points to where
- *                          the piece of memory data to be sent lies.
- * @param[in] len           length of that piece of memory data.
+ * @param[in] *buff              a constant void type pointer that points to
+ *                               where the piece of memory data to be sent lies.
+ * @param[in] len                length of that piece of memory data.
+ * @throws    std::system_error  if an error occurs writing to the the UDP
+ *                               socket.
  */
 ssize_t UdpSend::SendTo(const void* buff, size_t len)
 {
-    return send(sock_fd, buff, len, 0);
+    const ssize_t nbytes = send(sock_fd, buff, len, 0);
+
+    if (nbytes == -1)
+        throw std::system_error(errno, std::system_category(),
+                "Couldn't write to UDP socket " + sock_fd);
+
+    return nbytes;
 }
 
 
 /**
  * Gather-send a VCMTP packet.
  *
- * @param[in] iovec  First I/O vector.
- * @param[in] nvec   Number of I/O vectors.
+ * @param[in] iovec              First I/O vector.
+ * @param[in] nvec               Number of I/O vectors.
+ * @throws    std::system_error  if an error occurs writing to the the UDP
+ *                               socket.
  */
 int UdpSend::SendTo(
         const struct iovec* const iovec,
         const int                 nvec)
 {
-    return writev(sock_fd, iovec, nvec);
+    const ssize_t nbytes = writev(sock_fd, iovec, nvec);
+
+    if (nbytes == -1)
+        throw std::system_error(errno, std::system_category(),
+                "Couldn't write to UDP socket " + sock_fd);
+
+    return nbytes;
 }
 
 
