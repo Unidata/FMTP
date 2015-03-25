@@ -96,9 +96,10 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const char*                 mcastAddr,
                          const unsigned short        mcastPort,
                          uint32_t                    initProdIndex,
-                         SendAppNotifier*            notifier)
+                         SendAppNotifier*            notifier,
+                         const unsigned char         ttl)
 :
-    udpsend(new UdpSend(mcastAddr,mcastPort)),
+    udpsend(new UdpSend(mcastAddr, mcastPort, ttl)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     prodIndex(initProdIndex),
@@ -213,7 +214,7 @@ void vcmtpSendv3::Start()
  *                           data. May be 0, in which case no metadata is sent.
  * @param[in] metaSize       Size of the metadata in bytes. May be 0, in which
  *                           case no metadata is sent.
- * @throw std::runtime_error if the UdpSend::SendTo() fails.
+ * @throw std::system_error  if the UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const unsigned metaSize)
@@ -250,9 +251,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     #endif
 #else
     /* Send the BOP message on multicast socket */
-    if (udpsend->SendTo(ioVec, 3) < 0)
-        throw std::runtime_error(
-                "vcmtpSendv3::SendBOPMessage(): SendTo() error");
+    udpsend->SendTo(ioVec, 3);
 
     #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(prodIndex);
@@ -494,8 +493,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
  * Sends the EOP message to the receiver to indicate the end of a product
  * transmission.
  *
- * @param[in]               none
- * @throw  runtime_error    if UdpSend::SendTo() fails.
+ * @throws std::system_error  if UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::sendEOPMessage()
 {
@@ -514,8 +512,7 @@ void vcmtpSendv3::sendEOPMessage()
         WriteToLog(debugmsg);
     #endif
 #else
-    if (udpsend->SendTo(&header, sizeof(header)) < 0)
-        throw std::runtime_error("vcmtpSendv3::sendEOPMessage::SendTo error");
+    udpsend->SendTo(&header, sizeof(header));
 
     #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(prodIndex);

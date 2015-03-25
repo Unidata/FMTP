@@ -94,7 +94,8 @@ public:
             const char*           mcastAddr,
             const unsigned short  mcastPort,
             uint32_t              initProdIndex,
-            SendAppNotifier*      notifier);
+            SendAppNotifier*      notifier,
+            const unsigned char   ttl = 1);
     explicit vcmtpSendv3(
             const char*           tcpAddr,
             const unsigned short  tcpPort,
