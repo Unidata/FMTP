@@ -29,7 +29,6 @@
 
 #include "UdpSend.h"
 
-#include <arpa/inet.h>
 #include <errno.h>
 #include <stdexcept>
 #include <string.h>
