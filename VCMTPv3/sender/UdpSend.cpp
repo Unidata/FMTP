@@ -84,6 +84,7 @@ UdpSend::~UdpSend()
  */
 void UdpSend::Init()
 {
+    int newttl = ttl;
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
@@ -96,17 +97,19 @@ void UdpSend::Init()
     recv_addr.sin_addr.s_addr =inet_addr(recvAddr.c_str());
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
-    if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr)) ==
-            -1)
-        throw std::system_error(errno, std::system_category(),
-                std::string("UdpSend::UdpSend() Couldn't connect UDP socket to "
-                        "IP address ") + inet_ntoa(recv_addr.sin_addr) +
-                        ", port " + std::to_string(recvPort));
-    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) ==
-            -1)
-        throw std::system_error(errno, std::system_category(),
+    if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
+            < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
+                "UdpSend::UdpSend() Couldn't connect UDP socket to "
+                "IP address ") + inet_ntoa(recv_addr.sin_addr) +
+                ", port " + std::to_string(recvPort));
+    }
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
+                sizeof(newttl)) < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
                 "UdpSend::UdpSend() Couldn't set UDP socket time-to-live "
-                "option to " + ttl);
+                "option to ") + std::to_string(ttl));
+    }
 }
 
 
