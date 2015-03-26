@@ -78,9 +78,13 @@ UdpSend::~UdpSend()
 
 
 /**
- * Connect to the UDP socket.
+ * Initializer. It creates a new UDP socket and sets the address and port from
+ * the pre-set parameters. Also it connects to the created socket and if
+ * necessary, sets the TTL field with a new value.
  *
  * @throws std::system_error  if socket creation fails.
+ * @throws std::system_error  if connecting to socket fails.
+ * @throws std::system_error  if setting TTL fails.
  */
 void UdpSend::Init()
 {
