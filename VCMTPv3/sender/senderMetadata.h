@@ -32,6 +32,7 @@
 
 #include <chrono>
 #include <map>
+#include <mutex>
 #include <pthread.h>
 #include <set>
 #include <stdint.h>
@@ -75,7 +76,7 @@ public:
 private:
     /** first: prodindex; second: pointer to metadata of the specified prodindex */
     std::map<uint32_t, RetxMetadata*> indexMetaMap;
-    pthread_rwlock_t                  indexMetaMapLock;
+    std::mutex                        indexMetaMapLock;
     bool rmRetxMetadataNoLock(uint32_t prodindex);
 };
 
