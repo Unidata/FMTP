@@ -180,11 +180,14 @@ void TcpRecv::initSocket()
     while (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
         if (errno == ECONNREFUSED || errno == ETIMEDOUT ||
                 errno == ECONNRESET || errno == EHOSTUNREACH) {
-            if (sleep(30))
+            if (sleep(30)) {
+                close(sockfd);
                 throw std::system_error(EINTR, std::system_category(),
                     "TcpRecv:TcpRecv() sleep() interrupted");
+            }
         }
         else {
+            close(sockfd);
             throw std::system_error(errno, std::system_category(),
                     "TcpRecv:TcpRecv() Error connecting to " + servAddr);
         }
