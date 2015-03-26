@@ -11,7 +11,7 @@ DEBUG_FLAG = DEBUG1
 TEST_FLAG = NONE
 
 $(ELFFILE): testSendApp.cpp
-	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
+	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -g -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
 		testSendApp.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp \
 		ProdIndexDelayQueue.cpp RetxThreads.cpp
 
