@@ -9,9 +9,11 @@ DEBUG_FLAG = DEBUG1
 #TEST_FLAG = TEST_DATA_MISS
 #TEST_FLAG = TEST_EOP
 TEST_FLAG = NONE
+MEASURE_FLAG = MEASURE
 
-$(ELFFILE): testSendApp.cpp
-	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -g -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
+$(ELFFILE): *.cpp *.h
+	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -D$(MEASURE_FLAG) \
+		-g -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
 		testSendApp.cpp UdpSend.cpp TcpSend.cpp senderMetadata.cpp vcmtpSendv3.cpp \
 		ProdIndexDelayQueue.cpp RetxThreads.cpp
 

@@ -139,6 +139,12 @@ private:
     std::exception              except;
     bool                        exceptIsSet;
 
+    /* member variables for measurement use only */
+    bool txdone;
+    std::chrono::high_resolution_clock::time_point start_t;
+    std::chrono::high_resolution_clock::time_point end_t;
+    /* member variables for measurement use ends */
+
     /**
      * Adds and entry for a data-product to the retransmission set.
      *

@@ -250,6 +250,18 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
         WriteToLog(debugmsg);
     #endif
 #else
+    #ifdef MEASURE
+        std::string measuremsg = "Product #" + std::to_string(prodIndex);
+        measuremsg += ": Transmission start time (BOP), Prodsize = ";
+        measuremsg += std::to_string(prodSize);
+        measuremsg += " bytes";
+        std::cout << measuremsg << std::endl;
+        /* set txdone to false in BOPHandler */
+        txdone = false;
+        start_t = std::chrono::high_resolution_clock::now();
+        WriteToLog(measuremsg);
+    #endif
+
     /* Send the BOP message on multicast socket */
     udpsend->SendTo(ioVec, 3);
 
@@ -513,6 +525,16 @@ void vcmtpSendv3::sendEOPMessage()
     #endif
 #else
     udpsend->SendTo(&header, sizeof(header));
+
+    #ifdef MEASURE
+        std::string measuremsg = "Product #" + std::to_string(prodIndex);
+        measuremsg += ": Transmission end time (EOP)";
+        std::cout << measuremsg << std::endl;
+        /* set txdone to true in EOPHandler */
+        txdone = true;
+        end_t = std::chrono::high_resolution_clock::now();
+        WriteToLog(measuremsg);
+    #endif
 
     #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(prodIndex);
@@ -1126,8 +1148,39 @@ void vcmtpSendv3::WriteToLog(const std::string& content)
     strftime(buf, 30, "%Y-%m-%d %I:%M:%S  ", timeinfo);
     std::string time(buf);
 
+    /* code block only effective for measurement code */
+    #ifdef MEASURE
+    std::string hrclk;
+    std::string nanosec;
+    if (txdone) {
+        hrclk = std::to_string(end_t.time_since_epoch().count())
+            + " since epoch, ";
+    }
+    else {
+        hrclk = std::to_string(start_t.time_since_epoch().count())
+            + " since epoch, ";
+    }
+
+    if (txdone) {
+        std::chrono::duration<double> timespan =
+            std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+        nanosec = ", Elapsed time: " + std::to_string(timespan.count());
+        nanosec += " seconds.";
+    }
+    #endif
+    /* code block ends */
+
     std::ofstream logfile("VCMTPv3_SENDER.log",
             std::ofstream::out | std::ofstream::app);
-    logfile << time << content << std::endl;
+    #ifdef MEASURE
+        if (txdone) {
+            logfile << time << hrclk << content << nanosec << std::endl;
+        }
+        else {
+            logfile << time << hrclk << content << std::endl;
+        }
+    #else
+        logfile << time << content << std::endl;
+    #endif
     logfile.close();
 }
