@@ -42,7 +42,11 @@ int main ()
     std::chrono::duration<double> time_span =
         std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
 
-    std::cout << "It took " << time_span.count() << " seconds.";
+    std::cout << "It took " << time_span.count() << " seconds." << std::endl;
+
+    std::cout << "It took " <<
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count()
+        << " nanoseconds." << std::endl;
     std::cout << std::endl;
 
     return 0;
