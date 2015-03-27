@@ -31,16 +31,19 @@ typedef std::chrono::high_resolution_clock myClock;
 
 int main ()
 {
-    myClock::time_point t1 = myClock::now();
+    auto t1 = myClock::now();
 
     std::cout << "printing out 1000 stars...\n";
     for (int i=0; i<1000; ++i) std::cout << "*";
     std::cout << std::endl;
 
-    myClock::time_point t2 = myClock::now();
+    auto t2 = myClock::now();
 
     std::chrono::duration<double> time_span =
         std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+
+    std::cout << "Since Epoch: " << t1.time_since_epoch().count() << std::endl;
+    std::cout << "Since Epoch: " << t2.time_since_epoch().count() << std::endl;
 
     std::cout << "It took " << time_span.count() << " seconds." << std::endl;
 
