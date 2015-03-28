@@ -411,6 +411,7 @@ void vcmtpRecvv3::mcastHandler()
             BOPHandler(header);
 
             #ifdef MEASURE
+                recvbytes = 0;
                 std::string measure = "Product #" +
                     std::to_string(header.prodindex);
                 measure += ": Transmission start time (BOP)";
