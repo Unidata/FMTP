@@ -29,6 +29,7 @@
 #define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
 
+#include <chrono>
 #include <condition_variable>
 #include <exception>
 #include <list>
@@ -116,6 +117,13 @@ private:
     bool                    exceptIsSet;
     std::mutex              linkmtx;
     uint64_t                linkspeed;  /*!< max link speed up to 18000 Pbps */
+
+    /* member variables for measurement use only */
+    bool rxdone;
+    std::chrono::high_resolution_clock::time_point start_t;
+    std::chrono::high_resolution_clock::time_point end_t;
+    int recvbytes;
+    /* member variables for measurement use ends */
 
     void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     static void*  StartRetxRequester(void* ptr);

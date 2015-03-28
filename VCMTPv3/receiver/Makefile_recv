@@ -5,9 +5,11 @@ LIB =
 ELFFILE = testRecvApp
 DEBUG_FLAG = DEBUG1
 #DEBUG_FLAG = DEBUG2
+MEASURE_FLAG = MEASURE
 
 $(ELFFILE): *.cpp *.h
-	$(CC) -D$(DEBUG_FLAG) -g -std=c++11 -I$(INCLUDE) -pthread -o $(ELFFILE) testRecvApp.cpp \
+	$(CC) -D$(DEBUG_FLAG) -D$(MEASURE_FLAG) \
+		-g -std=c++11 -I$(INCLUDE) -pthread -o $(ELFFILE) testRecvApp.cpp \
 		TcpRecv.cpp vcmtpRecvv3.cpp ProdBitMap.cpp
 
 .PHONY : clean

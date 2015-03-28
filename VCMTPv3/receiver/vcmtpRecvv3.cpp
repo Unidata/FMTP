@@ -385,6 +385,10 @@ void* vcmtpRecvv3::StartMcastHandler(
  */
 void vcmtpRecvv3::mcastHandler()
 {
+    #ifdef MEASURE
+        recvbytes = 0;
+    #endif
+
     while(1)
     {
         VcmtpHeader   header;
@@ -409,12 +413,44 @@ void vcmtpRecvv3::mcastHandler()
 
         if (header.flags == VCMTP_BOP) {
             BOPHandler(header);
+
+            #ifdef MEASURE
+                std::string measure = "Product #" +
+                    std::to_string(header.prodindex);
+                measure += ": Transmission start time (BOP)";
+                std::cout << measure << std::endl;
+                /* set rxdone to false upon receiving BOP */
+                rxdone = false;
+                start_t = std::chrono::high_resolution_clock::now();
+                WriteToLog(measure);
+            #endif
         }
         else if (header.flags == VCMTP_MEM_DATA) {
             recvMemData(header);
+
+            #ifdef MEASURE
+                /* header size + payload length equals whole block size */
+                recvbytes += nbytes;
+                recvbytes += header.payloadlen;
+            #endif
         }
         else if (header.flags == VCMTP_EOP) {
             mcastEOPHandler(header);
+
+            #ifdef MEASURE
+                /* header size + payload length equals whole block size */
+                recvbytes += nbytes;
+                recvbytes += header.payloadlen;
+                std::string measure = "Product #" +
+                    std::to_string(header.prodindex);
+                measure += ": Transmission end time (EOP), received bytes = ";
+                measure += std::to_string(recvbytes);
+                std::cout << measure << std::endl;
+                /* set rxdone to true upon receiving EOP */
+                rxdone = true;
+                end_t = std::chrono::high_resolution_clock::now();
+                WriteToLog(measure);
+            #endif
         }
 
         int ignoredState;
@@ -1322,8 +1358,39 @@ void vcmtpRecvv3::WriteToLog(const std::string& content)
     strftime(buf, 30, "%Y-%m-%d %I:%M:%S  ", timeinfo);
     std::string time(buf);
 
+    /* code block only effective for measurement code */
+    #ifdef MEASURE
+    std::string hrclk;
+    std::string nanosec;
+    if (rxdone) {
+        hrclk = std::to_string(end_t.time_since_epoch().count())
+            + " since epoch, ";
+    }
+    else {
+        hrclk = std::to_string(start_t.time_since_epoch().count())
+            + " since epoch, ";
+    }
+
+    if (rxdone) {
+        std::chrono::duration<double> timespan =
+            std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+        nanosec = ", Elapsed time: " + std::to_string(timespan.count());
+        nanosec += " seconds.";
+    }
+    #endif
+    /* code block ends */
+
     std::ofstream logfile("VCMTPv3_RECEIVER.log",
             std::ofstream::out | std::ofstream::app);
-    logfile << time << content << std::endl;
+    #ifdef MEASURE
+        if (rxdone) {
+            logfile << time << hrclk << content << nanosec << std::endl;
+        }
+        else {
+            logfile << time << hrclk << content << std::endl;
+        }
+    #else
+        logfile << time << content << std::endl;
+    #endif
     logfile.close();
 }
