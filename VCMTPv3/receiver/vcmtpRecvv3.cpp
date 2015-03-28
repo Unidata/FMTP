@@ -385,10 +385,6 @@ void* vcmtpRecvv3::StartMcastHandler(
  */
 void vcmtpRecvv3::mcastHandler()
 {
-    #ifdef MEASURE
-        recvbytes = 0;
-    #endif
-
     while(1)
     {
         VcmtpHeader   header;
