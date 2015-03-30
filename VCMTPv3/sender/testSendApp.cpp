@@ -85,7 +85,10 @@ int main(int argc, char const* argv[])
 
         sender->Start();
         sleep(2);
-        sender->sendProduct(data, datasize, metadata, metaSize);
+        for(int i=0; i<100; ++i) {
+            sender->sendProduct(data, datasize, metadata, metaSize);
+            sleep(1);
+        }
         while(1);
 
         munmap(data, datasize);
