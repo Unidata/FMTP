@@ -102,8 +102,10 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcastPort(mcastPort),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     prodptr(0),
-    notifier(0),   /*!< constructor called by independent test program will
-                    set notifier to NULL */
+    /**
+     * constructor called by independent test program will set notifier to NULL
+     */
+    notifier(0),
     mcastSock(0),
     retxSock(0),
     msgQfilled(),
@@ -136,6 +138,23 @@ vcmtpRecvv3::~vcmtpRecvv3()
     delete tcprecv;
     if (bitmap)
         delete bitmap;
+}
+
+
+/**
+ * A public setter of link speed. The setter is thread-safe, but a recommended
+ * way is to set the link speed before the receiver starts. Due to the feature
+ * of virtual circuits, the link speed won't change when it's set up. So the
+ * link speed remains for the whole life of the receiver. As the possible link
+ * speed nowadays could possibly be 10Gbps or even higher, a 64-bit unsigned
+ * integer is used to hold the value, which can be up to 18000 Pbps.
+ *
+ * @param[in] speed                 User-specified link speed
+ */
+void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
+{
+    std::unique_lock<std::mutex> lock(linkmtx);
+    linkspeed = speed;
 }
 
 
@@ -196,102 +215,174 @@ void vcmtpRecvv3::Stop()
 
 
 /**
- * Join multicast group specified by mcastAddr:mcastPort.
+ * Add the unrequested BOP identified by the given prodindex into the list.
+ * If the BOP is already in the list, return with a false. If it's not, add
+ * it into the list and return with a true.
  *
- * @param[in] mcastAddr      Udp multicast address for receiving data products.
- * @param[in] mcastPort      Udp multicast port for receiving data products.
- * @throw std::system_error  if the socket couldn't be created.
- * @throw std::system_error  if the socket couldn't be bound.
- * @throw std::system_error  if the socket couldn't join the multicast group.
+ * @param[in] prodindex        Product index of the missing BOP
  */
-void vcmtpRecvv3::joinGroup(
-        std::string          mcastAddr,
-        const unsigned short mcastPort)
+bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
 {
-    (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
-    mcastgroup.sin_family = AF_INET;
-    mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
-    mcastgroup.sin_port = htons(mcastPort);
-    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() creating socket failed");
-    if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
-            < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
-                std::to_string(static_cast<long long>(mcastSock)) +
-                               " to multicast group " + mcastgroup);
-    mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
-    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
-                   sizeof(mreq)) < 0 )
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() setsockopt() failed");
+    bool addsuccess;
+    std::list<uint32_t>::iterator it;
+    std::unique_lock<std::mutex>  lock(BOPListMutex);
+    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it) {
+        if (*it == prodindex) {
+            addsuccess = false;
+            return addsuccess;
+        }
+    }
+    misBOPlist.push_back(prodindex);
+    addsuccess = true;
+    return addsuccess;
 }
 
 
 /**
- * Start a Retx procedure, including the retxHandler thread and retxRequester
- * thread. These two threads will be started independently and after the
- * procedure returns, it continues to run the mcastHandler thread.
+ * Handles a multicast BOP message given its peeked-at and decoded VCMTP header.
+ *
+ * @pre                       The multicast socket contains a VCMTP BOP packet.
+ * @param[in] header          The associated, peeked-at and already-decoded
+ *                            VCMTP header.
+ * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  if the packet is invalid.
+ */
+void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
+{
+    char          pktBuf[MAX_VCMTP_PACKET_LEN];
+    const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
+
+    if (nbytes < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::BOPHandler() recv() error.");
+
+    checkPayloadLen(header, nbytes);
+    BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
+}
+
+
+/**
+ * Parse BOP message and call notifier to notify receiving application.
+ *
+ * @param[in] header           Header associated with the packet.
+ * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
+ * @throw std::runtime_error   if the payload is too small.
+ * @throw std::runtime_error   if the amount of metadata is invalid.
+ */
+void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
+                             const char* const  VcmtpPacketData)
+{
+    /**
+     * Every time a new BOP arrives, save the msg to check following data
+     * packets
+     */
+    if (header.payloadlen < 6)
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
+    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
+    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
+    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
+                      ? AVAIL_BOP_LEN : BOPmsg.metasize;
+    if (header.payloadlen - 6 < BOPmsg.metasize)
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
+    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
+
+    /**
+     * Every time a new BOP arrives, save the header to check following data
+     * packets.
+     */
+    {
+        std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+        vcmtpHeader = header;
+        vcmtpHeader.seqnum     = 0;
+        vcmtpHeader.payloadlen = 0;
+    }
+
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" +
+            std::to_string(vcmtpHeader.prodindex);
+        debugmsg += ": BOP is received. Product size = ";
+        debugmsg += std::to_string(BOPmsg.prodsize);
+        debugmsg += ", Metadata size = ";
+        debugmsg += std::to_string(BOPmsg.metasize);
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
+    /** forcibly terminate the previous timer */
+    timerWake.notify_all();
+
+    if(notifier)
+        notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
+                                BOPmsg.metasize, &prodptr);
+
+    if (bitmap) {
+        delete bitmap;
+        bitmap = 0;
+    }
+    uint32_t blocknum = BOPmsg.prodsize ?
+        (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
+    // TODO: what if blocknum = 0?
+    bitmap = new ProdBitMap(blocknum);
+
+    /**
+     * clear EOPStatus for new product. due to the sequencial feature that VC
+     * has, if new BOP arrives and previous EOP is missing, then the EOP is
+     * really missing. In which case, should be requested.
+     */
+    clearEOPState();
+
+    /**
+     * Set the amount of sleeping time. Based on a precise network delay model,
+     * total delay should include transmission delay, propogation delay,
+     * processing delay and queueing delay. From a pragmatic view, the queueing
+     * delay, processing delay of routers and switches, and propogation delay
+     * are all added into RTT. Thus only processing delay of the receiver and
+     * transmission delay need to be considered except for RTT. Processing
+     * delay is usually nanoseconds to microseconds, which can be ignored. And
+     * since the receiver timer starts after BOP is received, the RTT is not
+     * affecting the timer model. Sleeptime here means the estimated remaining
+     * time of the current product. Thus, the only thing needs to be considered
+     * is the transmission delay, which can be calculated as product size over
+     * link speed. Besides, a little more extra time would be favorable to
+     * tolerate possible fluctuation.
+     */
+    float sleeptime = 1.5 * (BOPmsg.prodsize / linkspeed);
+    /** add the new product into timer queue */
+    {
+        std::unique_lock<std::mutex> lock(timerQmtx);
+        //timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
+        timerParam timerparam = {vcmtpHeader.prodindex, 0.2};
+        timerParamQ.push(timerparam);
+        timerQfilled.notify_all();
+    }
+}
+
+
+/**
+ * Checks the length of the payload of a VCMTP packet -- as stated in the VCMTP
+ * header -- against the actual length of a VCMTP packet.
+ *
+ * @param[in] header              The decoded VCMTP header.
+ * @param[in] nbytes              The size of the VCMTP packet in bytes.
+ * @throw     std::runtime_error  if the packet is invalid.
+ */
+void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes)
+{
+    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
+        throw std::runtime_error("vcmtpRecvv3::checkPayloadLen(): "
+                "Invalid payload length");
+}
+
+
+/**
+ * Clears the EOPStatus to false as initialization for new product.
  *
  * @param[in] none
  */
-void vcmtpRecvv3::StartRetxProcedure()
+void vcmtpRecvv3::clearEOPState()
 {
-    int retval = pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler,
-                                this);
-    if(retval != 0) {
-        throw std::system_error(retval, std::system_category(),
-            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
-    }
-    pthread_detach(retx_t);
-
-    retval = pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester,
-                            this);
-    if(retval != 0) {
-        throw std::system_error(retval, std::system_category(),
-            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
-    }
-    pthread_detach(retx_rq);
-}
-
-
-/**
- * Start the retxHandler thread using a passed-in vcmtpRecvv3 pointer.
- *
- * @param[in] *ptr        A pointer to the pre-defined data structure in the
- *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
- */
-void* vcmtpRecvv3::StartRetxHandler(void* ptr)
-{
-    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
-    try {
-        recvr->retxHandler();
-    }
-    catch (const std::exception& e) {
-        recvr->taskExit(e);
-    }
-    return NULL;
-}
-
-
-/**
- * Start the retxRequester thread using a passed-in vcmtpRecvv3 pointer.
- *
- * @param[in] *ptr        A pointer to the pre-defined data structure in the
- *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
- */
-void* vcmtpRecvv3::StartRetxRequester(void* ptr)
-{
-    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
-    try {
-        recvr->retxRequester();
-    }
-    catch (const std::exception& e) {
-        recvr->taskExit(e);
-    }
-    return NULL;
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    EOPStatus = false;
 }
 
 
@@ -339,38 +430,128 @@ void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
 
 
 /**
- * Checks the length of the payload of a VCMTP packet -- as stated in the VCMTP
- * header -- against the actual length of a VCMTP packet.
+ * Handles a received EOP from the unicast thread. Check the bitmap to see if
+ * all the data blocks are received. If true, notify the RecvApp. If false,
+ * request for retransmission if it has to be so.
  *
- * @param[in] header              The decoded VCMTP header.
- * @param[in] nbytes              The size of the VCMTP packet in bytes.
- * @throw     std::runtime_error  if the packet is invalid.
+ * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
  */
-void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes)
+void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 {
-    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
-        throw std::runtime_error("vcmtpRecvv3::checkPayloadLen(): "
-                "Invalid payload length");
+    /**
+     * Under the assumption that all packets are in sequence, the EOP should
+     * always come in after the BOP. In which case, BOP and EOP are mapped
+     * one to one. When timer thread checks the EOPStatus, it always reflects
+     * the status of current EOP which associates with the latest BOP.
+     */
+    setEOPReceived();
+
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" + std::to_string(header.prodindex);
+        debugmsg += ": EOP is received";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
+    if (bitmap) {
+        /**
+         * if bitmap check tells everything is completed, then sends the
+         * RETX_END message back to sender. Meanwhile notify receiving
+         * application.
+         */
+        if (bitmap->isComplete()) {
+            sendRetxEnd(header.prodindex);
+            if (notifier)
+                notifier->notify_of_eop();
+
+            #ifdef DEBUG2
+                std::string debugmsg = "Product #" +
+                    std::to_string(header.prodindex);
+                debugmsg += " has been completely received";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+            #elif DEBUG1
+                std::string debugmsg = "Product #" +
+                    std::to_string(header.prodindex);
+                debugmsg += " has been completely received";
+                std::cout << debugmsg << std::endl;
+            #endif
+        }
+        else {
+            /**
+             * check if the last data block has been received. If true, then
+             * all the other missing blocks have been requested. In this case,
+             * receiver just needs to wait until product being all completed.
+             * Otherwise, last block is missing as well, receiver needs to
+             * request retx for all the missing blocks including the last one.
+             */
+            if (!hasLastBlock()) {
+                requestAnyMissingData(BOPmsg.prodsize);
+            }
+        }
+    }
 }
 
+
 /**
- * Starts the multicast-receiving task of a VCMTP receiver. Called by
- * `pthread_create()`.
+ * Check if the last data block has been received.
  *
- * @param[in] arg   Pointer to the VCMTP receiver.
- * @retval    NULL  Always.
+ * @param[in] none
  */
-void* vcmtpRecvv3::StartMcastHandler(
-        void* const arg)
+bool vcmtpRecvv3::hasLastBlock()
 {
-    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(arg);
-    try {
-        recvr->mcastHandler();
-    }
-    catch (const std::exception& e) {
-        recvr->taskExit(e);
-    }
-    return NULL;
+    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
+    /**
+     * seqnum + payloadlen should always be equal to or smaller than prodsize
+     */
+    return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == BOPmsg.prodsize);
+}
+
+
+/**
+ * Returns the current EOPStatus.
+ *
+ * @param[in] none
+ */
+bool vcmtpRecvv3::isEOPReceived()
+{
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    return EOPStatus;
+}
+
+
+/**
+ * Join multicast group specified by mcastAddr:mcastPort.
+ *
+ * @param[in] mcastAddr      Udp multicast address for receiving data products.
+ * @param[in] mcastPort      Udp multicast port for receiving data products.
+ * @throw std::system_error  if the socket couldn't be created.
+ * @throw std::system_error  if the socket couldn't be bound.
+ * @throw std::system_error  if the socket couldn't join the multicast group.
+ */
+void vcmtpRecvv3::joinGroup(
+        std::string          mcastAddr,
+        const unsigned short mcastPort)
+{
+    (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
+    mcastgroup.sin_family = AF_INET;
+    mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
+    mcastgroup.sin_port = htons(mcastPort);
+    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup() creating socket failed");
+    if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
+            < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
+                std::to_string(static_cast<long long>(mcastSock)) +
+                               " to multicast group " + mcastgroup);
+    mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+                   sizeof(mreq)) < 0 )
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup() setsockopt() failed");
 }
 
 
@@ -457,39 +638,70 @@ void vcmtpRecvv3::mcastHandler()
 
 
 /**
- * Fetch the requests from an internal message queue and call corresponding
- * handler to send requests respectively. The read operation on the internal
- * message queue will block if the queue is empty itself. The existing request
- * being handled will only be removed from the queue if the handler returns a
- * successful state.
+ * Handles a received EOP from the multicast thread. Since the data is only
+ * fetched with a MSG_PEEK flag, it's necessary to remove the data by calling
+ * recv() again without MSG_PEEK.
  *
- * @param[in] none
+ * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
  */
-void vcmtpRecvv3::retxRequester()
+void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
 {
-    while(1)
-    {
-        INLReqMsg reqmsg;
+    char          pktBuf[VCMTP_HEADER_LEN];
+    /** read the EOP packet out in order to remove it from buffer */
+    const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
 
-        {
-            std::unique_lock<std::mutex> lock(msgQmutex);
-            while (msgqueue.empty())
-                msgQfilled.wait(lock);
-            reqmsg = msgqueue.front();
-        }
+    if (nbytes < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::EOPHandler() recv() error.");
 
-        if ( ((reqmsg.reqtype == MISSING_BOP) &&
-                sendBOPRetxReq(reqmsg.prodindex)) ||
-            ((reqmsg.reqtype == MISSING_DATA) &&
-                sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
-                                reqmsg.payloadlen)) ||
-            ((reqmsg.reqtype == MISSING_EOP) &&
-                sendEOPRetxReq(reqmsg.prodindex)) )
-        {
-            std::unique_lock<std::mutex> lock(msgQmutex);
-            msgqueue.pop();
-        }
-    }
+    setEOPReceived();
+    timerWake.notify_all();
+    EOPHandler(header);
+}
+
+
+/**
+ * Pushes a request for a data-packet onto the retransmission-request queue.
+ *
+ * @pre                  The retransmission-request queue is locked.
+ * @param[in] prodindex  Index of the associated data-product.
+ * @param[in] seqnum     Sequence number of the data-packet.
+ * @param[in] datalen    Amount of data in bytes.
+ */
+void vcmtpRecvv3::pushMissingDataReq(const uint32_t prodindex,
+                                     const uint32_t seqnum,
+                                     const uint16_t datalen)
+{
+    INLReqMsg reqmsg = {MISSING_DATA, prodindex, seqnum, datalen};
+    msgqueue.push(reqmsg);
+}
+
+
+/**
+ * Pushes a request for a BOP-packet onto the retransmission-request queue.
+ *
+ * @param[in] prodindex  Index of the associated data-product.
+ */
+void vcmtpRecvv3::pushMissingBopReq(const uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(msgQmutex);
+    INLReqMsg                    reqmsg = {MISSING_BOP, prodindex, 0, 0};
+    msgqueue.push(reqmsg);
+    msgQfilled.notify_one();
+}
+
+
+/**
+ * Pushes a request for a EOP-packet onto the retransmission-request queue.
+ *
+ * @param[in] prodindex  Index of the associated data-product.
+ */
+void vcmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(msgQmutex);
+    INLReqMsg                    reqmsg = {MISSING_EOP, prodindex, 0, 0};
+    msgqueue.push(reqmsg);
+    msgQfilled.notify_one();
 }
 
 
@@ -608,98 +820,38 @@ void vcmtpRecvv3::retxHandler()
 
 
 /**
- * Parse BOP message and call notifier to notify receiving application.
+ * Fetch the requests from an internal message queue and call corresponding
+ * handler to send requests respectively. The read operation on the internal
+ * message queue will block if the queue is empty itself. The existing request
+ * being handled will only be removed from the queue if the handler returns a
+ * successful state.
  *
- * @param[in] header           Header associated with the packet.
- * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
- * @throw std::runtime_error   if the payload is too small.
- * @throw std::runtime_error   if the amount of metadata is invalid.
+ * @param[in] none
  */
-void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
-                             const char* const  VcmtpPacketData)
+void vcmtpRecvv3::retxRequester()
 {
-    /**
-     * Every time a new BOP arrives, save the msg to check following data
-     * packets
-     */
-    if (header.payloadlen < 6)
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
-    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
-    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
-    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
-                      ? AVAIL_BOP_LEN : BOPmsg.metasize;
-    if (header.payloadlen - 6 < BOPmsg.metasize)
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
-    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
-
-    /**
-     * Every time a new BOP arrives, save the header to check following data
-     * packets.
-     */
+    while(1)
     {
-        std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-        vcmtpHeader = header;
-        vcmtpHeader.seqnum     = 0;
-        vcmtpHeader.payloadlen = 0;
-    }
+        INLReqMsg reqmsg;
 
-    #ifdef DEBUG2
-        std::string debugmsg = "Product #" +
-            std::to_string(vcmtpHeader.prodindex);
-        debugmsg += ": BOP is received. Product size = ";
-        debugmsg += std::to_string(BOPmsg.prodsize);
-        debugmsg += ", Metadata size = ";
-        debugmsg += std::to_string(BOPmsg.metasize);
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-    #endif
+        {
+            std::unique_lock<std::mutex> lock(msgQmutex);
+            while (msgqueue.empty())
+                msgQfilled.wait(lock);
+            reqmsg = msgqueue.front();
+        }
 
-    /** forcibly terminate the previous timer */
-    timerWake.notify_all();
-
-    if(notifier)
-        notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
-                                BOPmsg.metasize, &prodptr);
-
-    if (bitmap) {
-        delete bitmap;
-        bitmap = 0;
-    }
-    uint32_t blocknum = BOPmsg.prodsize ?
-        (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
-    // TODO: what if blocknum = 0?
-    bitmap = new ProdBitMap(blocknum);
-
-    /**
-     * clear EOPStatus for new product. due to the sequencial feature that VC
-     * has, if new BOP arrives and previous EOP is missing, then the EOP is
-     * really missing. In which case, should be requested.
-     */
-    clearEOPState();
-
-    /**
-     * Set the amount of sleeping time. Based on a precise network delay model,
-     * total delay should include transmission delay, propogation delay,
-     * processing delay and queueing delay. From a pragmatic view, the queueing
-     * delay, processing delay of routers and switches, and propogation delay
-     * are all added into RTT. Thus only processing delay of the receiver and
-     * transmission delay need to be considered except for RTT. Processing
-     * delay is usually nanoseconds to microseconds, which can be ignored. And
-     * since the receiver timer starts after BOP is received, the RTT is not
-     * affecting the timer model. Sleeptime here means the estimated remaining
-     * time of the current product. Thus, the only thing needs to be considered
-     * is the transmission delay, which can be calculated as product size over
-     * link speed. Besides, a little more extra time would be favorable to
-     * tolerate possible fluctuation.
-     */
-    float sleeptime = 1.5 * (BOPmsg.prodsize / linkspeed);
-    /** add the new product into timer queue */
-    {
-        std::unique_lock<std::mutex> lock(timerQmtx);
-        //timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
-        timerParam timerparam = {vcmtpHeader.prodindex, 0.2};
-        timerParamQ.push(timerparam);
-        timerQfilled.notify_all();
+        if ( ((reqmsg.reqtype == MISSING_BOP) &&
+                sendBOPRetxReq(reqmsg.prodindex)) ||
+            ((reqmsg.reqtype == MISSING_DATA) &&
+                sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
+                                reqmsg.payloadlen)) ||
+            ((reqmsg.reqtype == MISSING_EOP) &&
+                sendEOPRetxReq(reqmsg.prodindex)) )
+        {
+            std::unique_lock<std::mutex> lock(msgQmutex);
+            msgqueue.pop();
+        }
     }
 }
 
@@ -731,49 +883,14 @@ bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
 
 
 /**
- * Add the unrequested BOP identified by the given prodindex into the list.
- * If the BOP is already in the list, return with a false. If it's not, add
- * it into the list and return with a true.
+ * Handles a received EOP from the unicast thread. No need to remove the data,
+ * just call the handling process directly.
  *
- * @param[in] prodindex        Product index of the missing BOP
+ * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
  */
-bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
+void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
 {
-    bool addsuccess;
-    std::list<uint32_t>::iterator it;
-    std::unique_lock<std::mutex>  lock(BOPListMutex);
-    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it) {
-        if (*it == prodindex) {
-            addsuccess = false;
-            return addsuccess;
-        }
-    }
-    misBOPlist.push_back(prodindex);
-    addsuccess = true;
-    return addsuccess;
-}
-
-
-/**
- * Handles a multicast BOP message given its peeked-at and decoded VCMTP header.
- *
- * @pre                       The multicast socket contains a VCMTP BOP packet.
- * @param[in] header          The associated, peeked-at and already-decoded
- *                            VCMTP header.
- * @throw std::system_error   if an error occurs while reading the socket.
- * @throw std::runtime_error  if the packet is invalid.
- */
-void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
-{
-    char          pktBuf[MAX_VCMTP_PACKET_LEN];
-    const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
-
-    if (nbytes < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::BOPHandler() recv() error.");
-
-    checkPayloadLen(header, nbytes);
-    BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
+    EOPHandler(header);
 }
 
 
@@ -830,51 +947,6 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
         /** receiver should trust the packet from sender is legal */
         bitmap->set(header.seqnum/VCMTP_DATA_LEN);
     }
-}
-
-
-/**
- * Pushes a request for a BOP-packet onto the retransmission-request queue.
- *
- * @param[in] prodindex  Index of the associated data-product.
- */
-void vcmtpRecvv3::pushMissingBopReq(const uint32_t prodindex)
-{
-    std::unique_lock<std::mutex> lock(msgQmutex);
-    INLReqMsg                    reqmsg = {MISSING_BOP, prodindex, 0, 0};
-    msgqueue.push(reqmsg);
-    msgQfilled.notify_one();
-}
-
-
-/**
- * Pushes a request for a EOP-packet onto the retransmission-request queue.
- *
- * @param[in] prodindex  Index of the associated data-product.
- */
-void vcmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
-{
-    std::unique_lock<std::mutex> lock(msgQmutex);
-    INLReqMsg                    reqmsg = {MISSING_EOP, prodindex, 0, 0};
-    msgqueue.push(reqmsg);
-    msgQfilled.notify_one();
-}
-
-
-/**
- * Pushes a request for a data-packet onto the retransmission-request queue.
- *
- * @pre                  The retransmission-request queue is locked.
- * @param[in] prodindex  Index of the associated data-product.
- * @param[in] seqnum     Sequence number of the data-packet.
- * @param[in] datalen    Amount of data in bytes.
- */
-void vcmtpRecvv3::pushMissingDataReq(const uint32_t prodindex,
-                                     const uint32_t seqnum,
-                                     const uint16_t datalen)
-{
-    INLReqMsg reqmsg = {MISSING_DATA, prodindex, seqnum, datalen};
-    msgqueue.push(reqmsg);
 }
 
 
@@ -972,101 +1044,40 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 
 
 /**
- * Handles a received EOP from the multicast thread. Since the data is only
- * fetched with a MSG_PEEK flag, it's necessary to remove the data by calling
- * recv() again without MSG_PEEK.
+ * Request for EOP retransmission if the EOP is not received. This function is
+ * an integration of isEOPReceived() and pushMissingEopReq() but being made
+ * atomic. If the EOP is requested by this function, it returns a boolean true.
+ * Otherwise, if not requested, it returns a boolean false.
  *
- * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
+ * @param[in] prodindex        Product index which the EOP is using.
  */
-void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
+bool vcmtpRecvv3::reqEOPifMiss(const uint32_t prodindex)
 {
-    char          pktBuf[VCMTP_HEADER_LEN];
-    /** read the EOP packet out in order to remove it from buffer */
-    const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
-
-    if (nbytes < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::EOPHandler() recv() error.");
-
-    setEOPReceived();
-    timerWake.notify_all();
-    EOPHandler(header);
-}
-
-
-/**
- * Handles a received EOP from the unicast thread. No need to remove the data,
- * just call the handling process directly.
- *
- * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
- */
-void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
-{
-    EOPHandler(header);
-}
-
-
-/**
- * Handles a received EOP from the unicast thread. Check the bitmap to see if
- * all the data blocks are received. If true, notify the RecvApp. If false,
- * request for retransmission if it has to be so.
- *
- * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
- */
-void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
-{
-    /**
-     * Under the assumption that all packets are in sequence, the EOP should
-     * always come in after the BOP. In which case, BOP and EOP are mapped
-     * one to one. When timer thread checks the EOPStatus, it always reflects
-     * the status of current EOP which associates with the latest BOP.
-     */
-    setEOPReceived();
-
-    #ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(header.prodindex);
-        debugmsg += ": EOP is received";
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-    #endif
-
-    if (bitmap) {
-        /**
-         * if bitmap check tells everything is completed, then sends the
-         * RETX_END message back to sender. Meanwhile notify receiving
-         * application.
-         */
-        if (bitmap->isComplete()) {
-            sendRetxEnd(header.prodindex);
-            if (notifier)
-                notifier->notify_of_eop();
-
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(header.prodindex);
-                debugmsg += " has been completely received";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #elif DEBUG1
-                std::string debugmsg = "Product #" +
-                    std::to_string(header.prodindex);
-                debugmsg += " has been completely received";
-                std::cout << debugmsg << std::endl;
-            #endif
-        }
-        else {
-            /**
-             * check if the last data block has been received. If true, then
-             * all the other missing blocks have been requested. In this case,
-             * receiver just needs to wait until product being all completed.
-             * Otherwise, last block is missing as well, receiver needs to
-             * request retx for all the missing blocks including the last one.
-             */
-            if (!hasLastBlock()) {
-                requestAnyMissingData(BOPmsg.prodsize);
-            }
-        }
+    bool hasReq = false;
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    if (!EOPStatus) {
+        pushMissingEopReq(prodindex);
+        hasReq = true;
     }
+    return hasReq;
+}
+
+
+/**
+ * Start the actual timer thread.
+ *
+ * @param[in] *ptr    A pointer to an vcmtpRecvv3 instance.
+ */
+void* vcmtpRecvv3::runTimerThread(void* ptr)
+{
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
+    try {
+        recvr->timerThread();
+    }
+    catch (std::exception& e) {
+        recvr->taskExit(e);
+    }
+    return NULL;
 }
 
 
@@ -1107,24 +1118,6 @@ bool vcmtpRecvv3::sendEOPRetxReq(uint32_t prodindex)
 
 
 /**
- * Sends a retransmission end message to the sender to indicate the product
- * indexed by prodindex has been completely received.
- *
- * @param[in] prodindex        The product index of the finished product.
- */
-bool vcmtpRecvv3::sendRetxEnd(uint32_t prodindex)
-{
-    VcmtpHeader header;
-    header.prodindex  = htonl(prodindex);
-    header.seqnum     = 0;
-    header.payloadlen = 0;
-    header.flags      = htons(VCMTP_RETX_END);
-
-    return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
-}
-
-
-/**
  * Sends a request for retransmission of the missing block. The sequence
  * number and payload length are guaranteed to be aligned to the boundary of
  * a legal block.
@@ -1147,17 +1140,106 @@ bool vcmtpRecvv3::sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
 
 
 /**
- * Check if the last data block has been received.
+ * Sends a retransmission end message to the sender to indicate the product
+ * indexed by prodindex has been completely received.
+ *
+ * @param[in] prodindex        The product index of the finished product.
+ */
+bool vcmtpRecvv3::sendRetxEnd(uint32_t prodindex)
+{
+    VcmtpHeader header;
+    header.prodindex  = htonl(prodindex);
+    header.seqnum     = 0;
+    header.payloadlen = 0;
+    header.flags      = htons(VCMTP_RETX_END);
+
+    return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
+}
+
+
+/**
+ * Start the retxRequester thread using a passed-in vcmtpRecvv3 pointer.
+ *
+ * @param[in] *ptr        A pointer to the pre-defined data structure in the
+ *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
+ */
+void* vcmtpRecvv3::StartRetxRequester(void* ptr)
+{
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
+    try {
+        recvr->retxRequester();
+    }
+    catch (const std::exception& e) {
+        recvr->taskExit(e);
+    }
+    return NULL;
+}
+
+
+/**
+ * Start the retxHandler thread using a passed-in vcmtpRecvv3 pointer.
+ *
+ * @param[in] *ptr        A pointer to the pre-defined data structure in the
+ *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
+ */
+void* vcmtpRecvv3::StartRetxHandler(void* ptr)
+{
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
+    try {
+        recvr->retxHandler();
+    }
+    catch (const std::exception& e) {
+        recvr->taskExit(e);
+    }
+    return NULL;
+}
+
+
+/**
+ * Starts the multicast-receiving task of a VCMTP receiver. Called by
+ * `pthread_create()`.
+ *
+ * @param[in] arg   Pointer to the VCMTP receiver.
+ * @retval    NULL  Always.
+ */
+void* vcmtpRecvv3::StartMcastHandler(
+        void* const arg)
+{
+    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(arg);
+    try {
+        recvr->mcastHandler();
+    }
+    catch (const std::exception& e) {
+        recvr->taskExit(e);
+    }
+    return NULL;
+}
+
+
+/**
+ * Start a Retx procedure, including the retxHandler thread and retxRequester
+ * thread. These two threads will be started independently and after the
+ * procedure returns, it continues to run the mcastHandler thread.
  *
  * @param[in] none
  */
-bool vcmtpRecvv3::hasLastBlock()
+void vcmtpRecvv3::StartRetxProcedure()
 {
-    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-    /**
-     * seqnum + payloadlen should always be equal to or smaller than prodsize
-     */
-    return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == BOPmsg.prodsize);
+    int retval = pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler,
+                                this);
+    if(retval != 0) {
+        throw std::system_error(retval, std::system_category(),
+            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
+    }
+    pthread_detach(retx_t);
+
+    retval = pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester,
+                            this);
+    if(retval != 0) {
+        throw std::system_error(retval, std::system_category(),
+            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
+    }
+    pthread_detach(retx_rq);
 }
 
 
@@ -1181,20 +1263,14 @@ void vcmtpRecvv3::startTimerThread()
 
 
 /**
- * Start the actual timer thread.
+ * Sets the EOPStatus to true, which indicates the successful reception of EOP.
  *
- * @param[in] *ptr    A pointer to an vcmtpRecvv3 instance.
+ * @param[in] none
  */
-void* vcmtpRecvv3::runTimerThread(void* ptr)
+void vcmtpRecvv3::setEOPReceived()
 {
-    vcmtpRecvv3* const recvr = static_cast<vcmtpRecvv3*>(ptr);
-    try {
-        recvr->timerThread();
-    }
-    catch (std::exception& e) {
-        recvr->taskExit(e);
-    }
-    return NULL;
+    std::unique_lock<std::mutex> lock(EOPStatMtx);
+    EOPStatus = true;
 }
 
 
@@ -1246,62 +1322,6 @@ void vcmtpRecvv3::timerThread()
 
 
 /**
- * Sets the EOPStatus to true, which indicates the successful reception of EOP.
- *
- * @param[in] none
- */
-void vcmtpRecvv3::setEOPReceived()
-{
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    EOPStatus = true;
-}
-
-
-/**
- * Clears the EOPStatus to false as initialization for new product.
- *
- * @param[in] none
- */
-void vcmtpRecvv3::clearEOPState()
-{
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    EOPStatus = false;
-}
-
-
-/**
- * Returns the current EOPStatus.
- *
- * @param[in] none
- */
-bool vcmtpRecvv3::isEOPReceived()
-{
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    return EOPStatus;
-}
-
-
-/**
- * Request for EOP retransmission if the EOP is not received. This function is
- * an integration of isEOPReceived() and pushMissingEopReq() but being made
- * atomic. If the EOP is requested by this function, it returns a boolean true.
- * Otherwise, if not requested, it returns a boolean false.
- *
- * @param[in] prodindex        Product index which the EOP is using.
- */
-bool vcmtpRecvv3::reqEOPifMiss(const uint32_t prodindex)
-{
-    bool hasReq = false;
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    if (!EOPStatus) {
-        pushMissingEopReq(prodindex);
-        hasReq = true;
-    }
-    return hasReq;
-}
-
-
-/**
  * Task terminator. If an exception is caught, this function will be called.
  * It consequently terminates all the other threads by calling the Stop(). This
  * task exit call will not be blocking.
@@ -1318,23 +1338,6 @@ void vcmtpRecvv3::taskExit(const std::exception& e)
         }
     }
     Stop();
-}
-
-
-/**
- * A public setter of link speed. The setter is thread-safe, but a recommended
- * way is to set the link speed before the receiver starts. Due to the feature
- * of virtual circuits, the link speed won't change when it's set up. So the
- * link speed remains for the whole life of the receiver. As the possible link
- * speed nowadays could possibly be 10Gbps or even higher, a 64-bit unsigned
- * integer is used to hold the value, which can be up to 18000 Pbps.
- *
- * @param[in] speed                 User-specified link speed
- */
-void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
-{
-    std::unique_lock<std::mutex> lock(linkmtx);
-    linkspeed = speed;
 }
 
 
