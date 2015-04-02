@@ -28,12 +28,12 @@
 
 #include "vcmtpSendv3.h"
 
+#include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <math.h>
 #include <stdexcept>
 #include <system_error>
-#include <unistd.h>
 
 
 #ifndef NULL

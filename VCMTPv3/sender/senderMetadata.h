@@ -30,13 +30,13 @@
 #define VCMTP_SENDER_SENDERMETADATA_H_
 
 
+#include <pthread.h>
+#include <stdint.h>
+#include <time.h>
 #include <chrono>
 #include <map>
 #include <mutex>
-#include <pthread.h>
 #include <set>
-#include <stdint.h>
-#include <time.h>
 
 
 typedef std::chrono::high_resolution_clock HRclock;

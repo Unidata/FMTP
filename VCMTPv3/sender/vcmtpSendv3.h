@@ -30,13 +30,13 @@
 #define VCMTP_SENDER_VCMTPSENDV3_H_
 
 
+#include <pthread.h>
+#include <sys/types.h>
 #include <atomic>
 #include <exception>
 #include <list>
 #include <map>
-#include <pthread.h>
 #include <set>
-#include <sys/types.h>
 
 #include "ProdIndexDelayQueue.h"
 #include "RetxThreads.h"

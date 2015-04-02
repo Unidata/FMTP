@@ -13,12 +13,12 @@
 #define VCMTP_SENDER_PRODINDEXDELAYQUEUE_H_
 
 
+#include <sys/types.h>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
 #include <queue>
-#include <sys/types.h>
 #include <vector>
 
 
