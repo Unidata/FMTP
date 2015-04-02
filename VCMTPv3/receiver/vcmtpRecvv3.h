@@ -29,15 +29,15 @@
 #define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
 
+#include <netinet/in.h>
+#include <pthread.h>
+#include <stdint.h>
 #include <chrono>
 #include <condition_variable>
 #include <exception>
 #include <list>
 #include <mutex>
-#include <netinet/in.h>
-#include <pthread.h>
 #include <queue>
-#include <stdint.h>
 #include <string>
 
 #include "ProdBitMap.h"

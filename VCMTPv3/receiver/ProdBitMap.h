@@ -28,8 +28,8 @@
 #define VCMTP_RECEIVER_PRODBITMAP_H_
 
 
-#include <mutex>
 #include <stdint.h>
+#include <mutex>
 #include <vector>
 
 
