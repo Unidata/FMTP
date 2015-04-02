@@ -98,9 +98,14 @@ void UdpSend::Init()
     /** set connection type to IPv4 */
     recv_addr.sin_family = AF_INET;
     /** set the address to the receiver address passed to the constructor */
-    recv_addr.sin_addr.s_addr =inet_addr(recvAddr.c_str());
+    recv_addr.sin_addr.s_addr = inet_addr(recvAddr.c_str());
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
+    /*
+    struct in_addr localInterface;
+    localInterface.s_addr = inet_addr("127.0.0.1");
+    setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface));
+    */
     if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
             < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
