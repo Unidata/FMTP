@@ -69,15 +69,16 @@ public:
     ~senderMetadata();
 
     void addRetxMetadata(RetxMetadata* ptrMeta);
-    bool rmRetxMetadata(uint32_t prodindex);
-    RetxMetadata* getMetadata(uint32_t prodindex);
     bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
+    RetxMetadata* getMetadata(uint32_t prodindex);
+    bool rmRetxMetadata(uint32_t prodindex);
 
 private:
+    bool rmRetxMetadataNoLock(uint32_t prodindex);
+
     /** first: prodindex; second: pointer to metadata of the specified prodindex */
     std::map<uint32_t, RetxMetadata*> indexMetaMap;
     std::mutex                        indexMetaMapLock;
-    bool rmRetxMetadataNoLock(uint32_t prodindex);
 };
 
 

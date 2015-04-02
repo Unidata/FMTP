@@ -77,6 +77,78 @@ TcpSend::~TcpSend()
 
 
 /**
+ * Accept incoming tcp connection requests and push them into the socket list.
+ * Then return the current socket file descriptor for further use. The socket
+ * list is a globally shared resource, thus it needs to be protected by a lock.
+ *
+ * @param[in] none
+ * @return    newsockfd         file descriptor of the newly connected socket.
+ * @throw  runtime_error    if accept() system call fails.
+ */
+int TcpSend::acceptConn()
+{
+    struct sockaddr_in addr;
+    unsigned           addrLen = sizeof(addr);
+    if (getsockname(sockfd, (struct sockaddr*)&addr, &addrLen))
+        throw std::system_error(errno, std::system_category(),
+                std::string("Couldn't get address of socket ") +
+                std::to_string(static_cast<long long>(sockfd)));
+#if 0
+    cerr << std::string("TcpSend::acceptConn(): Accept()ing on socket ").
+            append(std::to_string(sockfd)).append(" (").
+            append(inet_ntoa(addr.sin_addr)).append(":").
+            append(std::to_string(ntohs(addr.sin_port))).append(")\n");
+#endif
+    int newsockfd = accept(sockfd, NULL, NULL);
+    if(newsockfd < 0)
+        throw std::runtime_error("TcpSend::acceptConn() error reading from socket");
+
+#if 0
+    cerr << std::string("TcpSend::acceptConn(): Accepted new socket ").
+            append(std::to_string(newsockfd)).append("\n");
+#endif
+    {
+        std::unique_lock<std::mutex> lock(sockListMutex);
+        connSockList.push_back(newsockfd);
+    }
+
+    return newsockfd;
+}
+
+
+/**
+ * Accept incoming tcp connection requests and push them into the socket list.
+ * Then return the current socket file descriptor for further use.
+ *
+ * @param[in] none
+ * @return    connSockList          connected socket list (a collection of
+ */
+const std::list<int>& TcpSend::getConnSockList()
+{
+    return connSockList;
+}
+
+
+/**
+ * Return the local port number.
+ *
+ * @return                   The local port number in host byte-order.
+ * @throw std::system_error  The port number cannot be obtained.
+ */
+unsigned short TcpSend::getPortNum()
+{
+    struct sockaddr_in tmpAddr;
+    socklen_t          tmpAddrLen = sizeof(tmpAddr);
+
+    if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::getPortNum() error getting port number");
+
+    return ntohs(tmpAddr.sin_port);
+}
+
+
+/**
  * Initializer for TcpSend class, taking tcp address and tcp port to establish
  * a tcp connection. When the connection is established, keep listen on it with
  * a maximum of MAX_CONNECTION allowed to connect. Consistency is strongly
@@ -164,80 +236,6 @@ void TcpSend::Init()
 
 
 /**
- * Accept incoming tcp connection requests and push them into the socket list.
- * Then return the current socket file descriptor for further use. The socket
- * list is a globally shared resource, thus it needs to be protected by a lock.
- *
- * @param[in] none
- * @return    newsockfd         file descriptor of the newly connected socket.
- * @throw  runtime_error    if accept() system call fails.
- */
-int TcpSend::acceptConn()
-{
-    struct sockaddr_in addr;
-    unsigned           addrLen = sizeof(addr);
-    if (getsockname(sockfd, (struct sockaddr*)&addr, &addrLen))
-        throw std::system_error(errno, std::system_category(),
-                std::string("Couldn't get address of socket ") +
-                std::to_string(static_cast<long long>(sockfd)));
-#if 0
-    cerr << std::string("TcpSend::acceptConn(): Accept()ing on socket ").
-            append(std::to_string(sockfd)).append(" (").
-            append(inet_ntoa(addr.sin_addr)).append(":").
-            append(std::to_string(ntohs(addr.sin_port))).append(")\n");
-#endif
-    int newsockfd = accept(sockfd, NULL, NULL);
-    if(newsockfd < 0)
-        throw std::runtime_error("TcpSend::acceptConn() error reading from socket");
-
-#if 0
-    cerr << std::string("TcpSend::acceptConn(): Accepted new socket ").
-            append(std::to_string(newsockfd)).append("\n");
-#endif
-    {
-        std::unique_lock<std::mutex> lock(sockListMutex);
-        connSockList.push_back(newsockfd);
-    }
-
-    return newsockfd;
-}
-
-
-/**
- * Accept incoming tcp connection requests and push them into the socket list.
- * Then return the current socket file descriptor for further use.
- *
- * @param[in] none
- * @return    connSockList          connected socket list (a collection of
- */
-const std::list<int>& TcpSend::getConnSockList()
-{
-    return connSockList;
-}
-
-
-void TcpSend::rmSockInList(int sockfd)
-{
-    std::unique_lock<std::mutex> lock(sockListMutex);
-    connSockList.remove(sockfd);
-}
-
-
-/**
- * Read a given amount of bytes from the socket.
- *
- * @param[in] retxsockfd    retransmission socket file descriptor.
- * @param[in] *pktBuf       pointer to the buffer to store the received bytes.
- * @param[in] bufSize       size of that buffer
- * @return    int           return the return value of read() system call.
- */
-int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
-{
-    return read(retxsockfd, pktBuf, bufSize);
-}
-
-
-/**
  * Read an amount of bytes from the socket while the number of bytes equals the
  * VCMTP header size. Parse the buffer which stores the packet header and fill
  * each field of VcmtpHeader structure with corresponding information. If the
@@ -266,6 +264,32 @@ int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
     recvheader->flags      = ntohs(recvheader->flags);
 
     return retval;
+}
+
+
+/**
+ * Read a given amount of bytes from the socket.
+ *
+ * @param[in] retxsockfd    retransmission socket file descriptor.
+ * @param[in] *pktBuf       pointer to the buffer to store the received bytes.
+ * @param[in] bufSize       size of that buffer
+ * @return    int           return the return value of read() system call.
+ */
+int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
+{
+    return read(retxsockfd, pktBuf, bufSize);
+}
+
+
+/**
+ * Removes the given socket from the list.
+ *
+ * @param[in] sockfd    retransmission socket file descriptor.
+ */
+void TcpSend::rmSockInList(int sockfd)
+{
+    std::unique_lock<std::mutex> lock(sockListMutex);
+    connSockList.remove(sockfd);
 }
 
 
@@ -299,20 +323,3 @@ int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
 }
 
 
-/**
- * Return the local port number.
- *
- * @return                   The local port number in host byte-order.
- * @throw std::system_error  The port number cannot be obtained.
- */
-unsigned short TcpSend::getPortNum()
-{
-    struct sockaddr_in tmpAddr;
-    socklen_t          tmpAddrLen = sizeof(tmpAddr);
-
-    if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
-        throw std::system_error(errno, std::system_category(),
-                "TcpSend::getPortNum() error getting port number");
-
-    return ntohs(tmpAddr.sin_port);
-}

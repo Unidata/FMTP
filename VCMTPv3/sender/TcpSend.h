@@ -47,19 +47,20 @@ public:
     /** source port would be initialized to 0 if not being specified. */
     TcpSend(std::string tcpaddr, unsigned short tcpport = 0);
     ~TcpSend();
-    void Init(); /*!< start point that upper layer should call */
+
     int acceptConn();
     /** return the reference of a socket list */
     const std::list<int>& getConnSockList();
-    void rmSockInList(int sockfd);
     unsigned short getPortNum();
-    /** read any data coming into this given socket */
-    int readSock(int retxsockfd, char* pktBuf, int bufSize);
+    void Init(); /*!< start point that upper layer should call */
     /** only parse the header part of a coming packet */
     int parseHeader(int retxsockfd, VcmtpHeader* recvheader);
+    /** read any data coming into this given socket */
+    int readSock(int retxsockfd, char* pktBuf, int bufSize);
+    void rmSockInList(int sockfd);
     /** gathering send by calling io vector system call */
     int send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
-             size_t paylen);
+        size_t paylen);
 
 private:
     int                sockfd;

@@ -42,9 +42,17 @@ class UdpSend {
 public:
     UdpSend(const std::string& recvaddr, unsigned short recvport);
     UdpSend(const std::string& recvaddr, unsigned short recvport,
-            unsigned char ttl);
+        unsigned char ttl);
     ~UdpSend();
+
     void Init();  /*!< start point which caller should call */
+    /**
+     * SendData() sends the packet content separated in two different physical
+     * locations, which is put together into a io vector structure, to the
+     * destination identified by a socket file descriptor.
+     */
+    ssize_t SendData(void* header, const size_t headerLen, void* data,
+        const size_t dataLen);
     /**
      * SendTo() sends a piece of message to a destination identified by a
      * socket file descriptor.
@@ -56,15 +64,7 @@ public:
      * @param[in] iovec  First I/O vector.
      * @param[in] nvec   Number of I/O vectors.
      */
-    int SendTo(const struct iovec* const iovec,
-               const int                 nvec);
-    /**
-     * SendData() sends the packet content separated in two different physical
-     * locations, which is put together into a io vector structure, to the
-     * destination identified by a socket file descriptor.
-     */
-    ssize_t SendData(void* header, const size_t headerLen, void* data,
-                     const size_t dataLen);
+    int SendTo(const struct iovec* const iovec, const int nvec);
 
 private:
     int                sock_fd;

@@ -61,27 +61,6 @@ senderMetadata::~senderMetadata()
 
 
 /**
- * Fetch the requested RetxMetadata entry identified by a given prodindex. If
- * found nothing, return NULL pointer. Otherwise return the pointer to that
- * RetxMetadata struct. By default, the RetxMetadata pointer should be
- * initialized to NULL.
- *
- * @param[in] prodindex         specific product index
- */
-RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
-{
-    RetxMetadata* temp = NULL;
-    std::map<uint32_t, RetxMetadata*>::iterator it;
-    {
-        std::unique_lock<std::mutex> lock(indexMetaMapLock);
-        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
-            temp = it->second;
-    }
-    return temp;
-}
-
-
-/**
  * Add the new RetxMetadata entry into the prodindex-RetxMetadata map. A mutex
  * lock is added to ensure no conflict happening when adding a new entry.
  *
@@ -91,44 +70,6 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 {
     std::unique_lock<std::mutex> lock(indexMetaMapLock);
     indexMetaMap[ptrMeta->prodindex] = ptrMeta;
-}
-
-
-/**
- * Remove the RetxMetadata identified by a given product index. This function
- * doesn't have any mutex locks to protect. The caller needs to do all the
- * protection. It returns a boolean status value to indicate whether the remove
- * is successful or not. If successful, it's a true, otherwise it's a false.
- *
- * @param[in] prodindex         product index of the requested product
- */
-bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
-{
-    bool rmSuccess;
-    std::map<uint32_t, RetxMetadata*>::iterator it;
-    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
-        delete it->second;
-        indexMetaMap.erase(it);
-        rmSuccess = true;
-    }
-    else {
-        rmSuccess = false;
-    }
-    return rmSuccess;
-}
-
-
-/**
- * Remove the RetxMetadata identified by a given prodindex. Actually calling
- * the non-lock remove function and put a mutex lock on the map.
- *
- * @param[in] prodindex         product index of the requested product
- */
-bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
-{
-    std::unique_lock<std::mutex> lock(indexMetaMapLock);
-    bool rmSuccess = rmRetxMetadataNoLock(prodindex);
-    return rmSuccess;
 }
 
 
@@ -162,4 +103,63 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
         }
     }
     return prodRemoved;
+}
+
+
+/**
+ * Fetch the requested RetxMetadata entry identified by a given prodindex. If
+ * found nothing, return NULL pointer. Otherwise return the pointer to that
+ * RetxMetadata struct. By default, the RetxMetadata pointer should be
+ * initialized to NULL.
+ *
+ * @param[in] prodindex         specific product index
+ */
+RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
+{
+    RetxMetadata* temp = NULL;
+    std::map<uint32_t, RetxMetadata*>::iterator it;
+    {
+        std::unique_lock<std::mutex> lock(indexMetaMapLock);
+        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
+            temp = it->second;
+    }
+    return temp;
+}
+
+
+/**
+ * Remove the RetxMetadata identified by a given prodindex. Actually calling
+ * the non-lock remove function and put a mutex lock on the map.
+ *
+ * @param[in] prodindex         product index of the requested product
+ */
+bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    bool rmSuccess = rmRetxMetadataNoLock(prodindex);
+    return rmSuccess;
+}
+
+
+/**
+ * Remove the RetxMetadata identified by a given product index. This function
+ * doesn't have any mutex locks to protect. The caller needs to do all the
+ * protection. It returns a boolean status value to indicate whether the remove
+ * is successful or not. If successful, it's a true, otherwise it's a false.
+ *
+ * @param[in] prodindex         product index of the requested product
+ */
+bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
+{
+    bool rmSuccess;
+    std::map<uint32_t, RetxMetadata*>::iterator it;
+    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
+        delete it->second;
+        indexMetaMap.erase(it);
+        rmSuccess = true;
+    }
+    else {
+        rmSuccess = false;
+    }
+    return rmSuccess;
 }

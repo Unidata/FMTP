@@ -118,6 +118,35 @@ void UdpSend::Init()
 
 
 /**
+ * SendData() sends the packet content separated in two different physical
+ * locations, which is put together into a io vector structure, to the
+ * destination identified by a socket file descriptor.
+ *
+ * @param[in] *header       a constant void type pointer that points to where
+ *                          the content of the packet header lies.
+ * @param[in] headerlen     length of that packet header.
+ * @param[in] *data         a constant void type pointer that points to where
+ *                          the piece of memory data to be sent lies.
+ * @param[in] datalen       length of that piece of memory data.
+ */
+ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
+                          const size_t dataLen)
+{
+    int ret;
+    /** vector including the two memory locations */
+    struct iovec iov[2];
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headerLen;
+    iov[1].iov_base = data;
+    iov[1].iov_len  = dataLen;
+
+    /** call the gathered writing system call to avoid multiple copies */
+    ret = writev(sock_fd, iov, 2);
+    return ret;
+}
+
+
+/**
  * Send a piece of memory data given by the buff pointer and len length to the
  * already set destination which is identified by a socket file descriptor.
  *
@@ -147,9 +176,7 @@ ssize_t UdpSend::SendTo(const void* buff, size_t len)
  * @throws    std::system_error  if an error occurs writing to the the UDP
  *                               socket.
  */
-int UdpSend::SendTo(
-        const struct iovec* const iovec,
-        const int                 nvec)
+int UdpSend::SendTo(const struct iovec* const iovec, const int nvec)
 {
     const ssize_t nbytes = writev(sock_fd, iovec, nvec);
 
@@ -158,33 +185,4 @@ int UdpSend::SendTo(
                 "Couldn't write to UDP socket " + sock_fd);
 
     return nbytes;
-}
-
-
-/**
- * SendData() sends the packet content separated in two different physical
- * locations, which is put together into a io vector structure, to the
- * destination identified by a socket file descriptor.
- *
- * @param[in] *header       a constant void type pointer that points to where
- *                          the content of the packet header lies.
- * @param[in] headerlen     length of that packet header.
- * @param[in] *data         a constant void type pointer that points to where
- *                          the piece of memory data to be sent lies.
- * @param[in] datalen       length of that piece of memory data.
- */
-ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
-                          const size_t dataLen)
-{
-    int ret;
-    /** vector including the two memory locations */
-    struct iovec iov[2];
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headerLen;
-    iov[1].iov_base = data;
-    iov[1].iov_len  = dataLen;
-
-    /** call the gathered writing system call to avoid multiple copies */
-    ret = writev(sock_fd, iov, 2);
-    return ret;
 }
