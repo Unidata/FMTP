@@ -223,6 +223,7 @@ void vcmtpRecvv3::Stop()
  */
 bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
 {
+<<<<<<< HEAD
     bool addsuccess;
     std::list<uint32_t>::iterator it;
     std::unique_lock<std::mutex>  lock(BOPListMutex);
@@ -253,6 +254,28 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
     const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
 
     if (nbytes < 0)
+=======
+    (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
+    mcastgroup.sin_family = AF_INET;
+    mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
+    //mcastgroup.sin_addr.s_addr = htonl(INADDR_ANY);
+    mcastgroup.sin_port = htons(mcastPort);
+    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup() creating socket failed");
+    if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
+            < 0)
+        throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
+                std::to_string(static_cast<long long>(mcastSock)) +
+                               " to multicast group " + mcastgroup);
+    mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    //mreq.imr_interface.s_addr = inet_addr("127.0.0.1");
+    //setsockopt(mcastSock,IPPROTO_IP,IP_MULTICAST_IF,&mreq.imr_interface,sizeof(struct in_addr));
+    if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+                   sizeof(mreq)) < 0 )
+>>>>>>> fbfedab0bd6f37381c573e0b2df339e5ef1353e3
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::BOPHandler() recv() error.");
 
