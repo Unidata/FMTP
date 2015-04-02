@@ -42,7 +42,7 @@ class UdpSend {
 public:
     UdpSend(const std::string& recvaddr, unsigned short recvport);
     UdpSend(const std::string& recvaddr, unsigned short recvport,
-        unsigned char ttl);
+            unsigned char ttl);
     ~UdpSend();
 
     void Init();  /*!< start point which caller should call */
@@ -52,7 +52,7 @@ public:
      * destination identified by a socket file descriptor.
      */
     ssize_t SendData(void* header, const size_t headerLen, void* data,
-        const size_t dataLen);
+                     const size_t dataLen);
     /**
      * SendTo() sends a piece of message to a destination identified by a
      * socket file descriptor.

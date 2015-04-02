@@ -83,33 +83,33 @@ class vcmtpSendv3
 {
 public:
     explicit vcmtpSendv3(
-        const char*           tcpAddr,
-        const unsigned short  tcpPort,
-        const char*           mcastAddr,
-        const unsigned short  mcastPort);
+                 const char*           tcpAddr,
+                 const unsigned short  tcpPort,
+                 const char*           mcastAddr,
+                 const unsigned short  mcastPort);
     explicit vcmtpSendv3(
-        const char*           tcpAddr,
-        const unsigned short  tcpPort,
-        const char*           mcastAddr,
-        const unsigned short  mcastPort,
-        uint32_t              initProdIndex,
-        SendAppNotifier*      notifier,
-        const unsigned char   ttl = 1);
+                 const char*           tcpAddr,
+                 const unsigned short  tcpPort,
+                 const char*           mcastAddr,
+                 const unsigned short  mcastPort,
+                 uint32_t              initProdIndex,
+                 SendAppNotifier*      notifier,
+                 const unsigned char   ttl = 1);
     explicit vcmtpSendv3(
-        const char*           tcpAddr,
-        const unsigned short  tcpPort,
-        const char*           mcastAddr,
-        const unsigned short  mcastPort,
-        uint32_t              initProdIndex,
-        float                 timeoutRatio,
-        unsigned char         ttl,
-        SendAppNotifier*      notifier);
+                 const char*           tcpAddr,
+                 const unsigned short  tcpPort,
+                 const char*           mcastAddr,
+                 const unsigned short  mcastPort,
+                 uint32_t              initProdIndex,
+                 float                 timeoutRatio,
+                 unsigned char         ttl,
+                 SendAppNotifier*      notifier);
     ~vcmtpSendv3();
 
     unsigned short getTcpPortNum();
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
-                        unsigned metaSize);
+                               unsigned metaSize);
     void           SetLinkSpeed(uint64_t speed);
     /** Sender side start point, the first function to be called */
     void           Start();
@@ -126,7 +126,7 @@ private:
      * @throw std::runtime_error  if a retransmission entry couldn't be created.
      */
     RetxMetadata* addRetxMetadata(void* const data, const size_t dataSize,
-        void* const metadata, const size_t metaSize);
+                                  void* const metadata, const size_t metaSize);
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
     /** new coordinator thread */
     static void* coordinator(void* ptr);
@@ -137,7 +137,7 @@ private:
      * @param[in] retxMeta    Associated retransmission entry.
      */
     void handleRetxReq(VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta, const int sock);
+                       RetxMetadata* const retxMeta, const int sock);
     /**
      * Handles a notice from a receiver that a data-product has been completely
      * received.
@@ -147,7 +147,7 @@ private:
      * @param[in] sock        The receiver's socket.
      */
     void handleRetxEnd(VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta, const int sock);
+                       RetxMetadata* const retxMeta, const int sock);
     /**
      * Handles a notice from a receiver that BOP for a product is missing.
      *
@@ -156,7 +156,7 @@ private:
      * @param[in] sock        The receiver's socket.
      */
     void handleBopReq(VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta, const int sock);
+                      RetxMetadata* const retxMeta, const int sock);
     /**
      * Handles a notice from a receiver that EOP for a product is missing.
      *
@@ -165,7 +165,7 @@ private:
      * @param[in] sock        The receiver's socket.
      */
     void handleEopReq(VcmtpHeader* const  recvheader,
-        RetxMetadata* const retxMeta, const int sock);
+                      RetxMetadata* const retxMeta, const int sock);
     /** new timer thread */
     void RunRetxThread(int retxsockfd);
     /**
@@ -183,7 +183,7 @@ private:
      * @param[in] sock        The receiver's socket.
      */
     void retransmit(const VcmtpHeader* const recvheader,
-        const RetxMetadata* const retxMeta, const int sock);
+                    const RetxMetadata* const retxMeta, const int sock);
     /**
      * Retransmits BOP packet to a receiver.
      *
@@ -192,7 +192,7 @@ private:
      * @param[in] sock        The receiver's socket.
      */
     void retransBOP(const VcmtpHeader* const  recvheader,
-        const RetxMetadata* const retxMeta, const int sock);
+                    const RetxMetadata* const retxMeta, const int sock);
     /**
      * Retransmits EOP packet to a receiver.
      *

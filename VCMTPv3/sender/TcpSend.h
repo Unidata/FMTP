@@ -60,7 +60,7 @@ public:
     void rmSockInList(int sockfd);
     /** gathering send by calling io vector system call */
     int send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
-        size_t paylen);
+             size_t paylen);
 
 private:
     int                sockfd;
