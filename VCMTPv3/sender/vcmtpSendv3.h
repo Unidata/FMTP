@@ -115,6 +115,7 @@ public:
     void           Start();
     /** Sender side stop point */
     void           Stop();
+    void           SetDefaultIF(const std::string ifaceip);
 
 private:
     /**

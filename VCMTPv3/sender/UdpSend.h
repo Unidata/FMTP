@@ -65,6 +65,7 @@ public:
      * @param[in] nvec   Number of I/O vectors.
      */
     int SendTo(const struct iovec* const iovec, const int nvec);
+    int SetDefaultIF(const std::string ifaceip);
 
 private:
     int                sock_fd;

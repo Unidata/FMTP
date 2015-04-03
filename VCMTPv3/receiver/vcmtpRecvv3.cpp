@@ -77,7 +77,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_rq(),
     retx_t(),
     mcast_t(),
-    timer_t()
+    timer_t(),
+    newinterface(false)
 {
 }
 
@@ -119,7 +120,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_rq(),
     retx_t(),
     mcast_t(),
-    timer_t()
+    timer_t(),
+    newinterface(false)
 {
 }
 
@@ -181,6 +183,13 @@ void vcmtpRecvv3::Start()
     /** clear EOPStatus for new product */
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
+    if (newinterface) {
+        if (setDefaultIF() < 0) {
+            throw std::system_error(errno, std::system_category(),
+                "vcmtpRecvv3::Start(): Couldn't set default interface");
+        }
+    }
+
     StartRetxProcedure();
     startTimerThread();
 
@@ -211,6 +220,18 @@ void vcmtpRecvv3::Stop()
     (void)pthread_cancel(mcast_t); /* failure is irrelevant */
     (void)pthread_cancel(retx_rq); /* failure is irrelevant */
     (void)pthread_cancel(retx_t);  /* failure is irrelevant */
+}
+
+
+/**
+ * Stores the interface IP and sets boolean flag.
+ *
+ * @param[in] ifaceip         IP address of the specified interface.
+ */
+void vcmtpRecvv3::SetDefaultIF(const std::string ifaceip)
+{
+    ifAddr = ifaceip;
+    newinterface = true;
 }
 
 
@@ -535,7 +556,7 @@ void vcmtpRecvv3::joinGroup(
 {
     (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
-    mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
+    mcastgroup.sin_addr.s_addr = htonl(INADDR_ANY);
     mcastgroup.sin_port = htons(mcastPort);
     if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
@@ -1078,6 +1099,25 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
         recvr->taskExit(e);
     }
     return NULL;
+}
+
+
+/**
+ * Sets the interface associated with the given IP address as default.
+ *
+ * @return                    0 indicates success, -1 indicates failure.
+ */
+int vcmtpRecvv3::setDefaultIF()
+{
+    struct in_addr ifaddr;
+    ifaddr.s_addr = inet_addr(ifAddr.c_str());
+    if (setsockopt(mcastSock, IPPROTO_IP, IP_MULTICAST_IF, &ifaddr,
+                   sizeof(ifaddr)) < 0 ) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
 }
 
 

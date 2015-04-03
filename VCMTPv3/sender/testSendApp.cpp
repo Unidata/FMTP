@@ -76,7 +76,7 @@ int main(int argc, char const* argv[])
     size_t datasize = filestatus.st_size;
 
     int fd = open(filename.c_str(), O_RDONLY);
-    if(fd>0)
+    if(fd > 0)
     {
         void* data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED,
                                   fd, 0);
@@ -84,6 +84,7 @@ int main(int argc, char const* argv[])
             std::cerr << "file map failed" << std::endl;
 
         sender->Start();
+        sender->SetDefaultIF("172.25.99.19");
         sleep(2);
         for(int i=0; i<100; ++i) {
             sender->sendProduct(data, datasize, metadata, metaSize);

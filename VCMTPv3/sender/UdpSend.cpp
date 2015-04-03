@@ -101,11 +101,7 @@ void UdpSend::Init()
     recv_addr.sin_addr.s_addr = inet_addr(recvAddr.c_str());
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
-    /*
-    struct in_addr localInterface;
-    localInterface.s_addr = inet_addr("127.0.0.1");
-    setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface));
-    */
+
     if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
             < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
@@ -190,4 +186,24 @@ int UdpSend::SendTo(const struct iovec* const iovec, const int nvec)
                 "Couldn't write to UDP socket " + sock_fd);
 
     return nbytes;
+}
+
+
+/**
+ * Set the interface associated with given address as default.
+ *
+ * @param[in] ifaceip            IP address of the specified interface
+ * @return                       0 indicates success, -1 indicates failure.
+ */
+int UdpSend::SetDefaultIF(const std::string ifaceip)
+{
+    struct in_addr interfaceIP;
+    interfaceIP.s_addr = inet_addr(ifaceip.c_str());
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
+                   sizeof(interfaceIP)) < 0) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
 }
