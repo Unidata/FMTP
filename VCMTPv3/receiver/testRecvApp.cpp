@@ -31,6 +31,18 @@
 #include <iostream>
 
 
+/**
+ * Since the LDM could be too heavy to use for testing purposes only. This main
+ * function is a light weight replacement of the LDM receiving application. It
+ * sets up the whole environment and call Start() to start receiving. All the
+ * arguments are passed in through command line.
+ *
+ * @param[in] tcpAddr      IP address of the sender.
+ * @param[in] tcpPort      Port number of the sender.
+ * @param[in] mcastAddr    multicast address of the group.
+ * @param[in] mcastPort    Port number of the multicast group.
+ * @param[in] ifAddr       IP of the interface to set as default.
+ */
 int main(int argc, char* argv[])
 {
     if (argc < 4) {

@@ -47,6 +47,7 @@
  * @param[in] tcpPort      Port number of the sender.
  * @param[in] mcastAddr    multicast address of the group.
  * @param[in] mcastPort    Port number of the multicast group.
+ * @param[in] ifAddr       IP of the interface to set as default.
  * @param[in] filename     file to be sent as data.
  */
 int main(int argc, char const* argv[])
