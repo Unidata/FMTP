@@ -60,7 +60,8 @@ int main(int argc, char const* argv[])
     const unsigned short tcpPort = (unsigned short)atoi(argv[2]);
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
-    std::string filename(argv[5]);
+    std::string ifAddr(argv[5]);
+    std::string filename(argv[6]);
 
     char tmp[] = "test metadata";
     char* metadata = tmp;
@@ -84,7 +85,7 @@ int main(int argc, char const* argv[])
             std::cerr << "file map failed" << std::endl;
 
         sender->Start();
-        sender->SetDefaultIF("172.25.99.19");
+        sender->SetDefaultIF(ifAddr.c_str());
         sleep(2);
         for(int i=0; i<100; ++i) {
             sender->sendProduct(data, datasize, metadata, metaSize);
