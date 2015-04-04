@@ -47,10 +47,10 @@
 void randDataGen()
 {
     std::random_device rd;
-    unsigned int rand = rd() % 100 + 1;
+    /* random file size range 1KB - 10MB */
+    unsigned int rand = rd() % 10240 + 1;
     rand = rand * 1024;
 
-    /* maximum 100KB */
     char* data = new char[rand];
     std::ifstream fp("/dev/urandom", std::ios::binary);
     if (fp.is_open()) {
