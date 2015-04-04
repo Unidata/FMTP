@@ -94,31 +94,6 @@ void TcpRecv::Init()
 
 
 /**
- * Sends a header and a payload on the TCP connection. Blocks until the packet
- * is sent or a severe error occurs.
- *
- * @param[in] header   Header.
- * @param[in] headLen  Length of the header in bytes.
- * @param[in] payload  Payload.
- * @param[in] payLen   Length of the payload in bytes.
- * @retval    -1       O/S failure.
- * @return             Number of bytes sent.
- */
-ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
-                          size_t payLen)
-{
-    struct iovec iov[2];
-
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headLen;
-    iov[1].iov_base = payload;
-    iov[1].iov_len  = payLen;
-
-    return writev(sockfd, iov, 2);
-}
-
-
-/**
  * Receives a header and a payload on the TCP connection. Blocks until a packet
  * is received or an error occurs.
  *
@@ -153,6 +128,31 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
 
     throw std::system_error(errno, std::system_category(),
             "TcpRecv::recvData(): Couldn't read from socket " + sockStr);
+}
+
+
+/**
+ * Sends a header and a payload on the TCP connection. Blocks until the packet
+ * is sent or a severe error occurs.
+ *
+ * @param[in] header   Header.
+ * @param[in] headLen  Length of the header in bytes.
+ * @param[in] payload  Payload.
+ * @param[in] payLen   Length of the payload in bytes.
+ * @retval    -1       O/S failure.
+ * @return             Number of bytes sent.
+ */
+ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
+                          size_t payLen)
+{
+    struct iovec iov[2];
+
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headLen;
+    iov[1].iov_base = payload;
+    iov[1].iov_len  = payLen;
+
+    return writev(sockfd, iov, 2);
 }
 
 

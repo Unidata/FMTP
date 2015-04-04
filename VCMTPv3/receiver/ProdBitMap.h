@@ -38,16 +38,17 @@ class ProdBitMap
 public:
     ProdBitMap(const uint32_t bitmapsize);
     ~ProdBitMap();
-    void set(uint32_t blockindex);
     bool isComplete();
+    void set(uint32_t blockindex);
 
 private:
+    /* count the received data block number */
+    uint32_t count();
+
     std::vector<bool>* map;
     uint32_t           mapsize;
     uint32_t           recvblocks;
     std::mutex         mutex;
-
-    uint32_t count();  /*!< count the received data block number */
 };
 
 

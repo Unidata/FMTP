@@ -42,20 +42,6 @@ public:
     ~TcpRecv();
     void Init();  /*!< the start point which upper layer should call */
     /**
-     * Sends a header and a payload on the TCP connection. Blocks until the packet
-     * is sent or a severe error occurs. Re-establishes the TCP connection if
-     * necessary.
-     *
-     * @param[in] header   Header.
-     * @param[in] headLen  Length of the header in bytes.
-     * @param[in] payload  Payload.
-     * @param[in] payLen   Length of the payload in bytes.
-     * @retval    -1       O/S failure.
-     * @return             Number of bytes sent.
-     */
-    ssize_t sendData(void* header, size_t headLen, char* payload,
-                     size_t payLen);
-    /**
      * Receives a header and a payload on the TCP connection. Blocks until the
      * packet is received or a severe error occurs. Re-establishes the TCP
      * connection if necessary.
@@ -69,13 +55,22 @@ public:
      */
     ssize_t recvData(void* header, size_t headLen, char* payload,
                      size_t payLen);
+    /**
+     * Sends a header and a payload on the TCP connection. Blocks until the packet
+     * is sent or a severe error occurs. Re-establishes the TCP connection if
+     * necessary.
+     *
+     * @param[in] header   Header.
+     * @param[in] headLen  Length of the header in bytes.
+     * @param[in] payload  Payload.
+     * @param[in] payLen   Length of the payload in bytes.
+     * @retval    -1       O/S failure.
+     * @return             Number of bytes sent.
+     */
+    ssize_t sendData(void* header, size_t headLen, char* payload,
+                     size_t payLen);
 
 private:
-    int                     sockfd;
-    struct sockaddr_in      servAddr;
-    std::string             tcpAddr;  /* a copy of the passed-in tcpAddr */
-    unsigned short          tcpPort;  /* a copy of the passed-in tcpPort */
-
     /**
      * Initializes the TCP connection. Blocks until the connection is established
      * or a severe error occurs.
@@ -83,6 +78,11 @@ private:
      * @throws std::system_error  if a system error occurs.
      */
     void initSocket();
+
+    int                     sockfd;
+    struct sockaddr_in      servAddr;
+    std::string             tcpAddr;  /* a copy of the passed-in tcpAddr */
+    unsigned short          tcpPort;  /* a copy of the passed-in tcpPort */
 };
 
 

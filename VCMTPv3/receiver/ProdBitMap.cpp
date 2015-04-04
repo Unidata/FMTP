@@ -54,6 +54,18 @@ ProdBitMap::~ProdBitMap()
 
 
 /**
+ * Checks if all the bits, which represents the blocks are set.
+ *
+ * @param[in] none
+ */
+bool ProdBitMap::isComplete()
+{
+    std::unique_lock<std::mutex> lock(mutex);
+    return (count() == mapsize);
+}
+
+
+/**
  * Use the given block index to set the corresponding bit. Meanwhile, keep
  * updating the received block counter.
  *
@@ -77,16 +89,4 @@ void ProdBitMap::set(uint32_t blockindex)
 uint32_t ProdBitMap::count()
 {
     return recvblocks;
-}
-
-
-/**
- * Checks if all the bits, which represents the blocks are set.
- *
- * @param[in] none
- */
-bool ProdBitMap::isComplete()
-{
-    std::unique_lock<std::mutex> lock(mutex);
-    return (count() == mapsize);
 }
