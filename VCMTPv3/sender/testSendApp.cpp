@@ -33,8 +33,38 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fstream>
 #include <iostream>
+#include <random>
 #include <string>
+
+
+/**
+ * Generates a random sized file filled with random bytes. The filename is
+ * fixed as test.dat. But for every iteration its size will be changed, caller
+ * needs to re-open it and read again.
+ */
+void randDataGen()
+{
+    std::random_device rd;
+    unsigned int rand = rd() % 100 + 1;
+    rand = rand * 1024;
+
+    /* maximum 100KB */
+    char* data = new char[rand];
+    std::ifstream fp("/dev/urandom", std::ios::binary);
+    if (fp.is_open()) {
+        fp.read(data, rand);
+    }
+
+    std::ofstream rdfile("test.dat");
+    if (rdfile.is_open()) {
+        rdfile.write(data, rand);
+    }
+    fp.close();
+    rdfile.close();
+    delete[] data;
+}
 
 
 /**
@@ -48,7 +78,6 @@
  * @param[in] mcastAddr    multicast address of the group.
  * @param[in] mcastPort    Port number of the multicast group.
  * @param[in] ifAddr       IP of the interface to set as default.
- * @param[in] filename     file to be sent as data.
  */
 int main(int argc, char const* argv[])
 {
@@ -62,7 +91,7 @@ int main(int argc, char const* argv[])
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
-    std::string filename(argv[6]);
+    std::string filename("test.dat");
 
     char tmp[] = "test metadata";
     char* metadata = tmp;
@@ -72,34 +101,39 @@ int main(int argc, char const* argv[])
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 0);
 
-    /** use the filename to get filesize */
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-    size_t datasize = filestatus.st_size;
+    sender->Start();
+    sender->SetDefaultIF(ifAddr.c_str());
+    sleep(2);
 
-    int fd = open(filename.c_str(), O_RDONLY);
-    if(fd > 0)
-    {
-        void* data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED,
-                                  fd, 0);
-        if (data == MAP_FAILED)
-            std::cerr << "file map failed" << std::endl;
+    for(int i=0; i<100; ++i) {
+        /* generate random sized data */
+        randDataGen();
 
-        sender->Start();
-        sender->SetDefaultIF(ifAddr.c_str());
-        sleep(2);
-        for(int i=0; i<100; ++i) {
+        /** use the filename to get filesize */
+        struct stat filestatus;
+        stat(filename.c_str(), &filestatus);
+        size_t datasize = filestatus.st_size;
+
+        int fd = open(filename.c_str(), O_RDONLY);
+        if(fd > 0)
+        {
+            void* data = (char*) mmap(0, datasize, PROT_READ,
+                                      MAP_FILE | MAP_SHARED, fd, 0);
+            if (data == MAP_FAILED)
+                std::cerr << "file map failed" << std::endl;
+
             sender->sendProduct(data, datasize, metadata, metaSize);
+            /* 1 sec interval between two products */
             sleep(1);
+
+            munmap(data, datasize);
+            close(fd);
         }
-        while(1);
-
-        munmap(data, datasize);
-        close(fd);
+        else
+            std::cerr << "test::main()::open(): error" << std::endl;
     }
-    else
-        std::cerr << "test::main()::open(): error" << std::endl;
-
     delete sender;
+
+    while(1);
     return 0;
 }
