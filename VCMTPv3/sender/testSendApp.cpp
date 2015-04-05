@@ -64,6 +64,7 @@ void randDataGen()
     fp.close();
     rdfile.close();
     delete[] data;
+    data = NULL;
 }
 
 
