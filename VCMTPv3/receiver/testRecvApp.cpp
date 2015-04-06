@@ -31,25 +31,33 @@
 #include <iostream>
 
 
+/**
+ * Since the LDM could be too heavy to use for testing purposes only. This main
+ * function is a light weight replacement of the LDM receiving application. It
+ * sets up the whole environment and call Start() to start receiving. All the
+ * arguments are passed in through command line.
+ *
+ * @param[in] tcpAddr      IP address of the sender.
+ * @param[in] tcpPort      Port number of the sender.
+ * @param[in] mcastAddr    multicast address of the group.
+ * @param[in] mcastPort    Port number of the multicast group.
+ * @param[in] ifAddr       IP of the interface to set as default.
+ */
 int main(int argc, char* argv[])
 {
     if (argc < 4) {
         std::cerr << "ERROR: Insufficient arguments." << std::endl;
         return 1;
     }
-    /*
-    string tcpAddr                 = "127.0.0.1";
-    const unsigned short tcpPort   = 1234;
-    string mcastAddr               = "233.0.225.123";
-    const unsigned short mcastPort = 5173;
-    */
     std::string tcpAddr(argv[1]);
     const unsigned short tcpPort = (unsigned short)atoi(argv[2]);
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
+    std::string ifAddr(argv[5]);
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecvv3.SetLinkSpeed(1000000000);
+    vcmtpRecvv3.SetDefaultIF(ifAddr.c_str());
     vcmtpRecvv3.Start();
     return 0;
 }

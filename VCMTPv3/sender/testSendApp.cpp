@@ -29,41 +29,42 @@
 #include "vcmtpSendv3.h"
 
 #include <fcntl.h>
-#include <iostream>
 #include <pthread.h>
-#include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-
-typedef struct NewThreadInfo
-{
-    vcmtpSendv3* sender;
-    void*        prodptr;
-    size_t       prodsize;
-    char*        metaptr;
-    unsigned int metasize;
-} tInfo;
+#include <fstream>
+#include <iostream>
+#include <random>
+#include <string>
 
 
 /**
- * Calls vcmtpSendv3::sendProduct() to send the product. Since
- * vcmtpSendv3::Start() is a blocking call which joins all the other threads,
- * main() can not call sendProduct() after Start() is called. Thus a new thread
- * is created to run the sendProduct() separately.
- *
- * @param[in] ptr           A pointer to the tInfo structure.
+ * Generates a random sized file filled with random bytes. The filename is
+ * fixed as test.dat. But for every iteration its size will be changed, caller
+ * needs to re-open it and read again.
  */
-void* sendprod(void* ptr)
+void randDataGen()
 {
-    tInfo* tinfo = (tInfo*) ptr;
-    sleep(2);
-    tinfo->sender->sendProduct(tinfo->prodptr, tinfo->prodsize, tinfo->metaptr,
-                               tinfo->metasize);
+    std::random_device rd;
+    /* random file size range 1KB - 10MB */
+    unsigned int rand = rd() % 10240 + 1;
+    rand = rand * 1024;
 
-    pthread_exit(0);
-    return NULL;
+    char* data = new char[rand];
+    std::ifstream fp("/dev/urandom", std::ios::binary);
+    if (fp.is_open()) {
+        fp.read(data, rand);
+    }
+
+    std::ofstream rdfile("test.dat");
+    if (rdfile.is_open()) {
+        rdfile.write(data, rand);
+    }
+    fp.close();
+    rdfile.close();
+    delete[] data;
+    data = NULL;
 }
 
 
@@ -77,7 +78,7 @@ void* sendprod(void* ptr)
  * @param[in] tcpPort      Port number of the sender.
  * @param[in] mcastAddr    multicast address of the group.
  * @param[in] mcastPort    Port number of the multicast group.
- * @param[in] filename     file to be sent as data.
+ * @param[in] ifAddr       IP of the interface to set as default.
  */
 int main(int argc, char const* argv[])
 {
@@ -90,53 +91,50 @@ int main(int argc, char const* argv[])
     const unsigned short tcpPort = (unsigned short)atoi(argv[2]);
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
-    std::string filename(argv[5]);
-
-    tInfo tinfo;
+    std::string ifAddr(argv[5]);
+    std::string filename("test.dat");
 
     char tmp[] = "test metadata";
     char* metadata = tmp;
     unsigned int metaSize = sizeof(tmp);
 
-    tinfo.metaptr  = metadata;
-    tinfo.metasize = metaSize;
-
     vcmtpSendv3* sender =
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 0);
 
-    tinfo.sender = sender;
+    sender->Start();
+    sender->SetDefaultIF(ifAddr.c_str());
+    sleep(2);
 
-    /** use the filename to get filesize */
-    struct stat filestatus;
-    stat(filename.c_str(), &filestatus);
-    size_t datasize = filestatus.st_size;
+    for(int i=0; i<100; ++i) {
+        /* generate random sized data */
+        randDataGen();
 
-    tinfo.prodsize = datasize;
+        /** use the filename to get filesize */
+        struct stat filestatus;
+        stat(filename.c_str(), &filestatus);
+        size_t datasize = filestatus.st_size;
 
-    int fd = open(filename.c_str(), O_RDONLY);
-    if(fd>0)
-    {
-        void* data = (char*) mmap(0, datasize, PROT_READ, MAP_FILE | MAP_SHARED,
-                                  fd, 0);
-        if (data == MAP_FAILED)
-            std::cerr << "file map failed" << std::endl;
+        int fd = open(filename.c_str(), O_RDONLY);
+        if(fd > 0)
+        {
+            void* data = (char*) mmap(0, datasize, PROT_READ,
+                                      MAP_FILE | MAP_SHARED, fd, 0);
+            if (data == MAP_FAILED)
+                std::cerr << "file map failed" << std::endl;
 
-        tinfo.prodptr = data;
+            sender->sendProduct(data, datasize, metadata, metaSize);
+            /* 1 sec interval between two products */
+            sleep(1);
 
-        pthread_t t;
-        pthread_create(&t, NULL, sendprod, (void *) &tinfo);
-
-        sender->Start();
-
-        pthread_join(t, NULL);
-
-        munmap(data, datasize);
-        close(fd);
+            munmap(data, datasize);
+            close(fd);
+        }
+        else
+            std::cerr << "test::main()::open(): error" << std::endl;
     }
-    else
-        std::cerr << "test::main()::open(): error" << std::endl;
-
     delete sender;
+
+    while(1);
     return 0;
 }

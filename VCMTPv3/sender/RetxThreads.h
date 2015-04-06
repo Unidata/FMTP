@@ -12,9 +12,10 @@
 #ifndef RETXTHREADS_H_
 #define RETXTHREADS_H_
 
+#include <pthread.h>
 #include <forward_list>
 #include <mutex>
-#include <pthread.h>
+
 
 class RetxThreads {
 public:

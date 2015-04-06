@@ -1,10 +1,10 @@
 /**
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  *
- * @file      ProdBitMap.h
+ * @file      randgen.cpp
  * @author    Shawn Chen <sc7cq@virginia.edu>
  * @version   1.0
- * @date      Jan 22, 2015
+ * @date      Apr. 3, 2015
  *
  * @section   LICENSE
  *
@@ -18,38 +18,37 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details at http://www.gnu.org/copyleft/gpl.html
  *
- * @brief     Define the interfaces of ProdBitMap class.
- *
- * A per-product bitmap class, used to track all the data blocks of a product.
+ * @brief     Generates random sized file with random content.
  */
 
 
-#ifndef VCMTP_RECEIVER_PRODBITMAP_H_
-#define VCMTP_RECEIVER_PRODBITMAP_H_
+#include <stdlib.h>
+#include <stdio.h>
+#include <fstream>
+#include <iostream>
+#include <random>
 
 
-#include <stdint.h>
-#include <mutex>
-#include <vector>
-
-
-class ProdBitMap
+int main(int argc, const char *argv[])
 {
-public:
-    ProdBitMap(const uint32_t bitmapsize);
-    ~ProdBitMap();
-    bool isComplete();
-    void set(uint32_t blockindex);
+    std::random_device rd;
+    unsigned int rand = rd() % 100 + 1;
+    rand = rand * 1024;
 
-private:
-    /* count the received data block number */
-    uint32_t count();
+    /* maximum 100KB */
+    char* data = new char[rand];
+    std::ifstream fp("/dev/urandom", std::ios::binary);
+    if (fp.is_open()) {
+        fp.read(data, rand);
+    }
 
-    std::vector<bool>* map;
-    uint32_t           mapsize;
-    uint32_t           recvblocks;
-    std::mutex         mutex;
-};
+    std::ofstream rdfile("test.dat");
+    if (rdfile.is_open()) {
+        rdfile.write(data, rand);
+    }
+    fp.close();
+    rdfile.close();
+    delete[] data;
 
-
-#endif /* VCMTP_RECEIVER_PRODBITMAP_H_ */
+    return 0;
+}

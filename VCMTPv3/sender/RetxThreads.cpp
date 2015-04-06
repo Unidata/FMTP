@@ -13,12 +13,24 @@
 
 #include <mutex>
 
+
+/**
+ * Add a new thread into the list.
+ *
+ * @param[in] thread        Thread handler created by the caller
+ */
 void RetxThreads::add(pthread_t& thread)
 {
     std::unique_lock<std::mutex> lock(mutex);
     threads.push_front(thread);
 }
 
+
+/**
+ * Remove a thread from the list
+ *
+ * @param[in] thread        Thread handler created by the caller
+ */
 void RetxThreads::remove(pthread_t& thread) noexcept
 {
     class Equals {
@@ -34,6 +46,10 @@ void RetxThreads::remove(pthread_t& thread) noexcept
     threads.remove_if(Equals(thread));
 }
 
+
+/**
+ * Cancel all threads and empty the list.
+ */
 void RetxThreads::shutdown() noexcept
 {
     std::unique_lock<std::mutex> lock(mutex);

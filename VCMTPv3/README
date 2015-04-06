@@ -112,24 +112,28 @@ USAGE
 
 VCMTPv3 is designed to cooperate with LDM (by UCAR) as an underlying transport
 protocol. But it's also possible to work alone using the testing applications.
-There is a testSendApp.cpp in the sender folder and a testRecvApp in the
+There is a testSendApp.cpp in the sender folder and a testRecvApp.cpp in the
 receiver folder.
 As being explained earlier, the testSendApp is the sending application which
 plays the role of the single sender in a multicast group. And you can start as
-many as testRecvApp you like to make them work as multicast receivers. But do
+many testRecvApp as you like to make them work as multicast receivers. But do
 remember that the sender should always be started first before the receivers.
+Both testSendApp and testRecvApp can receive command line arguments. So there
+are two scripts to start the testapp with arguments respectively.
 
 * Start the sender by
-  $ ./startTestSendApp
+  $ ./startTestSendApp.sh
 
 * Start the receiver by
-  $ ./startTestRecvApp
+  $ ./startTestRecvApp.sh
 
-Since both the vcmtpSendv3 and vcmtpRecvv3 have multiple overloaded methods
-and constructors, two scripts are used to start the testing application by
-passing in command line arguments. As you can see, for the testSendApp, it
-accepts the unicast IP:PORT, the multicast IP:PORT and a filename to be sent.
-For the testRecvApp, it accepts the unicast IP:PORT and the multicast IP:PORT.
+To make sender and receiver work, users should be aware under which scenario
+they are trying to run the testapp. The first scenario is to run both sender
+and receiver on the same node. With loopback enabled, it's possible to receive
+the expected packets. Specifying the interface as the default one or 0.0.0.0
+will work. Another scenario is two sides running on different nodes. Specifying
+whatever interface on the node and the corresponding interface on the peer will
+work. But pay attention that these interfaces should be physically connected.
 If there is a mocked product queue and TTL needs to be non-one value,
 developers can modify the testSendApp.cpp to call another vcmtpSendv3()
 constructor.

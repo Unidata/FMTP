@@ -29,10 +29,9 @@
 
 #include "UdpSend.h"
 
-#include <arpa/inet.h>
 #include <errno.h>
-#include <stdexcept>
 #include <string.h>
+#include <stdexcept>
 #include <system_error>
 
 
@@ -79,12 +78,17 @@ UdpSend::~UdpSend()
 
 
 /**
- * Connect to the UDP socket.
+ * Initializer. It creates a new UDP socket and sets the address and port from
+ * the pre-set parameters. Also it connects to the created socket and if
+ * necessary, sets the TTL field with a new value.
  *
  * @throws std::system_error  if socket creation fails.
+ * @throws std::system_error  if connecting to socket fails.
+ * @throws std::system_error  if setting TTL fails.
  */
 void UdpSend::Init()
 {
+    int newttl = ttl;
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
@@ -94,20 +98,52 @@ void UdpSend::Init()
     /** set connection type to IPv4 */
     recv_addr.sin_family = AF_INET;
     /** set the address to the receiver address passed to the constructor */
-    recv_addr.sin_addr.s_addr =inet_addr(recvAddr.c_str());
+    recv_addr.sin_addr.s_addr = inet_addr(recvAddr.c_str());
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
-    if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr)) ==
-            -1)
-        throw std::system_error(errno, std::system_category(),
-                std::string("UdpSend::UdpSend() Couldn't connect UDP socket to "
-                        "IP address ") + inet_ntoa(recv_addr.sin_addr) +
-                        ", port " + std::to_string(recvPort));
-    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) ==
-            -1)
-        throw std::system_error(errno, std::system_category(),
+
+    if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
+            < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
+                "UdpSend::UdpSend() Couldn't connect UDP socket to "
+                "IP address ") + inet_ntoa(recv_addr.sin_addr) +
+                ", port " + std::to_string(recvPort));
+    }
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
+                sizeof(newttl)) < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
                 "UdpSend::UdpSend() Couldn't set UDP socket time-to-live "
-                "option to " + ttl);
+                "option to ") + std::to_string(ttl));
+    }
+}
+
+
+/**
+ * SendData() sends the packet content separated in two different physical
+ * locations, which is put together into a io vector structure, to the
+ * destination identified by a socket file descriptor.
+ *
+ * @param[in] *header       a constant void type pointer that points to where
+ *                          the content of the packet header lies.
+ * @param[in] headerlen     length of that packet header.
+ * @param[in] *data         a constant void type pointer that points to where
+ *                          the piece of memory data to be sent lies.
+ * @param[in] datalen       length of that piece of memory data.
+ */
+ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
+                          const size_t dataLen)
+{
+    int ret;
+    /** vector including the two memory locations */
+    struct iovec iov[2];
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headerLen;
+    iov[1].iov_base = data;
+    iov[1].iov_len  = dataLen;
+
+    /** call the gathered writing system call to avoid multiple copies */
+    ret = writev(sock_fd, iov, 2);
+    return ret;
 }
 
 
@@ -141,9 +177,7 @@ ssize_t UdpSend::SendTo(const void* buff, size_t len)
  * @throws    std::system_error  if an error occurs writing to the the UDP
  *                               socket.
  */
-int UdpSend::SendTo(
-        const struct iovec* const iovec,
-        const int                 nvec)
+int UdpSend::SendTo(const struct iovec* const iovec, const int nvec)
 {
     const ssize_t nbytes = writev(sock_fd, iovec, nvec);
 
@@ -156,29 +190,20 @@ int UdpSend::SendTo(
 
 
 /**
- * SendData() sends the packet content separated in two different physical
- * locations, which is put together into a io vector structure, to the
- * destination identified by a socket file descriptor.
+ * Set the interface associated with given address as default.
  *
- * @param[in] *header       a constant void type pointer that points to where
- *                          the content of the packet header lies.
- * @param[in] headerlen     length of that packet header.
- * @param[in] *data         a constant void type pointer that points to where
- *                          the piece of memory data to be sent lies.
- * @param[in] datalen       length of that piece of memory data.
+ * @param[in] ifaceip            IP address of the specified interface
+ * @return                       0 indicates success, -1 indicates failure.
  */
-ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
-                          const size_t dataLen)
+int UdpSend::SetDefaultIF(const std::string ifaceip)
 {
-    int ret;
-    /** vector including the two memory locations */
-    struct iovec iov[2];
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headerLen;
-    iov[1].iov_base = data;
-    iov[1].iov_len  = dataLen;
-
-    /** call the gathered writing system call to avoid multiple copies */
-    ret = writev(sock_fd, iov, 2);
-    return ret;
+    struct in_addr interfaceIP;
+    interfaceIP.s_addr = inet_addr(ifaceip.c_str());
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
+                   sizeof(interfaceIP)) < 0) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
 }

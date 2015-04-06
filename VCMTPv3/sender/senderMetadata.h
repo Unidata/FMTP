@@ -30,12 +30,13 @@
 #define VCMTP_SENDER_SENDERMETADATA_H_
 
 
-#include <chrono>
-#include <map>
 #include <pthread.h>
-#include <set>
 #include <stdint.h>
 #include <time.h>
+#include <chrono>
+#include <map>
+#include <mutex>
+#include <set>
 
 
 typedef std::chrono::high_resolution_clock HRclock;
@@ -68,15 +69,16 @@ public:
     ~senderMetadata();
 
     void addRetxMetadata(RetxMetadata* ptrMeta);
-    bool rmRetxMetadata(uint32_t prodindex);
-    RetxMetadata* getMetadata(uint32_t prodindex);
     bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
+    RetxMetadata* getMetadata(uint32_t prodindex);
+    bool rmRetxMetadata(uint32_t prodindex);
 
 private:
+    bool rmRetxMetadataNoLock(uint32_t prodindex);
+
     /** first: prodindex; second: pointer to metadata of the specified prodindex */
     std::map<uint32_t, RetxMetadata*> indexMetaMap;
-    pthread_rwlock_t                  indexMetaMapLock;
-    bool rmRetxMetadataNoLock(uint32_t prodindex);
+    std::mutex                        indexMetaMapLock;
 };
 
 

@@ -27,14 +27,14 @@
 
 #include "TcpRecv.h"
 
-#include <cstring>
 #include <errno.h>
-#include <iostream>
 #include <netdb.h>
-#include <stdexcept>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <cstring>
+#include <iostream>
+#include <stdexcept>
 
 
 /**
@@ -94,31 +94,6 @@ void TcpRecv::Init()
 
 
 /**
- * Sends a header and a payload on the TCP connection. Blocks until the packet
- * is sent or a severe error occurs.
- *
- * @param[in] header   Header.
- * @param[in] headLen  Length of the header in bytes.
- * @param[in] payload  Payload.
- * @param[in] payLen   Length of the payload in bytes.
- * @retval    -1       O/S failure.
- * @return             Number of bytes sent.
- */
-ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
-                          size_t payLen)
-{
-    struct iovec iov[2];
-
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headLen;
-    iov[1].iov_base = payload;
-    iov[1].iov_len  = payLen;
-
-    return writev(sockfd, iov, 2);
-}
-
-
-/**
  * Receives a header and a payload on the TCP connection. Blocks until a packet
  * is received or an error occurs.
  *
@@ -157,6 +132,31 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
 
 
 /**
+ * Sends a header and a payload on the TCP connection. Blocks until the packet
+ * is sent or a severe error occurs.
+ *
+ * @param[in] header   Header.
+ * @param[in] headLen  Length of the header in bytes.
+ * @param[in] payload  Payload.
+ * @param[in] payLen   Length of the payload in bytes.
+ * @retval    -1       O/S failure.
+ * @return             Number of bytes sent.
+ */
+ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
+                          size_t payLen)
+{
+    struct iovec iov[2];
+
+    iov[0].iov_base = header;
+    iov[0].iov_len  = headLen;
+    iov[1].iov_base = payload;
+    iov[1].iov_len  = payLen;
+
+    return writev(sockfd, iov, 2);
+}
+
+
+/**
  * Initializes the TCP connection. Blocks until the connection is established
  * or a severe error occurs. The interval between two trials is 30 seconds.
  *
@@ -180,11 +180,14 @@ void TcpRecv::initSocket()
     while (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
         if (errno == ECONNREFUSED || errno == ETIMEDOUT ||
                 errno == ECONNRESET || errno == EHOSTUNREACH) {
-            if (sleep(30))
+            if (sleep(30)) {
+                close(sockfd);
                 throw std::system_error(EINTR, std::system_category(),
                     "TcpRecv:TcpRecv() sleep() interrupted");
+            }
         }
         else {
+            close(sockfd);
             throw std::system_error(errno, std::system_category(),
                     "TcpRecv:TcpRecv() Error connecting to " + servAddr);
         }

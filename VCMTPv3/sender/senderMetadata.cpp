@@ -35,31 +35,74 @@
 
 
 /**
- * Construct the senderMetadata class, initialize the index-metadata mapping
- * lock.
+ * Construct the senderMetadata class
  *
  * @param[in] none
  */
 senderMetadata::senderMetadata()
 {
-    pthread_rwlock_init(&indexMetaMapLock, NULL);
 }
 
 
 /**
- * Destruct the senderMetadata class, destroy the index-metadata mapping lock.
- * Clear the whole prodindex-metadata map.
+ * Destruct the senderMetadata class. Clear the whole prodindex-metadata map.
  *
  * @param[in] none
  */
 senderMetadata::~senderMetadata()
 {
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
     for (std::map<uint32_t, RetxMetadata*>::iterator it = indexMetaMap.begin();
          it != indexMetaMap.end(); ++it) {
         delete(it->second);
         indexMetaMap.erase(it);
     }
-    pthread_rwlock_destroy(&indexMetaMapLock);
+}
+
+
+/**
+ * Add the new RetxMetadata entry into the prodindex-RetxMetadata map. A mutex
+ * lock is added to ensure no conflict happening when adding a new entry.
+ *
+ * @param[in] ptrMeta           A pointer to the new RetxMetadata struct
+ */
+void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
+{
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    indexMetaMap[ptrMeta->prodindex] = ptrMeta;
+}
+
+
+/**
+ * Remove the particular receiver identified by the retxsockfd from the
+ * finished receiver set. And check if the set is empty after the operation.
+ * If it is, then remove the whole entry from the map. Otherwise, just clear
+ * that receiver.
+ *
+ * @param[in] prodindex         product index of the requested product
+ * @param[in] retxsockfd        sock file descriptor of the retransmission tcp
+ *                              connection.
+ */
+bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
+{
+    bool prodRemoved;
+    std::map<uint32_t, RetxMetadata*>::iterator it;
+    {
+        std::unique_lock<std::mutex> lock(indexMetaMapLock);
+        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
+            it->second->unfinReceivers.erase(retxsockfd);
+            if (it->second->unfinReceivers.empty()) {
+                prodRemoved = rmRetxMetadataNoLock(prodindex);
+            }
+            else {
+                prodRemoved = false;
+            }
+        }
+        else {
+            prodRemoved = false;
+        }
+    }
+    return prodRemoved;
 }
 
 
@@ -75,31 +118,32 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 {
     RetxMetadata* temp = NULL;
     std::map<uint32_t, RetxMetadata*>::iterator it;
-    pthread_rwlock_rdlock(&indexMetaMapLock);
-    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
-        temp = it->second;
-    pthread_rwlock_unlock(&indexMetaMapLock);
+    {
+        std::unique_lock<std::mutex> lock(indexMetaMapLock);
+        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
+            temp = it->second;
+    }
     return temp;
 }
 
 
 /**
- * Add the new RetxMetadata entry into the prodindex-RetxMetadata map. A read/
- * write lock is added to ensure no conflict happening when adding a new entry.
+ * Remove the RetxMetadata identified by a given prodindex. Actually calling
+ * the non-lock remove function and put a mutex lock on the map.
  *
- * @param[in] ptrMeta           A pointer to the new RetxMetadata struct
+ * @param[in] prodindex         product index of the requested product
  */
-void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
+bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 {
-    pthread_rwlock_wrlock(&indexMetaMapLock);
-    indexMetaMap[ptrMeta->prodindex] = ptrMeta;
-    pthread_rwlock_unlock(&indexMetaMapLock);
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    bool rmSuccess = rmRetxMetadataNoLock(prodindex);
+    return rmSuccess;
 }
 
 
 /**
  * Remove the RetxMetadata identified by a given product index. This function
- * doesn't have any read/write lock to protect. The caller needs to do all the
+ * doesn't have any mutex locks to protect. The caller needs to do all the
  * protection. It returns a boolean status value to indicate whether the remove
  * is successful or not. If successful, it's a true, otherwise it's a false.
  *
@@ -118,51 +162,4 @@ bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
         rmSuccess = false;
     }
     return rmSuccess;
-}
-
-
-/**
- * Remove the RetxMetadata identified by a given prodindex. Actually calling
- * the non-lock remove function and put a read/write lock to the map.
- *
- * @param[in] prodindex         product index of the requested product
- */
-bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
-{
-    pthread_rwlock_wrlock(&indexMetaMapLock);
-    bool rmSuccess = rmRetxMetadataNoLock(prodindex);
-    pthread_rwlock_unlock(&indexMetaMapLock);
-    return rmSuccess;
-}
-
-
-/**
- * Remove the particular receiver identified by the retxsockfd from the
- * finished receiver set. And check if the set is empty after the operation.
- * If it is, then remove the whole entry from the map. Otherwise, just clear
- * that receiver.
- *
- * @param[in] prodindex         product index of the requested product
- * @param[in] retxsockfd        sock file descriptor of the retransmission tcp
- *                              connection.
- */
-bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
-{
-    bool prodRemoved;
-    std::map<uint32_t, RetxMetadata*>::iterator it;
-    pthread_rwlock_wrlock(&indexMetaMapLock);
-    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
-        it->second->unfinReceivers.erase(retxsockfd);
-        if (it->second->unfinReceivers.empty()) {
-            prodRemoved = rmRetxMetadataNoLock(prodindex);
-        }
-        else {
-            prodRemoved = false;
-        }
-    }
-    else {
-        prodRemoved = false;
-    }
-    pthread_rwlock_unlock(&indexMetaMapLock);
-    return prodRemoved;
 }

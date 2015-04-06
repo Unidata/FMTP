@@ -29,14 +29,15 @@
 #define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
 
+#include <netinet/in.h>
+#include <pthread.h>
+#include <stdint.h>
+#include <chrono>
 #include <condition_variable>
 #include <exception>
 #include <list>
 #include <mutex>
-#include <netinet/in.h>
-#include <pthread.h>
 #include <queue>
-#include <stdint.h>
 #include <string>
 
 #include "ProdBitMap.h"
@@ -67,64 +68,35 @@ public:
                 std::string mcastAddr,
                 const unsigned short mcastPort);
     ~vcmtpRecvv3();
+
     void    SetLinkSpeed(uint64_t speed);
     void    Start();
     void    Stop();
+    void    SetDefaultIF(const std::string ifaceip);
 
 private:
-    std::string             tcpAddr;
-    unsigned short          tcpPort;
-    std::string             mcastAddr;
-    unsigned short          mcastPort;
-    int                     mcastSock;
-    int                     retxSock;
-    struct sockaddr_in      mcastgroup;
-    /** struct of multicast object */
-    struct ip_mreq          mreq;
-    /** temporary header buffer for each vcmtp packet */
-    VcmtpHeader             vcmtpHeader;
-    std::mutex              vcmtpHeaderMutex;
-    /** begin of product struct */
-    BOPMsg                  BOPmsg;
-    /** callback function of the receiving application */
-    RecvAppNotifier*        notifier;
-    /** pointer to a start point in product queue */
-    void*                   prodptr;
-    TcpRecv*                tcprecv;
-    ProdBitMap*             bitmap;
-    std::queue<INLReqMsg>   msgqueue;
-    std::condition_variable msgQfilled;
-    std::mutex              msgQmutex;
-    /** track all the missing BOP until received */
-    std::list<uint32_t>     misBOPlist;
-    std::mutex              BOPListMutex;
-    /*!< the state of EOP, true: received false: missing */
-    bool                    EOPStatus;
-    std::mutex              EOPStatMtx;
-    pthread_t               retx_rq; /*!< Retransmission request thread */
-    pthread_t               retx_t;  /*!< Retransmission receive thread */
-    pthread_t               mcast_t; /*!< Multicast receiver thread     */
-    pthread_t               timer_t; /*!< BOP timer thread              */
-    /** a queue containing timerParam structure for each product */
-    std::queue<timerParam>  timerParamQ;
-    std::condition_variable timerQfilled;
-    std::mutex              timerQmtx;
-    std::condition_variable timerWake;
-    std::mutex              timerWakemtx;
-    std::mutex              exitMutex;
-    std::exception          except;
-    bool                    exceptIsSet;
-    std::mutex              linkmtx;
-    uint64_t                linkspeed;  /*!< max link speed up to 18000 Pbps */
-
-    void    joinGroup(std::string mcastAddr, const unsigned short mcastPort);
-    static void*  StartRetxRequester(void* ptr);
-    static void*  StartRetxHandler(void* ptr);
-    static void*  StartMcastHandler(void* ptr);
-    void    StartRetxProcedure();
-    void    mcastHandler();
-    void    retxHandler();
-    void    retxRequester();
+    bool addUnrqBOPinList(uint32_t prodindex);
+    /**
+     * Handles a multicast BOP message given a peeked-at VCMTP header.
+     *
+     * @pre                           The multicast socket contains a VCMTP BOP
+     *                                packet.
+     * @param[in] header              The associated, already-decoded VCMTP header.
+     * @throw     std::system_error   if an error occurs while reading the socket.
+     * @throw     std::runtime_error  if the packet is invalid.
+     */
+    void BOPHandler(const VcmtpHeader& header);
+    /**
+     * Parse BOP message and call notifier to notify receiving application.
+     *
+     * @param[in] header           Header associated with the packet.
+     * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
+     * @throw std::runtime_error   if the payload is too small.
+     */
+    void BOPHandler(const VcmtpHeader& header,
+                    const char* const  VcmtpPacketData);
+    void checkPayloadLen(const VcmtpHeader& header, const size_t nbytes);
+    void clearEOPState();
     /**
      * Decodes the header of a VCMTP packet in-place.
      *
@@ -143,42 +115,12 @@ private:
      */
     void decodeHeader(char* const packet, const size_t nbytes,
                       VcmtpHeader& header, char** const payload);
-    void checkPayloadLen(const VcmtpHeader& header, const size_t nbytes);
-    /**
-     * Parse BOP message and call notifier to notify receiving application.
-     *
-     * @param[in] header           Header associated with the packet.
-     * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
-     * @throw std::runtime_error   if the payload is too small.
-     */
-    void BOPHandler(const VcmtpHeader& header,
-                    const char* const  VcmtpPacketData);
-    bool rmMisBOPinList(uint32_t prodindex);
-    bool addUnrqBOPinList(uint32_t prodindex);
-    void mcastEOPHandler(const VcmtpHeader& header);
-    void retxEOPHandler(const VcmtpHeader& header);
     void EOPHandler(const VcmtpHeader& header);
-    /**
-     * Handles a multicast BOP message given a peeked-at VCMTP header.
-     *
-     * @pre                           The multicast socket contains a VCMTP BOP
-     *                                packet.
-     * @param[in] header              The associated, already-decoded VCMTP header.
-     * @throw     std::system_error   if an error occurs while reading the socket.
-     * @throw     std::runtime_error  if the packet is invalid.
-     */
-    void BOPHandler(const VcmtpHeader& header);
-    /**
-     * Reads the data portion of a VCMTP data-packet into the location specified
-     * by the receiving application.
-     *
-     * @pre                       The socket contains a VCMTP data-packet.
-     * @param[in] header          The associated, peeked-at and decoded header.
-     * @throw std::system_error   if an error occurs while reading the multicast
-     *                            socket.
-     * @throw std::runtime_error  if the packet is invalid.
-     */
-    void readMcastData(const VcmtpHeader& header);
+    bool hasLastBlock();
+    bool isEOPReceived();
+    void joinGroup(std::string mcastAddr, const unsigned short mcastPort);
+    void mcastHandler();
+    void mcastEOPHandler(const VcmtpHeader& header);
     /**
      * Pushes a request for a data-packet onto the retransmission-request queue.
      *
@@ -200,6 +142,21 @@ private:
      * @param[in] prodindex  Index of the associated data-product.
      */
     void pushMissingEopReq(const uint32_t prodindex);
+    void retxHandler();
+    void retxRequester();
+    bool rmMisBOPinList(uint32_t prodindex);
+    void retxEOPHandler(const VcmtpHeader& header);
+    /**
+     * Reads the data portion of a VCMTP data-packet into the location specified
+     * by the receiving application.
+     *
+     * @pre                       The socket contains a VCMTP data-packet.
+     * @param[in] header          The associated, peeked-at and decoded header.
+     * @throw std::system_error   if an error occurs while reading the multicast
+     *                            socket.
+     * @throw std::runtime_error  if the packet is invalid.
+     */
+    void readMcastData(const VcmtpHeader& header);
     /**
      * Requests data-packets that lie between the last previously-received
      * data-packet of the current data-product and its most recently-received
@@ -232,22 +189,82 @@ private:
      * the request is sent out. Otherwise, return false.
      * */
     bool reqEOPifMiss(const uint32_t prodindex);
-
-    bool  sendBOPRetxReq(uint32_t prodindex);
-    bool  sendEOPRetxReq(uint32_t prodindex);
-    bool  sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
-                          uint16_t payloadlen);
-    bool  sendRetxEnd(uint32_t prodindex);
-    bool  hasLastBlock();
-    void  startTimerThread();
     static void* runTimerThread(void* ptr);
-    void  timerThread();
-
+    int setDefaultIF();
+    bool sendBOPRetxReq(uint32_t prodindex);
+    bool sendEOPRetxReq(uint32_t prodindex);
+    bool sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
+                         uint16_t payloadlen);
+    bool sendRetxEnd(uint32_t prodindex);
+    static void*  StartRetxRequester(void* ptr);
+    static void*  StartRetxHandler(void* ptr);
+    static void*  StartMcastHandler(void* ptr);
+    void StartRetxProcedure();
+    void startTimerThread();
     void setEOPReceived();
-    void clearEOPState();
-    bool isEOPReceived();
+    void timerThread();
     void taskExit(const std::exception&);
     void WriteToLog(const std::string& content);
+
+    std::string             tcpAddr;
+    unsigned short          tcpPort;
+    std::string             mcastAddr;
+    unsigned short          mcastPort;
+    /* IP address of the default interface */
+    std::string             ifAddr;
+    bool                    newinterface;
+    int                     mcastSock;
+    int                     retxSock;
+    struct sockaddr_in      mcastgroup;
+    /* struct of multicast object */
+    struct ip_mreq          mreq;
+    /* temporary header buffer for each vcmtp packet */
+    VcmtpHeader             vcmtpHeader;
+    std::mutex              vcmtpHeaderMutex;
+    /* begin of product struct */
+    BOPMsg                  BOPmsg;
+    /* callback function of the receiving application */
+    RecvAppNotifier*        notifier;
+    /* pointer to a start point in product queue */
+    void*                   prodptr;
+    TcpRecv*                tcprecv;
+    ProdBitMap*             bitmap;
+    std::queue<INLReqMsg>   msgqueue;
+    std::condition_variable msgQfilled;
+    std::mutex              msgQmutex;
+    /* track all the missing BOP until received */
+    std::list<uint32_t>     misBOPlist;
+    std::mutex              BOPListMutex;
+    /* the state of EOP, true: received false: missing */
+    bool                    EOPStatus;
+    std::mutex              EOPStatMtx;
+    /* Retransmission request thread */
+    pthread_t               retx_rq;
+    /* Retransmission receive thread */
+    pthread_t               retx_t;
+    /* Multicast receiver thread */
+    pthread_t               mcast_t;
+    /* BOP timer thread */
+    pthread_t               timer_t;
+    /* a queue containing timerParam structure for each product */
+    std::queue<timerParam>  timerParamQ;
+    std::condition_variable timerQfilled;
+    std::mutex              timerQmtx;
+    std::condition_variable timerWake;
+    std::mutex              timerWakemtx;
+    std::mutex              exitMutex;
+    std::exception          except;
+    bool                    exceptIsSet;
+    std::mutex              linkmtx;
+    /* max link speed up to 18000 Pbps */
+    uint64_t                linkspeed;
+
+    /* member variables for measurement use only */
+    bool                    rxdone;
+    std::chrono::high_resolution_clock::time_point start_t;
+    std::chrono::high_resolution_clock::time_point end_t;
+    int recvbytes;
+    /* member variables for measurement use ends */
 };
 
 
