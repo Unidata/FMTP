@@ -210,7 +210,7 @@ void vcmtpRecvv3::joinGroup(
 {
     (void) memset(&mcastgroup, 0, sizeof(mcastgroup));
     mcastgroup.sin_family = AF_INET;
-    mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
+    mcastgroup.sin_addr.s_addr = htonl(INADDR_ANY);
     mcastgroup.sin_port = htons(mcastPort);
     if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
