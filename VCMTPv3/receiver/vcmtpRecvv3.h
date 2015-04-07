@@ -58,17 +58,17 @@ struct StartTimerInfo
 
 class vcmtpRecvv3 {
 public:
-    vcmtpRecvv3(std::string tcpAddr,
+    vcmtpRecvv3(const std::string    tcpAddr,
                 const unsigned short tcpPort,
-                std::string mcastAddr,
+                const std::string    mcastAddr,
                 const unsigned short mcastPort,
-                RecvAppNotifier* notifier,
-                std::string ifAddr = "0.0.0.0");
-    vcmtpRecvv3(std::string tcpAddr,
+                RecvAppNotifier*     notifier,
+                const std::string    ifAddr = "0.0.0.0");
+    vcmtpRecvv3(const std::string    tcpAddr,
                 const unsigned short tcpPort,
-                std::string mcastAddr,
+                const std::string    mcastAddr,
                 const unsigned short mcastPort,
-                std::string ifAddr = "0.0.0.0");
+                const std::string    ifAddr = "0.0.0.0");
     ~vcmtpRecvv3();
 
     void    SetLinkSpeed(uint64_t speed);

@@ -52,12 +52,12 @@
  * @param[in] ifAddr        IP of the interface to listen for multicast packets.
  */
 vcmtpRecvv3::vcmtpRecvv3(
-    std::string          tcpAddr,
+    const std::string    tcpAddr,
     const unsigned short tcpPort,
-    std::string          mcastAddr,
+    const std::string    mcastAddr,
     const unsigned short mcastPort,
     RecvAppNotifier*     notifier,
-    std::string          ifAddr)
+    const std::string    ifAddr)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
@@ -95,11 +95,11 @@ vcmtpRecvv3::vcmtpRecvv3(
  * @param[in] ifAddr        IP of the interface to listen for multicast packets.
  */
 vcmtpRecvv3::vcmtpRecvv3(
-    std::string          tcpAddr,
+    const std::string    tcpAddr,
     const unsigned short tcpPort,
-    std::string          mcastAddr,
+    const std::string    mcastAddr,
     const unsigned short mcastPort,
-    std::string          ifAddr)
+    const std::string    ifAddr)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
