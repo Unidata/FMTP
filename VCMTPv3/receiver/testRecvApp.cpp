@@ -41,11 +41,11 @@
  * @param[in] tcpPort      Port number of the sender.
  * @param[in] mcastAddr    multicast address of the group.
  * @param[in] mcastPort    Port number of the multicast group.
- * @param[in] ifAddr       IP of the interface to set as default.
+ * @param[in] ifAddr       IP of the interface to listen for multicast packets.
  */
 int main(int argc, char* argv[])
 {
-    if (argc < 4) {
+    if (argc < 5) {
         std::cerr << "ERROR: Insufficient arguments." << std::endl;
         return 1;
     }
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
 
-    vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
+    vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort, ifAddr);
     vcmtpRecvv3.SetLinkSpeed(1000000000);
     vcmtpRecvv3.Start();
     return 0;

@@ -49,18 +49,21 @@
  * @param[in] mcastPort     Udp multicast port for receiving data products.
  * @param[in] notifier      Callback function to notify receiving application
  *                          of incoming Begin-Of-Product messages.
+ * @param[in] ifAddr        IP of the interface to listen for multicast packets.
  */
 vcmtpRecvv3::vcmtpRecvv3(
     std::string          tcpAddr,
     const unsigned short tcpPort,
     std::string          mcastAddr,
     const unsigned short mcastPort,
-    RecvAppNotifier*     notifier)
+    RecvAppNotifier*     notifier,
+    std::string          ifAddr)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
+    ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     prodptr(0),
     notifier(notifier),
@@ -77,8 +80,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_rq(),
     retx_t(),
     mcast_t(),
-    timer_t(),
-    newinterface(false)
+    timer_t()
 {
 }
 
@@ -90,22 +92,22 @@ vcmtpRecvv3::vcmtpRecvv3(
  * @param[in] tcpPort       Tcp unicast port for retransmission.
  * @param[in] mcastAddr     Udp multicast address for receiving data products.
  * @param[in] mcastPort     Udp multicast port for receiving data products.
+ * @param[in] ifAddr        IP of the interface to listen for multicast packets.
  */
 vcmtpRecvv3::vcmtpRecvv3(
     std::string          tcpAddr,
     const unsigned short tcpPort,
     std::string          mcastAddr,
-    const unsigned short mcastPort)
+    const unsigned short mcastPort,
+    std::string          ifAddr)
 :
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
+    ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     prodptr(0),
-    /**
-     * constructor called by independent test program will set notifier to NULL
-     */
     notifier(0),
     mcastSock(0),
     retxSock(0),
@@ -120,8 +122,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_rq(),
     retx_t(),
     mcast_t(),
-    timer_t(),
-    newinterface(false)
+    timer_t()
 {
 }
 
@@ -183,12 +184,6 @@ void vcmtpRecvv3::Start()
     /** clear EOPStatus for new product */
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
-    if (newinterface) {
-        if (setDefaultIF() < 0) {
-            throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::Start(): Couldn't set default interface");
-        }
-    }
 
     StartRetxProcedure();
     startTimerThread();
@@ -220,18 +215,6 @@ void vcmtpRecvv3::Stop()
     (void)pthread_cancel(mcast_t); /* failure is irrelevant */
     (void)pthread_cancel(retx_rq); /* failure is irrelevant */
     (void)pthread_cancel(retx_t);  /* failure is irrelevant */
-}
-
-
-/**
- * Stores the interface IP and sets boolean flag.
- *
- * @param[in] ifaceip         IP address of the specified interface.
- */
-void vcmtpRecvv3::SetDefaultIF(const std::string ifaceip)
-{
-    ifAddr = ifaceip;
-    newinterface = true;
 }
 
 
@@ -568,7 +551,7 @@ void vcmtpRecvv3::joinGroup(
                 std::to_string(static_cast<long long>(mcastSock)) +
                                " to multicast group " + mcastgroup);
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
-    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    mreq.imr_interface.s_addr = inet_addr(ifAddr.c_str());
     if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
                    sizeof(mreq)) < 0 )
         throw std::system_error(errno, std::system_category(),
@@ -1099,25 +1082,6 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
         recvr->taskExit(e);
     }
     return NULL;
-}
-
-
-/**
- * Sets the interface associated with the given IP address as default.
- *
- * @return                    0 indicates success, -1 indicates failure.
- */
-int vcmtpRecvv3::setDefaultIF()
-{
-    struct in_addr ifaddr;
-    ifaddr.s_addr = inet_addr(ifAddr.c_str());
-    if (setsockopt(mcastSock, IPPROTO_IP, IP_MULTICAST_IF, &ifaddr,
-                   sizeof(ifaddr)) < 0 ) {
-        return -1;
-    }
-    else {
-        return 0;
-    }
 }
 
 

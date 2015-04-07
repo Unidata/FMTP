@@ -62,17 +62,18 @@ public:
                 const unsigned short tcpPort,
                 std::string mcastAddr,
                 const unsigned short mcastPort,
-                RecvAppNotifier* notifier);
+                RecvAppNotifier* notifier,
+                std::string ifAddr = "0.0.0.0");
     vcmtpRecvv3(std::string tcpAddr,
                 const unsigned short tcpPort,
                 std::string mcastAddr,
-                const unsigned short mcastPort);
+                const unsigned short mcastPort,
+                std::string ifAddr = "0.0.0.0");
     ~vcmtpRecvv3();
 
     void    SetLinkSpeed(uint64_t speed);
     void    Start();
     void    Stop();
-    void    SetDefaultIF(const std::string ifaceip);
 
 private:
     bool addUnrqBOPinList(uint32_t prodindex);
@@ -190,7 +191,6 @@ private:
      * */
     bool reqEOPifMiss(const uint32_t prodindex);
     static void* runTimerThread(void* ptr);
-    int setDefaultIF();
     bool sendBOPRetxReq(uint32_t prodindex);
     bool sendEOPRetxReq(uint32_t prodindex);
     bool sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
@@ -212,7 +212,6 @@ private:
     unsigned short          mcastPort;
     /* IP address of the default interface */
     std::string             ifAddr;
-    bool                    newinterface;
     int                     mcastSock;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
