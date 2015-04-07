@@ -57,7 +57,6 @@ int main(int argc, char* argv[])
 
     vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort);
     vcmtpRecvv3.SetLinkSpeed(1000000000);
-    vcmtpRecvv3.SetDefaultIF(ifAddr.c_str());
     vcmtpRecvv3.Start();
     return 0;
 }
