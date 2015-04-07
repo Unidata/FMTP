@@ -40,9 +40,8 @@
 
 class UdpSend {
 public:
-    UdpSend(const std::string& recvaddr, unsigned short recvport);
-    UdpSend(const std::string& recvaddr, unsigned short recvport,
-            unsigned char ttl);
+    UdpSend(const std::string& recvaddr, const unsigned short recvport,
+            const unsigned char ttl, const std::string& ifAddr);
     ~UdpSend();
 
     void Init();  /*!< start point which caller should call */
@@ -68,11 +67,12 @@ public:
     int SetDefaultIF(const std::string ifaceip);
 
 private:
-    int                sock_fd;
-    struct sockaddr_in recv_addr;
-    std::string        recvAddr;
-    unsigned short     recvPort;
-    unsigned short     ttl;
+    int                   sock_fd;
+    struct sockaddr_in    recv_addr;
+    const std::string     recvAddr;
+    const unsigned short  recvPort;
+    const unsigned short  ttl;
+    const std::string     ifAddr;
 };
 
 

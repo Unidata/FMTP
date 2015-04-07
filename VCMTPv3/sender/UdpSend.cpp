@@ -42,27 +42,16 @@
 
 /**
  * Constructor, set the IP address and port of the receiver.
- *
- * @param[in] recvaddr     IP address of the receiver.
- * @param[in] recvport     Port number of the receiver.
- */
-UdpSend::UdpSend(const std::string& recvaddr, unsigned short recvport)
-    : recvAddr(recvaddr), recvPort(recvport)
-{
-}
-
-
-/**
- * Constructor, set the IP address and port of the receiver.
  * Override the default TTL value (which is 1) using the given ttl parameter.
  *
  * @param[in] recvAddr     IP address of the receiver.
- * @param[in] port         Port number of the receiver.
- * @param[in] newTTL       Time to live.
+ * @param[in] recvport     Port number of the receiver.
+ * @param[in] ttl          Time to live.
+ * @param[in] ifAddr       IP of interface to listen for multicast.
  */
-UdpSend::UdpSend(const std::string& recvaddr, unsigned short recvport,
-        unsigned char newTTL)
-    : recvAddr(recvaddr), recvPort(recvport), ttl(newTTL)
+UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
+                 const unsigned char ttl, const std::string& ifAddr)
+    : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr)
 {
 }
 

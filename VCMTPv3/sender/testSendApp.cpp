@@ -100,10 +100,9 @@ int main(int argc, char const* argv[])
 
     vcmtpSendv3* sender =
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
-                        0, 0);
+                        0, 1, ifAddr.c_str());
 
     sender->Start();
-    sender->SetDefaultIF(ifAddr.c_str());
     sleep(2);
 
     for(int i=0; i<100; ++i) {

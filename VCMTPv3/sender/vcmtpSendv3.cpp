@@ -286,22 +286,6 @@ void vcmtpSendv3::Stop()
 
 
 /**
- * Sets the interface associated with the given IP address as default.
- *
- * @param[in] ifaceip         IP address of the specified interface.
- * @throw std::runtime_error  if UdpSend::SetDefaultIF() throws an error.
- */
-void vcmtpSendv3::SetDefaultIF(const std::string ifaceip)
-{
-    if (udpsend->SetDefaultIF(ifaceip) < 0) {
-        throw std::system_error(errno, std::system_category(), std::string(
-                "vcmtpSendv3::SetDefaultIF() Couldn't set " + ifaceip
-                + " as default interface."));
-    }
-}
-
-
-/**
  * Adds and entry for a data-product to the retransmission set.
  *
  * @param[in] data      The data-product.
