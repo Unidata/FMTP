@@ -47,107 +47,40 @@
 
 
 /**
- * Constructs a sender instance and initializes a udpsend object pointer, a
- * tcpsend object pointer, a senderMetadata object pointer and set prodIndex to
- * 0 and make it maintained by sender itself. retxTimeoutRatio will be
- * initialized to 50.0 as a default value.
- *
- * @param[in] tcpAddr       Unicast address of the sender.
- * @param[in] tcpPort       Unicast port of the sender.
- * @param[in] mcastAddr     Multicast group address.
- * @param[in] mcastPort     Multicast group port.
- */
-vcmtpSendv3::vcmtpSendv3(const char*          tcpAddr,
-                         const unsigned short tcpPort,
-                         const char*          mcastAddr,
-                         const unsigned short mcastPort)
-:
-    udpsend(new UdpSend(mcastAddr,mcastPort)),
-    tcpsend(new TcpSend(tcpAddr, tcpPort)),
-    sendMeta(new senderMetadata()),
-    prodIndex(0),
-    retxTimeoutRatio(500000.0),
-    notifier(0),
-    linkspeed(0),
-    exitMutex(),
-    except(),
-    exceptIsSet(false),
-    coor_t(),
-    timer_t()
-{
-}
-
-
-/**
- * Constructs a sender instance with prodIndex specified and initialized by
- * receiving applications. VCMTP sender will start from this given prodindex.
- * retxTimeoutRatio will be initialized to 50.0 as a default value.
- *
- * @param[in] tcpAddr         Unicast address of the sender.
- * @param[in] tcpPort         Unicast port of the sender or 0, in which case one
- *                            is chosen by the operating-system.
- * @param[in] mcastAddr       Multicast group address.
- * @param[in] mcastPort       Multicast group port.
- * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
- * @param[in] notifier        Sending application notifier.
- */
-vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
-                         const unsigned short        tcpPort,
-                         const char*                 mcastAddr,
-                         const unsigned short        mcastPort,
-                         uint32_t                    initProdIndex,
-                         SendAppNotifier*            notifier,
-                         const unsigned char         ttl)
-:
-    udpsend(new UdpSend(mcastAddr, mcastPort, ttl)),
-    tcpsend(new TcpSend(tcpAddr, tcpPort)),
-    sendMeta(new senderMetadata()),
-    prodIndex(initProdIndex),
-    retxTimeoutRatio(500000.0),
-    notifier(notifier),
-    linkspeed(0),
-    exitMutex(),
-    except(),
-    exceptIsSet(false),
-    coor_t(),
-    timer_t()
-{
-}
-
-
-/**
  * Constructs a sender instance with prodIndex specified and initialized by
  * receiving applications. VCMTP sender will start from this given prodindex.
  * Besides, timeoutratio for all the products will be passed in, which means
  * timeoutratio is only associated with a particular network. And TTL will
  * also be set to override the default value 1.
  *
- * @param[in] tcpAddr         Unicast address of the sender.
- * @param[in] tcpPort         Unicast port of the sender or 0, in which case one
- *                            is chosen by the operating-system.
- * @param[in] mcastAddr       Multicast group address.
- * @param[in] mcastPort       Multicast group port.
- * @param[in] initProdIndex   Initial prodIndex set by receiving applications.
- * @param[in] timeoutRatio    retransmission timeout factor to tradeoff between
- *                            performance and robustness.
- * @param[in] ttl             Time to live, if not specified, default value is 1.
- * @param[in] notifier        Sending application notifier.
+ * @param[in] tcpAddr        Unicast address of the sender.
+ * @param[in] tcpPort        Unicast port of the sender or 0, in which case one
+ *                           is chosen by the operating-system.
+ * @param[in] mcastAddr      Multicast group address.
+ * @param[in] mcastPort      Multicast group port.
+ * @param[in] notifier       Sending application notifier.
+ * @param[in] ttl            Time to live, if not specified, default value is 1.
+ * @param[in] ifAddr         IP of the interface to listen for multicast.
+ * @param[in] initProdIndex  Initial prodIndex set by receiving applications.
+ * @param[in] timeoutRatio   retransmission timeout factor to tradeoff between
+ *                           performance and robustness.
  */
 vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const unsigned short        tcpPort,
                          const char*                 mcastAddr,
                          const unsigned short        mcastPort,
-                         uint32_t                    initProdIndex,
-                         float                       timeoutRatio,
-                         unsigned char               ttl,
-                         SendAppNotifier*            notifier)
+                         SendAppNotifier*            notifier,
+                         const unsigned char         ttl,
+                         const std::string           ifAddr,
+                         const uint32_t              initProdIndex,
+                         const float                 timeoutRatio)
 :
-    udpsend(new UdpSend(mcastAddr, mcastPort, ttl)),
+    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
+    notifier(notifier),
     prodIndex(initProdIndex),
     retxTimeoutRatio(timeoutRatio),
-    notifier(notifier),
     linkspeed(0),
     exitMutex(),
     except(),

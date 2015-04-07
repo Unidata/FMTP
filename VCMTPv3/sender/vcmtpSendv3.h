@@ -86,24 +86,12 @@ public:
                  const char*           tcpAddr,
                  const unsigned short  tcpPort,
                  const char*           mcastAddr,
-                 const unsigned short  mcastPort);
-    explicit vcmtpSendv3(
-                 const char*           tcpAddr,
-                 const unsigned short  tcpPort,
-                 const char*           mcastAddr,
                  const unsigned short  mcastPort,
-                 uint32_t              initProdIndex,
-                 SendAppNotifier*      notifier,
-                 const unsigned char   ttl = 1);
-    explicit vcmtpSendv3(
-                 const char*           tcpAddr,
-                 const unsigned short  tcpPort,
-                 const char*           mcastAddr,
-                 const unsigned short  mcastPort,
-                 uint32_t              initProdIndex,
-                 float                 timeoutRatio,
-                 unsigned char         ttl,
-                 SendAppNotifier*      notifier);
+                 SendAppNotifier*      notifier = NULL,
+                 const unsigned char   ttl = 1,
+                 const std::string     ifAddr = "0.0.0.0",
+                 const uint32_t        initProdIndex = 0,
+                 const float           timeoutRatio = 500000.0);
     ~vcmtpSendv3();
 
     unsigned short getTcpPortNum();
