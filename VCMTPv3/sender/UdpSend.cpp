@@ -92,6 +92,7 @@ void UdpSend::Init()
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
 
+    /*
     if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
             < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
@@ -99,6 +100,7 @@ void UdpSend::Init()
                 "IP address ") + inet_ntoa(recv_addr.sin_addr) +
                 ", port " + std::to_string(recvPort));
     }
+    */
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
                 sizeof(newttl)) < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
@@ -129,7 +131,7 @@ void UdpSend::Init()
 ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
                           const size_t dataLen)
 {
-    int ret;
+    struct msghdr msg;
     /** vector including the two memory locations */
     struct iovec iov[2];
     iov[0].iov_base = header;
@@ -137,8 +139,15 @@ ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
     iov[1].iov_base = data;
     iov[1].iov_len  = dataLen;
 
-    /** call the gathered writing system call to avoid multiple copies */
-    ret = writev(sock_fd, iov, 2);
+    msg.msg_name       = &recv_addr;
+    msg.msg_namelen    = sizeof(recv_addr);
+    msg.msg_iov        = iov;
+    msg.msg_iovlen     = 2;
+    msg.msg_control    = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags      = 0;
+
+    int ret = sendmsg(sock_fd, &msg, 0);
     return ret;
 }
 
@@ -155,7 +164,9 @@ ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
  */
 ssize_t UdpSend::SendTo(const void* buff, size_t len)
 {
-    const ssize_t nbytes = send(sock_fd, buff, len, 0);
+    const ssize_t nbytes = sendto(sock_fd, buff, len, 0,
+                                  (struct sockaddr *)&recv_addr,
+                                  sizeof(recv_addr));
 
     if (nbytes == -1)
         throw std::system_error(errno, std::system_category(),
@@ -173,9 +184,19 @@ ssize_t UdpSend::SendTo(const void* buff, size_t len)
  * @throws    std::system_error  if an error occurs writing to the the UDP
  *                               socket.
  */
-int UdpSend::SendTo(const struct iovec* const iovec, const int nvec)
+int UdpSend::SendTo(struct iovec* const iovec, const int nvec)
 {
-    const ssize_t nbytes = writev(sock_fd, iovec, nvec);
+    struct msghdr msg;
+
+    msg.msg_name       = &recv_addr;
+    msg.msg_namelen    = sizeof(recv_addr);
+    msg.msg_iov        = iovec;
+    msg.msg_iovlen     = nvec;
+    msg.msg_control    = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags      = 0;
+
+    int nbytes = sendmsg(sock_fd, &msg, 0);
 
     if (nbytes == -1)
         throw std::system_error(errno, std::system_category(),

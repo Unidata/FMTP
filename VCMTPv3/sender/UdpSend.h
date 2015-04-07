@@ -34,7 +34,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <sys/uio.h>
 #include <string>
 
 
@@ -63,7 +62,7 @@ public:
      * @param[in] iovec  First I/O vector.
      * @param[in] nvec   Number of I/O vectors.
      */
-    int SendTo(const struct iovec* const iovec, const int nvec);
+    int SendTo(struct iovec* const iovec, const int nvec);
 
 private:
     int                   sock_fd;
