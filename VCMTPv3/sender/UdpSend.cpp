@@ -78,6 +78,7 @@ UdpSend::~UdpSend()
 void UdpSend::Init()
 {
     int newttl = ttl;
+    struct in_addr interfaceIP;
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
@@ -94,15 +95,21 @@ void UdpSend::Init()
     if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
             < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
-                "UdpSend::UdpSend() Couldn't connect UDP socket to "
+                "UdpSend::Init() Couldn't connect UDP socket to "
                 "IP address ") + inet_ntoa(recv_addr.sin_addr) +
                 ", port " + std::to_string(recvPort));
     }
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
                 sizeof(newttl)) < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
-                "UdpSend::UdpSend() Couldn't set UDP socket time-to-live "
+                "UdpSend::Init() Couldn't set UDP socket time-to-live "
                 "option to ") + std::to_string(ttl));
+    }
+    interfaceIP.s_addr = inet_addr(ifAddr.c_str());
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
+                   sizeof(interfaceIP)) < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
+                "UdpSend::Init() Couldn't set UDP socket default interface");
     }
 }
 
@@ -175,24 +182,4 @@ int UdpSend::SendTo(const struct iovec* const iovec, const int nvec)
                 "Couldn't write to UDP socket " + sock_fd);
 
     return nbytes;
-}
-
-
-/**
- * Set the interface associated with given address as default.
- *
- * @param[in] ifaceip            IP address of the specified interface
- * @return                       0 indicates success, -1 indicates failure.
- */
-int UdpSend::SetDefaultIF(const std::string ifaceip)
-{
-    struct in_addr interfaceIP;
-    interfaceIP.s_addr = inet_addr(ifaceip.c_str());
-    if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
-                   sizeof(interfaceIP)) < 0) {
-        return -1;
-    }
-    else {
-        return 0;
-    }
 }
