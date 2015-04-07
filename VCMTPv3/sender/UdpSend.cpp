@@ -41,8 +41,8 @@
 
 
 /**
- * Constructor, set the IP address and port of the receiver.
- * Override the default TTL value (which is 1) using the given ttl parameter.
+ * Constructor, set the IP address and port of the receiver, TTL and default
+ * multicast ingress interface.
  *
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] recvport     Port number of the receiver.
@@ -92,15 +92,6 @@ void UdpSend::Init()
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
 
-    /*
-    if (connect(sock_fd, (struct sockaddr *) &recv_addr, sizeof(recv_addr))
-            < 0) {
-        throw std::system_error(errno, std::system_category(), std::string(
-                "UdpSend::Init() Couldn't connect UDP socket to "
-                "IP address ") + inet_ntoa(recv_addr.sin_addr) +
-                ", port " + std::to_string(recvPort));
-    }
-    */
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
                 sizeof(newttl)) < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
@@ -118,8 +109,7 @@ void UdpSend::Init()
 
 /**
  * SendData() sends the packet content separated in two different physical
- * locations, which is put together into a io vector structure, to the
- * destination identified by a socket file descriptor.
+ * locations, which is put together into a io vector structure.
  *
  * @param[in] *header       a constant void type pointer that points to where
  *                          the content of the packet header lies.
@@ -153,8 +143,7 @@ ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
 
 
 /**
- * Send a piece of memory data given by the buff pointer and len length to the
- * already set destination which is identified by a socket file descriptor.
+ * Send a piece of memory data given by the buff pointer and len length.
  *
  * @param[in] *buff              a constant void type pointer that points to
  *                               where the piece of memory data to be sent lies.
