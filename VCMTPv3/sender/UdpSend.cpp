@@ -109,7 +109,7 @@ void UdpSend::Init()
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
                    sizeof(interfaceIP)) < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
-                "UdpSend::Init() Couldn't set UDP socket default interface");
+                "UdpSend::Init() Couldn't set UDP socket default interface"));
     }
 }
 
