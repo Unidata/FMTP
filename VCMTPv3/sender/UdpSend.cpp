@@ -83,6 +83,7 @@ void UdpSend::Init()
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         throw std::system_error(errno, std::system_category(),
                 "UdpSend::UdpSend() Couldn't create UDP socket");
+
     /** clear struct recv_addr. */
     (void) memset(&recv_addr, 0, sizeof(recv_addr));
     /** set connection type to IPv4 */
@@ -92,12 +93,27 @@ void UdpSend::Init()
     /** set the port number to the port number passed to the constructor */
     recv_addr.sin_port = htons(recvPort);
 
+    int reuseaddr = true;
+    if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr,
+                   sizeof(reuseaddr)) < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
+                "UdpSend::Init() Couldn't enable Address reuse"));
+    }
+
+    int reuseport = true;
+    if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport,
+                   sizeof(reuseport)) < 0) {
+        throw std::system_error(errno, std::system_category(), std::string(
+                "UdpSend::Init() Couldn't enable Port reuse"));
+    }
+
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
                 sizeof(newttl)) < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
                 "UdpSend::Init() Couldn't set UDP socket time-to-live "
                 "option to ") + std::to_string(ttl));
     }
+
     interfaceIP.s_addr = inet_addr(ifAddr.c_str());
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
                    sizeof(interfaceIP)) < 0) {
