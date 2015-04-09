@@ -350,12 +350,11 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * link speed. Besides, a little more extra time would be favorable to
      * tolerate possible fluctuation.
      */
-    float sleeptime = 1.5 * (BOPmsg.prodsize / linkspeed);
+    double sleeptime = 50 * ((double)BOPmsg.prodsize / (double)linkspeed);
     /** add the new product into timer queue */
     {
         std::unique_lock<std::mutex> lock(timerQmtx);
-        //timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
-        timerParam timerparam = {vcmtpHeader.prodindex, 0.2};
+        timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
         timerParamQ.push(timerparam);
         timerQfilled.notify_all();
     }

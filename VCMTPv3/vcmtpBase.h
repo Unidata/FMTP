@@ -98,7 +98,7 @@ typedef struct recvInternalRetxReqMessage {
 /** a structure defining parameters for each product, prodindex : sleeptime */
 typedef struct timerParameter {
     uint32_t prodindex;
-    float    seconds;
+    double   seconds;
 } timerParam;
 
 
