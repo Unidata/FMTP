@@ -252,8 +252,7 @@ private:
     std::condition_variable timerWake;
     std::mutex              timerWakemtx;
     std::mutex              exitMutex;
-    std::exception          except;
-    bool                    exceptIsSet;
+    std::exception_ptr      except;
     std::mutex              linkmtx;
     /* max link speed up to 18000 Pbps */
     uint64_t                linkspeed;

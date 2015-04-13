@@ -28,6 +28,7 @@
 #include "vcmtpRecvv3.h"
 
 #include <arpa/inet.h>
+#include <exception>
 #include <fcntl.h>
 #include <math.h>
 #include <memory.h>
@@ -76,7 +77,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     EOPStatus(false),
     exitMutex(),
     except(),
-    exceptIsSet(false),
     retx_rq(),
     retx_t(),
     mcast_t(),
@@ -118,7 +118,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     EOPStatus(false),
     exitMutex(),
     except(),
-    exceptIsSet(false),
     retx_rq(),
     retx_t(),
     mcast_t(),
@@ -198,8 +197,8 @@ void vcmtpRecvv3::Start()
     (void)pthread_join(mcast_t, NULL);
     {
         std::unique_lock<std::mutex> lock(exitMutex);
-        if (exceptIsSet)
-            throw except;
+        if (except)
+            std::rethrow_exception(except);
     }
 }
 
@@ -782,7 +781,7 @@ void vcmtpRecvv3::retxHandler()
             }
 
             bitmap->set(header.seqnum/VCMTP_DATA_LEN);
-            if (bitmap && bitmap->isComplete()) {
+            if (bitmap->isComplete()) {
                 sendRetxEnd(header.prodindex);
                 if (notifier)
                     notifier->notify_of_eop();
@@ -1335,10 +1334,8 @@ void vcmtpRecvv3::taskExit(const std::exception& e)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
-        if (!exceptIsSet) {
-            except = e;
-            exceptIsSet = true;
-        }
+        if (!except)
+            except = std::make_exception_ptr(e);
     }
     Stop();
 }

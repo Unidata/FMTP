@@ -88,7 +88,8 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     except(),
     exceptIsSet(false),
     coor_t(),
-    timer_t()
+    timer_t(),
+    txdone(false)
 {
 }
 
@@ -1021,7 +1022,7 @@ void vcmtpSendv3::timerThread()
     while (1) {
         uint32_t prodindex;
         try {
-            uint32_t prodindex = timerDelayQ.pop();
+            prodindex = timerDelayQ.pop();
         }
         catch (std::runtime_error& e) {
             // Product-index delay-queue, `timerDelayQ`, was externally disabled

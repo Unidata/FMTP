@@ -55,8 +55,8 @@ senderMetadata::~senderMetadata()
     for (std::map<uint32_t, RetxMetadata*>::iterator it = indexMetaMap.begin();
          it != indexMetaMap.end(); ++it) {
         delete(it->second);
-        indexMetaMap.erase(it);
     }
+    indexMetaMap.clear();
 }
 
 
