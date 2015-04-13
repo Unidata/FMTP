@@ -60,7 +60,9 @@
  * @param[in] mcastPort      Multicast group port.
  * @param[in] notifier       Sending application notifier.
  * @param[in] ttl            Time to live, if not specified, default value is 1.
- * @param[in] ifAddr         IP of the interface to listen for multicast.
+ * @param[in] ifAddr         IP address of the interface to use to send
+ *                           multicast packets. "0.0.0.0" obtains the default
+ *                           multicast interface.
  * @param[in] initProdIndex  Initial prodIndex set by receiving applications.
  * @param[in] timeoutRatio   retransmission timeout factor to tradeoff between
  *                           performance and robustness.

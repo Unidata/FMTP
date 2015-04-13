@@ -23,3 +23,6 @@ Makefile
 .cproject
 TESTDATA
 *.trs
+submit_to_coverity
+cov-int
+vcmtp.tgz
