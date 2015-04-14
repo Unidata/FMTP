@@ -51,7 +51,8 @@
  */
 UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
                  const unsigned char ttl, const std::string& ifAddr)
-    : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr)
+    : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr),
+      sock_fd(-1), recv_addr()
 {
 }
 

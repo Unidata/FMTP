@@ -47,7 +47,7 @@
  *                              byte-order.
  */
 TcpRecv::TcpRecv(const std::string& tcpaddr, unsigned short tcpport)
-    : tcpAddr(tcpaddr), tcpPort(tcpport), sockfd(-1)
+    : tcpAddr(tcpaddr), tcpPort(tcpport), sockfd(-1), servAddr()
 {
 }
 

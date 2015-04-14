@@ -55,7 +55,8 @@
  *                        available port)
  */
 TcpSend::TcpSend(std::string tcpaddr, unsigned short tcpport)
-    : tcpAddr(tcpaddr), tcpPort(tcpport), sockListMutex()
+    : tcpAddr(tcpaddr), tcpPort(tcpport), sockListMutex(),
+      sockfd(-1), servAddr()
 {
 }
 

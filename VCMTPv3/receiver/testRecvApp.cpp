@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
 
-    vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort, ifAddr);
+    vcmtpRecvv3 vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr, mcastPort, NULL, ifAddr);
     vcmtpRecvv3.SetLinkSpeed(1000000000);
     vcmtpRecvv3.Start();
     return 0;

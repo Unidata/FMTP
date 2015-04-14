@@ -92,7 +92,8 @@ int main(int argc, char const* argv[])
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
-    std::string filename("test.dat");
+    //std::string filename("test.dat");
+    std::string filename("TEST5K");
 
     char tmp[] = "test metadata";
     char* metadata = tmp;
@@ -107,7 +108,7 @@ int main(int argc, char const* argv[])
 
     for(int i=0; i<100; ++i) {
         /* generate random sized data */
-        randDataGen();
+        //randDataGen();
 
         /** use the filename to get filesize */
         struct stat filestatus;

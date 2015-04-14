@@ -64,6 +64,10 @@ vcmtpRecvv3::vcmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
+    mcastgroup(),
+    mreq(),
+    vcmtpHeader(),
+    BOPmsg(),
     ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     prodptr(0),
@@ -80,48 +84,10 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_rq(),
     retx_t(),
     mcast_t(),
-    timer_t()
-{
-}
-
-
-/**
- * Constructs the receiver side instance (for independent tests).
- *
- * @param[in] tcpAddr       Tcp unicast address for retransmission.
- * @param[in] tcpPort       Tcp unicast port for retransmission.
- * @param[in] mcastAddr     Udp multicast address for receiving data products.
- * @param[in] mcastPort     Udp multicast port for receiving data products.
- * @param[in] ifAddr        IP of the interface to listen for multicast packets.
- */
-vcmtpRecvv3::vcmtpRecvv3(
-    const std::string    tcpAddr,
-    const unsigned short tcpPort,
-    const std::string    mcastAddr,
-    const unsigned short mcastPort,
-    const std::string    ifAddr)
-:
-    tcpAddr(tcpAddr),
-    tcpPort(tcpPort),
-    mcastAddr(mcastAddr),
-    mcastPort(mcastPort),
-    ifAddr(ifAddr),
-    tcprecv(new TcpRecv(tcpAddr, tcpPort)),
-    prodptr(0),
-    notifier(0),
-    mcastSock(0),
-    retxSock(0),
-    msgQfilled(),
-    msgQmutex(),
-    BOPListMutex(),
-    bitmap(0),
-    EOPStatus(false),
-    exitMutex(),
-    except(),
-    retx_rq(),
-    retx_t(),
-    mcast_t(),
-    timer_t()
+    timer_t(),
+    linkspeed(0),
+    rxdone(false),
+    recvbytes(0)
 {
 }
 
@@ -1020,11 +986,17 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  *
  * @pre                       The socket contains a VCMTP data-packet.
  * @param[in] header          The associated, peeked-at and decoded header.
+ * @throw std::system_error   if seqnum is out of boundary.
  * @throw std::system_error   if an error occurs while reading the socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
+    if (header.seqnum > BOPmsg.prodsize) {
+        throw std::system_error(header.seqnum, std::system_category(),
+            "vcmtpRecvv3::recvMemData() seqnum out of boundary");
+    }
+
     if (header.prodindex == vcmtpHeader.prodindex) {
         /*
          * The data-packet is for the current data-product.

@@ -62,12 +62,7 @@ public:
                 const unsigned short tcpPort,
                 const std::string    mcastAddr,
                 const unsigned short mcastPort,
-                RecvAppNotifier*     notifier,
-                const std::string    ifAddr = "0.0.0.0");
-    vcmtpRecvv3(const std::string    tcpAddr,
-                const unsigned short tcpPort,
-                const std::string    mcastAddr,
-                const unsigned short mcastPort,
+                RecvAppNotifier*     notifier = NULL,
                 const std::string    ifAddr = "0.0.0.0");
     ~vcmtpRecvv3();
 
