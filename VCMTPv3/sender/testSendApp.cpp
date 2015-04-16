@@ -28,41 +28,54 @@
 
 #include "vcmtpSendv3.h"
 
-#include <fcntl.h>
+//#include <fcntl.h>
 #include <pthread.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
+//#include <sys/mman.h>
+//#include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <string>
 
 
 /**
- * Generates a random sized file filled with random bytes. The filename is
- * fixed as test.dat. But for every iteration its size will be changed, caller
- * needs to re-open it and read again.
+ * Read a metadata file which contains the file sizes of a pareto distribution.
  */
-void randDataGen()
+void metaParse(unsigned int* pvec, unsigned int pvecsize)
 {
-    std::random_device rd;
-    /* random file size range 1KB - 10MB */
-    unsigned int rand = rd() % 10240 + 1;
-    rand = rand * 1024;
-
-    char* data = new char[rand];
-    std::ifstream fp("/dev/urandom", std::ios::binary);
+    std::string line;
+    std::ifstream fp("size.txt", std::ios::binary);
     if (fp.is_open()) {
-        fp.read(data, rand);
-    }
-
-    std::ofstream rdfile("test.dat");
-    if (rdfile.is_open()) {
-        rdfile.write(data, rand);
+        for(int i=0; i < pvecsize; ++i) {
+            std::getline(fp, line);
+            pvec[i] = std::stoi(line);
+        }
     }
     fp.close();
-    rdfile.close();
+}
+
+
+/**
+ * Generates a pareto distributed file filled with random bytes. The content
+ * of this file would be stored in heap and pointed by a pointer.
+ */
+char* paretoGen(unsigned int size)
+{
+    char* data = new char[size];
+    std::ifstream fp("/dev/urandom", std::ios::binary);
+    if (fp.is_open()) {
+        fp.read(data, size);
+    }
+    fp.close();
+    return data;
+}
+
+
+/**
+ * Delete dynamically allocated heap pointer.
+ */
+void paretoDestroy(char* data)
+{
     delete[] data;
     data = NULL;
 }
@@ -92,8 +105,8 @@ int main(int argc, char const* argv[])
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
-    //std::string filename("test.dat");
-    std::string filename("TEST5K");
+    std::string filename("test.dat");
+    //std::string filename("TEST5K");
 
     char tmp[] = "test metadata";
     char* metadata = tmp;
@@ -106,35 +119,23 @@ int main(int argc, char const* argv[])
     sender->Start();
     sleep(2);
 
-    for(int i=0; i<100; ++i) {
-        /* generate random sized data */
-        //randDataGen();
+    /* specify how many metadata files to send */
+    unsigned int pvecsize = 10;
+    unsigned int * pvec = new unsigned int[pvecsize];
+    metaParse(pvec, pvecsize);
 
-        /** use the filename to get filesize */
-        struct stat filestatus;
-        stat(filename.c_str(), &filestatus);
-        size_t datasize = filestatus.st_size;
-
-        int fd = open(filename.c_str(), O_RDONLY);
-        if(fd > 0)
-        {
-            void* data = (char*) mmap(0, datasize, PROT_READ,
-                                      MAP_FILE | MAP_SHARED, fd, 0);
-            if (data == MAP_FAILED)
-                std::cerr << "file map failed" << std::endl;
-
-            sender->sendProduct(data, datasize, metadata, metaSize);
-            /* 1 sec interval between two products */
-            sleep(1);
-
-            munmap(data, datasize);
-            close(fd);
-        }
-        else
-            std::cerr << "test::main()::open(): error" << std::endl;
+    for(int i=0; i < pvecsize; ++i) {
+        /* generate pareto distributed data */
+        char * data = paretoGen(pvec[i]);
+        sender->sendProduct(data, pvec[i], metadata, metaSize);
+        paretoDestroy(data);
+        /* 1 sec interval between two products */
+        sleep(1);
     }
-    delete sender;
+    delete[] pvec;
 
     while(1);
+
+    delete sender;
     return 0;
 }
