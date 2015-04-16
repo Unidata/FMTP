@@ -38,10 +38,10 @@
 /**
  * Read a metadata file which contains the file sizes of a pareto distribution.
  */
-void metaParse(unsigned int* pvec, unsigned int pvecsize)
+void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
 {
     std::string line;
-    std::ifstream fp("size.txt", std::ios::binary);
+    std::ifstream fp(filename, std::ios::binary);
     if (fp.is_open()) {
         for(int i=0; i < pvecsize; ++i) {
             std::getline(fp, line);
@@ -102,7 +102,7 @@ int main(int argc, char const* argv[])
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
-    std::string filename("test.dat");
+    std::string filename(argv[6]);
 
     char tmp[] = "test metadata";
     char* metadata = tmp;
@@ -118,7 +118,7 @@ int main(int argc, char const* argv[])
     /* specify how many metadata files to send */
     unsigned int pvecsize = 10;
     unsigned int * pvec = new unsigned int[pvecsize];
-    metaParse(pvec, pvecsize);
+    metaParse(pvec, pvecsize, filename);
 
     for(int i=0; i < pvecsize; ++i) {
         /* generate pareto distributed data */
