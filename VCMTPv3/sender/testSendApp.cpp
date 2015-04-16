@@ -28,10 +28,7 @@
 
 #include "vcmtpSendv3.h"
 
-//#include <fcntl.h>
 #include <pthread.h>
-//#include <sys/mman.h>
-//#include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
@@ -106,7 +103,6 @@ int main(int argc, char const* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
     std::string filename("test.dat");
-    //std::string filename("TEST5K");
 
     char tmp[] = "test metadata";
     char* metadata = tmp;

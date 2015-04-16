@@ -2,8 +2,7 @@
  * Copyright (C) 2014 University of Virginia. All rights reserved.
  *
  * @file      vcmtpSendv3.cpp
- * @author    Fatma Alali <fha6np@virginia.edu>
- *            Shawn Chen  <sc7cq@virginia.edu>
+ * @author    Shawn Chen  <sc7cq@virginia.edu>
  * @version   1.0
  * @date      Oct 16, 2014
  *
