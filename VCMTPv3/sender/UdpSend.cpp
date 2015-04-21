@@ -101,12 +101,14 @@ void UdpSend::Init()
                 "UdpSend::Init() Couldn't enable Address reuse"));
     }
 
+#ifdef SO_REUSEPORT
     int reuseport = true;
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport,
                    sizeof(reuseport)) < 0) {
         throw std::system_error(errno, std::system_category(), std::string(
                 "UdpSend::Init() Couldn't enable Port reuse"));
     }
+#endif
 
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
                 sizeof(newttl)) < 0) {

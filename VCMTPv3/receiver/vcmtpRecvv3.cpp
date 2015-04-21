@@ -80,7 +80,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     bitmap(0),
     EOPStatus(false),
     exitMutex(),
-    except(),
+    except(nullptr),
     retx_rq(),
     retx_t(),
     mcast_t(),
@@ -176,10 +176,18 @@ void vcmtpRecvv3::Start()
  */
 void vcmtpRecvv3::Stop()
 {
+    int prevState;
+
+    /*
+     * Prevent a thread on which `taskExit()` is executing from canceling itself
+     * before it cancels others
+     */
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState);
     (void)pthread_cancel(timer_t); /* failure is irrelevant */
     (void)pthread_cancel(mcast_t); /* failure is irrelevant */
     (void)pthread_cancel(retx_rq); /* failure is irrelevant */
     (void)pthread_cancel(retx_t);  /* failure is irrelevant */
+    (void)pthread_setcancelstate(prevState, &prevState);
 }
 
 
