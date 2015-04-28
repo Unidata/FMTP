@@ -80,7 +80,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     bitmap(0),
     EOPStatus(false),
     exitMutex(),
-    except(nullptr),
+    except(),
     retx_rq(),
     retx_t(),
     mcast_t(),
@@ -142,30 +142,41 @@ void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
 void vcmtpRecvv3::Start()
 {
     /** connect to the sender */
+    // std::cerr << "vcmtpRecvv3::Start(): Initializing TCP receiver" << std::endl;
     tcprecv->Init();
 
     /** set prodindex to max to avoid BOP missing for prodindex=0 */
     vcmtpHeader.prodindex = 0xFFFFFFFF;
     /** clear EOPStatus for new product */
+    // std::cerr << "vcmtpRecvv3::Start(): Clearing EOP state" << std::endl;
     clearEOPState();
+    // std::cerr << "vcmtpRecvv3::Start(): Joining multicast Group" << std::endl;
     joinGroup(mcastAddr, mcastPort);
 
+    // std::cerr << "vcmtpRecvv3::Start(): Starting retransmission task" << std::endl;
     StartRetxProcedure();
+    // std::cerr << "vcmtpRecvv3::Start(): Starting timer task" << std::endl;
     startTimerThread();
 
+    // std::cerr << "vcmtpRecvv3::Start(): Starting multicast receiver task" << std::endl;
     int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
                                 this);
     if (status) {
+        // std::cerr << "vcmtpRecvv3::Start(): Stopping" << std::endl;
         Stop();
         throw std::system_error(status, std::system_category(),
             "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
     }
+    // std::cerr << "vcmtpRecvv3::Start(): Joining multicast receiver task" << std::endl;
     (void)pthread_join(mcast_t, NULL);
     {
         std::unique_lock<std::mutex> lock(exitMutex);
-        if (except)
+        if (except) {
+            // std::cerr << "vcmtpRecvv3::Start(): Re-throwing exception" << std::endl;
             std::rethrow_exception(except);
+        }
     }
+    // std::cerr << "vcmtpRecvv3::Start(): Returning" << std::endl;
 }
 
 
@@ -1314,8 +1325,11 @@ void vcmtpRecvv3::taskExit(const std::exception& e)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
-        if (!except)
+        if (!except) {
+            std::cerr << "vcmtpRecvv3::taskExit(): Setting exception: " <<
+                    e.what() << std::endl;
             except = std::make_exception_ptr(e);
+        }
     }
     Stop();
 }
