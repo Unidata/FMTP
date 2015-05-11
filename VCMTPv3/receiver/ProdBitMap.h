@@ -40,6 +40,7 @@ public:
     ~ProdBitMap();
     bool isComplete();
     void set(uint32_t blockindex);
+    uint32_t getMapSize() {return mapsize;};
 
 private:
     /* count the received data block number */
