@@ -258,8 +258,8 @@ private:
     std::mutex              linkmtx;
     /* max link speed up to 18000 Pbps */
     uint64_t                linkspeed;
-    std::atomic_flag        retxHandlerCanceled = ATOMIC_FLAG_INIT; // cleared
-    std::atomic_flag        mcastHandlerCanceled = ATOMIC_FLAG_INIT; // cleared
+    std::atomic_flag        retxHandlerCanceled;
+    std::atomic_flag        mcastHandlerCanceled;
 
     /* member variables for measurement use only */
     bool                    rxdone;

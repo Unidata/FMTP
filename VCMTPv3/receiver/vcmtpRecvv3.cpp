@@ -90,7 +90,9 @@ vcmtpRecvv3::vcmtpRecvv3(
     timer_t(),
     linkspeed(0),
     rxdone(false),
-    recvbytes(0)
+    recvbytes(0),
+    retxHandlerCanceled(ATOMIC_FLAG_INIT),
+    mcastHandlerCanceled(ATOMIC_FLAG_INIT)
 {
 }
 
