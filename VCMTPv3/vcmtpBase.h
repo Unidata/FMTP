@@ -87,6 +87,7 @@ const uint16_t VCMTP_RETX_EOP  = 0x0400;
 const int MISSING_BOP  = 1;
 const int MISSING_DATA = 2;
 const int MISSING_EOP  = 3;
+const int SHUTDOWN     = 4;
 typedef struct recvInternalRetxReqMessage {
     int reqtype;
     uint32_t prodindex;

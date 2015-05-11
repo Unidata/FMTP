@@ -29,6 +29,7 @@
 #define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
 
+#include <atomic>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -200,6 +201,10 @@ private:
     void timerThread();
     void taskExit(const std::exception&);
     void WriteToLog(const std::string& content);
+    void stopJoinRetxRequester();
+    void stopJoinRetxHandler();
+    void stopJoinTimerThread();
+    void stopJoinMcastHandler();
 
     std::string             tcpAddr;
     unsigned short          tcpPort;
@@ -247,10 +252,14 @@ private:
     std::condition_variable timerWake;
     std::mutex              timerWakemtx;
     std::mutex              exitMutex;
+    std::condition_variable exitCond;
+    bool                    stopRequested;
     std::exception_ptr      except;
     std::mutex              linkmtx;
     /* max link speed up to 18000 Pbps */
     uint64_t                linkspeed;
+    std::atomic_flag        retxHandlerCanceled = ATOMIC_FLAG_INIT; // cleared
+    std::atomic_flag        mcastHandlerCanceled = ATOMIC_FLAG_INIT; // cleared
 
     /* member variables for measurement use only */
     bool                    rxdone;

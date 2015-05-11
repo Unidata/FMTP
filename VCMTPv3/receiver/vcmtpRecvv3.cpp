@@ -28,6 +28,7 @@
 #include "vcmtpRecvv3.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <exception>
 #include <fcntl.h>
 #include <math.h>
@@ -80,6 +81,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     bitmap(0),
     EOPStatus(false),
     exitMutex(),
+    exitCond(),
+    stopRequested(false),
     except(),
     retx_rq(),
     retx_t(),
@@ -134,59 +137,69 @@ void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
  * is thrown. Exceptions will be caught and all the threads will be terminated
  * by the exception handling code.
  *
+ * @throw std::system_error  if a retransmission-reception thread can't be
+ *                           started.
+ * @throw std::system_error  if a retransmission-request thread can't be
+ *                           started.
+ * @throw std::system_error  if a multicast-receiving thread couldn't be
+ *                           created.
  * @throw std::system_error  if the multicast group couldn't be joined.
  * @throw std::system_error  if an I/O error occurs.
- * @throw std::system_error  if the multicast-receiving thread couldn't be
- *                           created.
  */
 void vcmtpRecvv3::Start()
 {
     /** connect to the sender */
-    // std::cerr << "vcmtpRecvv3::Start(): Initializing TCP receiver" << std::endl;
     tcprecv->Init();
 
     /** set prodindex to max to avoid BOP missing for prodindex=0 */
     vcmtpHeader.prodindex = 0xFFFFFFFF;
     /** clear EOPStatus for new product */
-    // std::cerr << "vcmtpRecvv3::Start(): Clearing EOP state" << std::endl;
     clearEOPState();
-    // std::cerr << "vcmtpRecvv3::Start(): Joining multicast Group" << std::endl;
     joinGroup(mcastAddr, mcastPort);
 
-    // std::cerr << "vcmtpRecvv3::Start(): Starting retransmission task" << std::endl;
     StartRetxProcedure();
-    // std::cerr << "vcmtpRecvv3::Start(): Starting timer task" << std::endl;
     startTimerThread();
 
-    // std::cerr << "vcmtpRecvv3::Start(): Starting multicast receiver task" << std::endl;
     int status = pthread_create(&mcast_t, NULL, &vcmtpRecvv3::StartMcastHandler,
                                 this);
     if (status) {
-        // std::cerr << "vcmtpRecvv3::Start(): Stopping" << std::endl;
         Stop();
         throw std::system_error(status, std::system_category(),
             "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
     }
-    // std::cerr << "vcmtpRecvv3::Start(): Joining multicast receiver task" << std::endl;
-    (void)pthread_join(mcast_t, NULL);
+
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        while (!stopRequested && !except)
+            exitCond.wait(lock);
+        stopJoinRetxRequester();
+        stopJoinRetxHandler();
+        stopJoinTimerThread();
+        stopJoinMcastHandler();
+    }
+
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (except) {
-            // std::cerr << "vcmtpRecvv3::Start(): Re-throwing exception" << std::endl;
             std::rethrow_exception(except);
         }
     }
-    // std::cerr << "vcmtpRecvv3::Start(): Returning" << std::endl;
 }
 
 
 /**
- * Stops a running VCMTP receiver. Idempotent.
+ * Stops a running VCMTP receiver. Returns immediately. Idempotent.
  *
  * @pre  `vcmtpRecvv3::Start()` was previously called.
  */
 void vcmtpRecvv3::Stop()
 {
+    {
+        std::unique_lock<std::mutex> lock(exitMutex);
+        stopRequested = true;
+        exitCond.notify_one();
+    }
+
     int prevState;
 
     /*
@@ -194,10 +207,6 @@ void vcmtpRecvv3::Stop()
      * before it cancels others
      */
     (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState);
-    (void)pthread_cancel(timer_t); /* failure is irrelevant */
-    (void)pthread_cancel(mcast_t); /* failure is irrelevant */
-    (void)pthread_cancel(retx_rq); /* failure is irrelevant */
-    (void)pthread_cancel(retx_t);  /* failure is irrelevant */
     (void)pthread_setcancelstate(prevState, &prevState);
 }
 
@@ -703,29 +712,33 @@ void vcmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
  */
 void vcmtpRecvv3::retxHandler()
 {
-    char pktHead[VCMTP_HEADER_LEN];
-    (void) memset(pktHead, 0, sizeof(pktHead));
     VcmtpHeader header;
+    char        pktHead[VCMTP_HEADER_LEN];
+    int         initState;
+    int         ignoredState;
+
+    (void)memset(pktHead, 0, sizeof(pktHead));
+    /*
+     * Allow the current thread to be cancelled only when it is likely blocked
+     * attempting to read from the unicast socket because that prevents the
+     * receiver from being put into an inconsistent state yet allows for fast
+     * termination.
+     */
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
 
     while(1)
     {
         /** temp buffer, do not access in case of out of bound issues */
         char* paytmp;
+
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
         ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
-        /*
-         * Allow the current thread to be cancelled only when it is likely
-         * blocked attempting to read from the unicast socket because that
-         * prevents the receiver from being put into an inconsistent state yet
-         * allows for fast termination.
-         */
-        int ignoredState;
-        int initState;
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
         if (header.flags == VCMTP_RETX_BOP) {
-            (void)pthread_setcancelstate(initState, &ignoredState);
+            (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
@@ -751,7 +764,7 @@ void vcmtpRecvv3::retxHandler()
             char tmp[VCMTP_DATA_LEN];
 
             if(prodptr) {
-                (void)pthread_setcancelstate(initState, &ignoredState);
+                (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
@@ -759,7 +772,8 @@ void vcmtpRecvv3::retxHandler()
             }
             else {
                 /** dump the payload since there is no product queue */
-                (void)pthread_setcancelstate(initState, &ignoredState);
+                (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
+                        &ignoredState);
                 tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                         &ignoredState);
@@ -800,9 +814,9 @@ void vcmtpRecvv3::retxHandler()
         else if (header.flags == VCMTP_RETX_EOP) {
             retxEOPHandler(header);
         }
-
-        (void)pthread_setcancelstate(initState, &ignoredState);
     }
+
+    (void)pthread_setcancelstate(initState, &ignoredState);
 }
 
 
@@ -811,7 +825,8 @@ void vcmtpRecvv3::retxHandler()
  * handler to send requests respectively. The read operation on the internal
  * message queue will block if the queue is empty itself. The existing request
  * being handled will only be removed from the queue if the handler returns a
- * successful state.
+ * successful state. Doesn't return until a "shutdown" request is encountered or
+ * an error occurs.
  *
  * @param[in] none
  */
@@ -827,6 +842,9 @@ void vcmtpRecvv3::retxRequester()
                 msgQfilled.wait(lock);
             reqmsg = msgqueue.front();
         }
+
+        if (reqmsg.reqtype == SHUTDOWN)
+            break; // leave "shutdown" message in queue
 
         if ( ((reqmsg.reqtype == MISSING_BOP) &&
                 sendBOPRetxReq(reqmsg.prodindex)) ||
@@ -1151,10 +1169,12 @@ bool vcmtpRecvv3::sendRetxEnd(uint32_t prodindex)
 
 
 /**
- * Start the retxRequester thread using a passed-in vcmtpRecvv3 pointer.
+ * Start the retxRequester thread using a passed-in vcmtpRecvv3 pointer. Called
+ * by `pthread_create()`.
  *
  * @param[in] *ptr        A pointer to the pre-defined data structure in the
- *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
+ *                        caller. Here it's the pointer to a vcmtpRecvv3
+ *                        instance.
  */
 void* vcmtpRecvv3::StartRetxRequester(void* ptr)
 {
@@ -1166,6 +1186,29 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
         recvr->taskExit(e);
     }
     return NULL;
+}
+
+
+/**
+ * Stops the retransmission-request task by adding a "shutdown" request to the
+ * associated queue and joins with its thread.
+ *
+ * @throws std::system_error if the retransmission-request thread can't be
+ *                           joined.
+ */
+void vcmtpRecvv3::stopJoinRetxRequester()
+{
+    {
+        std::unique_lock<std::mutex> lock(msgQmutex);
+        INLReqMsg reqmsg = {SHUTDOWN};
+        msgqueue.push(reqmsg);
+        msgQfilled.notify_one();
+    }
+
+    int status = pthread_join(retx_rq, NULL);
+    if (status)
+        throw std::system_error(status, std::system_category(),
+                "Couldn't join retransmission-request thread");
 }
 
 
@@ -1182,9 +1225,34 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
         recvr->retxHandler();
     }
     catch (const std::exception& e) {
+        std::cerr << "StartRetxHandler(): Exception thrown" << std::endl;
         recvr->taskExit(e);
     }
     return NULL;
+}
+
+
+/**
+ * Stops the retransmission-reception task by canceling its thread and joining
+ * it.
+ *
+ * @throws std::system_error if the retransmission-reception thread can't be
+ *                           canceled.
+ * @throws std::system_error if the retransmission-reception thread can't be
+ *                           joined.
+ */
+void vcmtpRecvv3::stopJoinRetxHandler()
+{
+    if (!retxHandlerCanceled.test_and_set()) {
+        int status = pthread_cancel(retx_t);
+        if (status && status != ESRCH)
+            throw std::system_error(status, std::system_category(),
+                    "Couldn't cancel retransmission-reception thread");
+        status = pthread_join(retx_t, NULL);
+        if (status && status != ESRCH)
+            throw std::system_error(status, std::system_category(),
+                    "Couldn't join retransmission-reception thread");
+    }
 }
 
 
@@ -1210,11 +1278,35 @@ void* vcmtpRecvv3::StartMcastHandler(
 
 
 /**
+ * Stops the muticast task by canceling its thread and joining it.
+ *
+ * @throws std::system_error if the multicast thread can't be canceled.
+ * @throws std::system_error if the multicast thread can't be joined.
+ */
+void vcmtpRecvv3::stopJoinMcastHandler()
+{
+    if (!mcastHandlerCanceled.test_and_set()) {
+        int status = pthread_cancel(mcast_t);
+        if (status && status != ESRCH)
+            throw std::system_error(status, std::system_category(),
+                    "Couldn't cancel multicast thread");
+        status = pthread_join(mcast_t, NULL);
+        if (status && status != ESRCH)
+            throw std::system_error(status, std::system_category(),
+                    "Couldn't join multicast thread");
+    }
+}
+
+
+/**
  * Start a Retx procedure, including the retxHandler thread and retxRequester
  * thread. These two threads will be started independently and after the
  * procedure returns, it continues to run the mcastHandler thread.
  *
- * @param[in] none
+ * @throws    std::system_error if a retransmission-reception thread can't be
+ *                              started.
+ * @throws    std::system_error if a retransmission-request thread can't be
+ *                              started.
  */
 void vcmtpRecvv3::StartRetxProcedure()
 {
@@ -1224,15 +1316,17 @@ void vcmtpRecvv3::StartRetxProcedure()
         throw std::system_error(retval, std::system_category(),
             "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
     }
-    pthread_detach(retx_t);
 
     retval = pthread_create(&retx_rq, NULL, &vcmtpRecvv3::StartRetxRequester,
                             this);
     if(retval != 0) {
+        try {
+            stopJoinRetxHandler();
+        }
+        catch (...) {}
         throw std::system_error(retval, std::system_category(),
             "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
     }
-    pthread_detach(retx_rq);
 }
 
 
@@ -1250,8 +1344,29 @@ void vcmtpRecvv3::startTimerThread()
         throw std::system_error(retval, std::system_category(),
             "vcmtpRecvv3::startTimerThread() pthread_create() error");
     }
+}
 
-    pthread_detach(timer_t);
+
+/**
+ * Stops the timer task by adding a "shutdown" entry to the associated queue and
+ * joins with its thread.
+ *
+ * @throws std::system_error if the timer thread can't be joined.
+ */
+void vcmtpRecvv3::stopJoinTimerThread()
+{
+    timerParam timerparam;
+    {
+        std::unique_lock<std::mutex> lock(timerQmtx);
+        timerParam timerparam = {0, -1.0};
+        timerParamQ.push(timerparam);
+        timerQfilled.notify_one();
+    }
+
+    int status = pthread_join(timer_t, NULL);
+    if (status)
+        throw std::system_error(status, std::system_category(),
+                "Couldn't join timer thread");
 }
 
 
@@ -1272,9 +1387,8 @@ void vcmtpRecvv3::setEOPReceived()
  * EOP is not received, the timer should trigger after sleeping. If it is
  * received from the mcast socket, do not trigger to request for retransmission
  * of the EOP. mcastEOPHandler will notify the condition variable to interrupt
- * the timed wait function.
- *
- * @param[in] none
+ * the timed wait function. Doesn't return unless a "shutdown" entry is
+ * encountered or an exception is thrown.
  */
 void vcmtpRecvv3::timerThread()
 {
@@ -1286,6 +1400,9 @@ void vcmtpRecvv3::timerThread()
                 timerQfilled.wait(lock);
             timerparam = timerParamQ.front();
         }
+
+        if (timerparam.seconds < 0)
+            break; // leave "shutdown" entry in queue
 
         unsigned long period = timerparam.seconds * 1000000000lu;
         {
@@ -1315,9 +1432,10 @@ void vcmtpRecvv3::timerThread()
 
 
 /**
- * Task terminator. If an exception is caught, this function will be called.
- * It consequently terminates all the other threads by calling the Stop(). This
- * task exit call will not be blocking.
+ * Task terminator. If an exception is thrown by an independent task executing
+ * on an independent thread, then this function will be called. It consequently
+ * terminates all the other tasks. Blocks on the exit mutex; otherwise, returns
+ * immediately.
  *
  * @param[in] e                     Exception status
  */
@@ -1330,8 +1448,8 @@ void vcmtpRecvv3::taskExit(const std::exception& e)
                     e.what() << std::endl;
             except = std::make_exception_ptr(e);
         }
+        exitCond.notify_one();
     }
-    Stop();
 }
 
 
