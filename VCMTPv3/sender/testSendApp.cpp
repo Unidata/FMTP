@@ -41,7 +41,6 @@
 void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
 {
     std::string line;
-    std::string newline("\n");
     std::ifstream fp(filename, std::ios::binary);
     if (fp.is_open()) {
         for(int i=0; i < pvecsize; ++i) {
