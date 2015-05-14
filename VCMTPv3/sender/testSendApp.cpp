@@ -41,11 +41,15 @@
 void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
 {
     std::string line;
+    std::string newline("\n");
     std::ifstream fp(filename, std::ios::binary);
     if (fp.is_open()) {
         for(int i=0; i < pvecsize; ++i) {
             std::getline(fp, line);
-            pvec[i] = std::stoi(line);
+            if (line.find_first_not_of("\t\n ") != std::string::npos)
+                pvec[i] = std::stoi(line);
+            else
+                std::cout << "newline" << std::endl;
         }
     }
     fp.close();
@@ -117,7 +121,7 @@ int main(int argc, char const* argv[])
     sleep(2);
 
     /* specify how many metadata files to send */
-    unsigned int pvecsize = 10;
+    unsigned int pvecsize = 3;
     unsigned int * pvec = new unsigned int[pvecsize];
     metaParse(pvec, pvecsize, filename);
 
