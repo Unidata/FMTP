@@ -2,3 +2,6 @@ VcmtpPacket.cpp
 VcmtpPacket.h
 size.txt
 *.log
+.deps/
+.idea/
+size.txt-bak
