@@ -844,6 +844,20 @@ void vcmtpRecvv3::retxHandler()
         else if (header.flags == VCMTP_RETX_EOP) {
             retxEOPHandler(header);
         }
+        else if (header.flags == VCMTP_RETX_REJ) {
+            /*
+             * if associated bitmap exists, free the ProdBitMap and erase it
+             * Also avoid duplicated notification if the product's bitmap has
+             * already been removed.
+             */
+            if (bitmapSet.find(header.prodindex) != bitmapSet.end()) {
+                delete bitmapSet[header.prodindex];
+                bitmapSet.erase(header.prodindex);
+
+                if (notifier)
+                    notifier->notify_of_missed_prod(header.prodindex);
+            }
+        }
     }
 
     (void)pthread_setcancelstate(initState, &ignoredState);
