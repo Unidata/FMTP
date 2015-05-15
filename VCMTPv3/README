@@ -136,7 +136,11 @@ whatever interface on the node and the corresponding interface on the peer will
 work. But pay attention that these interfaces should be physically connected.
 If there is a mocked product queue and TTL needs to be non-one value,
 developers can modify the testSendApp.cpp to call another vcmtpSendv3()
-constructor.
+constructor. The testSendApp has a built-in random sized product generator.
+It reads the plain text file (which contains a single column of product sizes)
+and parses that text file to extract each number as a size for a product. Then
+it will read from system's /dev/urandom to fill a buffer of certain size as the
+product to be sent.
 
 To terminate the transmission, it is recommended to terminate the testRecvApp
 first, or the other receivers could be affected if testSendApp is terminated
