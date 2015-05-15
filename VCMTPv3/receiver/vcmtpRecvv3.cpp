@@ -468,6 +468,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             if (notifier)
                 notifier->notify_of_eop();
 
+            /* if current bitmap is complete, free the heap */
             delete bitmapSet[header.prodindex];
             bitmapSet.erase(header.prodindex);
 
@@ -810,6 +811,7 @@ void vcmtpRecvv3::retxHandler()
                 if (notifier)
                     notifier->notify_of_eop();
 
+                /* if current bitmap is complete, free the heap */
                 delete bitmapSet[header.prodindex];
                 bitmapSet.erase(header.prodindex);
 
@@ -977,6 +979,7 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
                 WriteToLog(debugmsg);
             #endif
         }
+        /* fetch the associated bitmap */
         ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
         /** receiver should trust the packet from sender is legal */
         bitmap->set(header.seqnum/VCMTP_DATA_LEN);
