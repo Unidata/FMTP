@@ -120,7 +120,7 @@ int main(int argc, char const* argv[])
     sleep(2);
 
     /* specify how many metadata files to send */
-    unsigned int pvecsize = 3;
+    unsigned int pvecsize = 20;
     unsigned int * pvec = new unsigned int[pvecsize];
     metaParse(pvec, pvecsize, filename);
 

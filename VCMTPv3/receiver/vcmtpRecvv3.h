@@ -29,10 +29,10 @@
 #define VCMTP_RECEIVER_VCMTPRECVV3_H_
 
 
-#include <atomic>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <exception>
@@ -40,12 +40,16 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include <unordered_map>
 
 #include "ProdBitMap.h"
 #include "RecvAppNotifier.h"
 #include "TcpRecv.h"
 #include "vcmtpBase.h"
 
+
+/* a prodindex-to-ProdBitMap ptr mapping */
+typedef std::unordered_map<uint32_t, ProdBitMap*> BitMapSet;
 
 class vcmtpRecvv3;
 
@@ -227,7 +231,7 @@ private:
     /* pointer to a start point in product queue */
     void*                   prodptr;
     TcpRecv*                tcprecv;
-    ProdBitMap*             bitmap;
+    BitMapSet               bitmapSet;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
     std::mutex              msgQmutex;

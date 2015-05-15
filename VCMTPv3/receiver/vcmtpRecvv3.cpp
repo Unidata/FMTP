@@ -78,7 +78,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     msgQfilled(),
     msgQmutex(),
     BOPListMutex(),
-    bitmap(0),
     EOPStatus(false),
     exitMutex(),
     exitCond(),
@@ -109,8 +108,10 @@ vcmtpRecvv3::~vcmtpRecvv3()
     (void)close(retxSock); // failure is irrelevant
     misBOPlist.clear();
     delete tcprecv;
-    if (bitmap)
-        delete bitmap;
+    BitMapSet::iterator it;
+    for (it = bitmapSet.begin(); it != bitmapSet.end(); ++it)
+        delete it->second;
+    bitmapSet.clear();
 }
 
 
@@ -314,14 +315,18 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
                                 BOPmsg.metasize, &prodptr);
 
-    if (bitmap) {
-        delete bitmap;
-        bitmap = 0;
-    }
     uint32_t blocknum = BOPmsg.prodsize ?
         (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
-    // TODO: what if blocknum = 0?
-    bitmap = new ProdBitMap(blocknum);
+
+    /* check if the product is already under tracking */
+    if (bitmapSet.find(header.prodindex) == bitmapSet.end()) {
+        /* put current product under tracking */
+        bitmapSet[ header.prodindex ] = new ProdBitMap(blocknum);
+    }
+    else {
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
+                "prodindex already existed in bitmapSet");
+    }
 
     /**
      * clear EOPStatus for new product. due to the sequencial feature that VC
@@ -451,6 +456,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         WriteToLog(debugmsg);
     #endif
 
+    ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
     if (bitmap) {
         /**
          * if bitmap check tells everything is completed, then sends the
@@ -461,6 +467,9 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             sendRetxEnd(header.prodindex);
             if (notifier)
                 notifier->notify_of_eop();
+
+            delete bitmapSet[header.prodindex];
+            bitmapSet.erase(header.prodindex);
 
             #ifdef DEBUG2
                 std::string debugmsg = "Product #" +
@@ -781,6 +790,7 @@ void vcmtpRecvv3::retxHandler()
                         &ignoredState);
             }
 
+            ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
             uint32_t iBlock = header.seqnum/VCMTP_DATA_LEN;
             try {
                 bitmap->set(header.seqnum/VCMTP_DATA_LEN);
@@ -799,6 +809,9 @@ void vcmtpRecvv3::retxHandler()
                 sendRetxEnd(header.prodindex);
                 if (notifier)
                     notifier->notify_of_eop();
+
+                delete bitmapSet[header.prodindex];
+                bitmapSet.erase(header.prodindex);
 
                 #ifdef DEBUG2
                     std::string debugmsg = "Product #" +
@@ -964,6 +977,7 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
                 WriteToLog(debugmsg);
             #endif
         }
+        ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
         /** receiver should trust the packet from sender is legal */
         bitmap->set(header.seqnum/VCMTP_DATA_LEN);
     }
