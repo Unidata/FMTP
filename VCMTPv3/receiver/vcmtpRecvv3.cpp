@@ -75,6 +75,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     notifier(notifier),
     mcastSock(0),
     retxSock(0),
+    pBlockMNG(new ProdBlockMNG()),
     msgQfilled(),
     msgQmutex(),
     BOPListMutex(),
@@ -108,10 +109,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     (void)close(retxSock); // failure is irrelevant
     misBOPlist.clear();
     delete tcprecv;
-    BitMapSet::iterator it;
-    for (it = bitmapSet.begin(); it != bitmapSet.end(); ++it)
-        delete it->second;
-    bitmapSet.clear();
+    delete pBlockMNG;
 }
 
 
@@ -319,13 +317,9 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
 
     /* check if the product is already under tracking */
-    if (bitmapSet.find(header.prodindex) == bitmapSet.end()) {
-        /* put current product under tracking */
-        bitmapSet[ header.prodindex ] = new ProdBitMap(blocknum);
-    }
-    else {
+    if (!pBlockMNG->addProd(header.prodindex, blocknum)) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
-                "prodindex already existed in bitmapSet");
+                "Error adding product into ProdBlockMNG");
     }
 
     /**
@@ -456,46 +450,39 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         WriteToLog(debugmsg);
     #endif
 
-    ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
-    if (bitmap) {
+    /**
+     * if bitmap check tells everything is completed, then sends the
+     * RETX_END message back to sender. Meanwhile notify receiving
+     * application.
+     */
+    if (pBlockMNG->delIfComplete(header.prodindex)) {
+        sendRetxEnd(header.prodindex);
+        if (notifier)
+            notifier->notify_of_eop();
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(header.prodindex);
+            debugmsg += " has been completely received";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #elif DEBUG1
+            std::string debugmsg = "Product #" +
+                std::to_string(header.prodindex);
+            debugmsg += " has been completely received";
+            std::cout << debugmsg << std::endl;
+        #endif
+    }
+    else {
         /**
-         * if bitmap check tells everything is completed, then sends the
-         * RETX_END message back to sender. Meanwhile notify receiving
-         * application.
+         * check if the last data block has been received. If true, then
+         * all the other missing blocks have been requested. In this case,
+         * receiver just needs to wait until product being all completed.
+         * Otherwise, last block is missing as well, receiver needs to
+         * request retx for all the missing blocks including the last one.
          */
-        if (bitmap->isComplete()) {
-            sendRetxEnd(header.prodindex);
-            if (notifier)
-                notifier->notify_of_eop();
-
-            /* if current bitmap is complete, free the heap */
-            delete bitmapSet[header.prodindex];
-            bitmapSet.erase(header.prodindex);
-
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(header.prodindex);
-                debugmsg += " has been completely received";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #elif DEBUG1
-                std::string debugmsg = "Product #" +
-                    std::to_string(header.prodindex);
-                debugmsg += " has been completely received";
-                std::cout << debugmsg << std::endl;
-            #endif
-        }
-        else {
-            /**
-             * check if the last data block has been received. If true, then
-             * all the other missing blocks have been requested. In this case,
-             * receiver just needs to wait until product being all completed.
-             * Otherwise, last block is missing as well, receiver needs to
-             * request retx for all the missing blocks including the last one.
-             */
-            if (!hasLastBlock()) {
-                requestAnyMissingData(BOPmsg.prodsize);
-            }
+        if (!hasLastBlock()) {
+            requestAnyMissingData(BOPmsg.prodsize);
         }
     }
 }
@@ -791,10 +778,9 @@ void vcmtpRecvv3::retxHandler()
                         &ignoredState);
             }
 
-            ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
             uint32_t iBlock = header.seqnum/VCMTP_DATA_LEN;
             try {
-                bitmap->set(header.seqnum/VCMTP_DATA_LEN);
+                pBlockMNG->set(header.prodindex, iBlock);
             }
             catch (std::exception& e) {
                 throw std::runtime_error(
@@ -802,18 +788,15 @@ void vcmtpRecvv3::retxHandler()
                         std::to_string(header.seqnum) +
                         ", iBlock=" + std::to_string(iBlock) +
                         ", bitmap->getMapSize()=" +
-                        std::to_string(bitmap->getMapSize()) +
+                        std::to_string(
+                            pBlockMNG->getMapSize(header.prodindex)) +
                         ", header.prodindex=" +
                         std::to_string(header.prodindex));
             }
-            if (bitmap->isComplete()) {
+            if (pBlockMNG->delIfComplete(header.prodindex)) {
                 sendRetxEnd(header.prodindex);
                 if (notifier)
                     notifier->notify_of_eop();
-
-                /* if current bitmap is complete, free the heap */
-                delete bitmapSet[header.prodindex];
-                bitmapSet.erase(header.prodindex);
 
                 #ifdef DEBUG2
                     std::string debugmsg = "Product #" +
@@ -830,7 +813,7 @@ void vcmtpRecvv3::retxHandler()
             }
 
             #ifdef DEBUG2
-                if (bitmap && !bitmap->isComplete()) {
+                if (!pBlockMNG->isComplete(header.prodindex)) {
                     std::string debugmsg = "Product #" +
                         std::to_string(header.prodindex);
                     debugmsg += ": RETX data block (SeqNum = ";
@@ -846,14 +829,11 @@ void vcmtpRecvv3::retxHandler()
         }
         else if (header.flags == VCMTP_RETX_REJ) {
             /*
-             * if associated bitmap exists, free the ProdBitMap and erase it
-             * Also avoid duplicated notification if the product's bitmap has
+             * if associated bitmap exists, remove the bitmap. Also avoid
+             * duplicated notification if the product's bitmap has
              * already been removed.
              */
-            if (bitmapSet.find(header.prodindex) != bitmapSet.end()) {
-                delete bitmapSet[header.prodindex];
-                bitmapSet.erase(header.prodindex);
-
+            if (pBlockMNG->rmProd(header.prodindex)) {
                 if (notifier)
                     notifier->notify_of_missed_prod(header.prodindex);
             }
@@ -993,10 +973,8 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
                 WriteToLog(debugmsg);
             #endif
         }
-        /* fetch the associated bitmap */
-        ProdBitMap* bitmap = bitmapSet[ header.prodindex ];
         /** receiver should trust the packet from sender is legal */
-        bitmap->set(header.seqnum/VCMTP_DATA_LEN);
+        pBlockMNG->set(header.prodindex, header.seqnum/VCMTP_DATA_LEN);
     }
 }
 

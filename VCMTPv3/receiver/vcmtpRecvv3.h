@@ -42,14 +42,11 @@
 #include <string>
 #include <unordered_map>
 
-#include "ProdBitMap.h"
+#include "ProdBlockMNG.h"
 #include "RecvAppNotifier.h"
 #include "TcpRecv.h"
 #include "vcmtpBase.h"
 
-
-/* a prodindex-to-ProdBitMap ptr mapping */
-typedef std::unordered_map<uint32_t, ProdBitMap*> BitMapSet;
 
 class vcmtpRecvv3;
 
@@ -231,7 +228,7 @@ private:
     /* pointer to a start point in product queue */
     void*                   prodptr;
     TcpRecv*                tcprecv;
-    BitMapSet               bitmapSet;
+    ProdBlockMNG*           pBlockMNG;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
     std::mutex              msgQmutex;
