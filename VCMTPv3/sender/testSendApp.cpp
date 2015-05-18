@@ -129,8 +129,8 @@ int main(int argc, char const* argv[])
         char * data = paretoGen(pvec[i]);
         sender->sendProduct(data, pvec[i], metadata, metaSize);
         paretoDestroy(data);
-        /* 1 sec interval between two products */
-        sleep(1);
+        /* 0.1 sec interval between two products */
+        usleep(100000);
     }
     delete[] pvec;
 
