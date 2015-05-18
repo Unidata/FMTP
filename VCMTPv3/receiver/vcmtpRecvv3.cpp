@@ -110,6 +110,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     close(mcastSock);
     (void)close(retxSock); // failure is irrelevant
     misBOPlist.clear();
+    BOPmap.clear();
     delete tcprecv;
     delete pBlockMNG;
 }
@@ -285,6 +286,11 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     if (header.payloadlen - 6 < BOPmsg.metasize)
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
     (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
+    /* Atomic insertion for BOP of new product */
+    {
+        std::unique_lock<std::mutex> lock(BOPmapmtx);
+        BOPmap[header.prodindex] = BOPmsg.prodsize;
+    }
 
     /**
      * Every time a new BOP arrives, save the header to check following data
@@ -461,6 +467,10 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         sendRetxEnd(header.prodindex);
         if (notifier)
             notifier->notify_of_eop();
+        {
+            std::unique_lock<std::mutex> lock(BOPmapmtx);
+            BOPmap.erase(header.prodindex);
+        }
 
         #ifdef DEBUG2
             std::string debugmsg = "Product #" +
@@ -763,6 +773,32 @@ void vcmtpRecvv3::retxHandler()
              * uses a temp buffer as trash to dump the payload content.
              */
             char tmp[VCMTP_DATA_LEN];
+            uint32_t prodsize = 0;
+            {
+                std::unique_lock<std::mutex> lock(BOPmapmtx);
+                if (BOPmap.find(header.prodindex) != BOPmap.end()) {
+                    prodsize = BOPmap[header.prodindex];
+                }
+                else {
+                    /** dump the payload since there is no product queue */
+                    (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
+                            &ignoredState);
+                    /*
+                     * The BOPmap will only be erased when the associated
+                     * product has been completely received. So if no valid
+                     * prodindex found, it indicates the product is received
+                     * and thus removed.
+                     */
+                    tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
+                            &ignoredState);
+                    continue;
+                }
+            }
+            if (header.seqnum + header.payloadlen > prodsize) {
+                throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                        "retx block out of boundary");
+            }
 
             if(prodptr) {
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
@@ -799,6 +835,10 @@ void vcmtpRecvv3::retxHandler()
                 sendRetxEnd(header.prodindex);
                 if (notifier)
                     notifier->notify_of_eop();
+                {
+                    std::unique_lock<std::mutex> lock(BOPmapmtx);
+                    BOPmap.erase(header.prodindex);
+                }
 
                 #ifdef DEBUG2
                     std::string debugmsg = "Product #" +
@@ -1055,9 +1095,9 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
-    if (header.seqnum > BOPmsg.prodsize) {
+    if (header.seqnum + header.payloadlen > BOPmsg.prodsize) {
         throw std::system_error(header.seqnum, std::system_category(),
-            "vcmtpRecvv3::recvMemData() seqnum out of boundary");
+            "vcmtpRecvv3::recvMemData() block out of boundary");
     }
 
     if (header.prodindex == vcmtpHeader.prodindex) {
