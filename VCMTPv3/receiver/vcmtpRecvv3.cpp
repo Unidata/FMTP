@@ -35,6 +35,8 @@
 #include <memory.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
 #include <fstream>
@@ -1488,6 +1490,16 @@ void vcmtpRecvv3::WriteToLog(const std::string& content)
     time_t rawtime;
     struct tm *timeinfo;
     char buf[30];
+    /* create logs  directory if it doesn't exist */
+    struct stat st = {0};
+    if (stat("logs", &st) == -1) {
+        mkdir("logs", 0755);
+    }
+    /* allocate a large enough buffer in case some long hostnames */
+    char hostname[1024];
+    gethostname(hostname, 1024);
+    std::string logpath(hostname);
+    logpath = "logs/VCMTPv3_RECEIVER_" + logpath + ".log";
 
     time(&rawtime);
     timeinfo = localtime(&rawtime);
@@ -1509,15 +1521,15 @@ void vcmtpRecvv3::WriteToLog(const std::string& content)
 
     if (rxdone) {
         std::chrono::duration<double> timespan =
-            std::chrono::duration_cast<std::chrono::duration<double>>(end_t - start_t);
+            std::chrono::duration_cast<std::chrono::duration<double>>
+                (end_t - start_t);
         nanosec = ", Elapsed time: " + std::to_string(timespan.count());
         nanosec += " seconds.";
     }
     #endif
     /* code block ends */
 
-    std::ofstream logfile("VCMTPv3_RECEIVER.log",
-            std::ofstream::out | std::ofstream::app);
+    std::ofstream logfile(logpath, std::ofstream::out | std::ofstream::app);
     #ifdef MEASURE
         if (rxdone) {
             logfile << time << hrclk << content << nanosec << std::endl;
