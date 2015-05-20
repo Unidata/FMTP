@@ -48,6 +48,8 @@
 #include "vcmtpBase.h"
 
 
+typedef std::unordered_map<uint32_t, uint32_t> BOPMap;
+
 class vcmtpRecvv3;
 
 struct StartTimerInfo
@@ -228,6 +230,9 @@ private:
     /* pointer to a start point in product queue */
     void*                   prodptr;
     TcpRecv*                tcprecv;
+    /* a map from prodindex to prodsize */
+    BOPMap                  BOPmap;
+    std::mutex              BOPmapmtx;
     ProdBlockMNG*           pBlockMNG;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
