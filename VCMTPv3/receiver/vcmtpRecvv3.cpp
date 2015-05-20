@@ -312,8 +312,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     timerWake.notify_all();
 
     if(notifier)
-        notifier->notify_of_bop(BOPmsg.prodsize, BOPmsg.metadata,
-                                BOPmsg.metasize, &prodptr);
+        notifier->notify_of_bop(vcmtpHeader.prodindex, BOPmsg.prodsize,
+                BOPmsg.metadata, BOPmsg.metasize, &prodptr);
 
     uint32_t blocknum = BOPmsg.prodsize ?
         (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
@@ -460,7 +460,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
     if (pBlockMNG->delIfComplete(header.prodindex)) {
         sendRetxEnd(header.prodindex);
         if (notifier)
-            notifier->notify_of_eop();
+            notifier->notify_of_eop(header.prodindex);
 
         #ifdef DEBUG2
             std::string debugmsg = "Product #" +
@@ -798,7 +798,7 @@ void vcmtpRecvv3::retxHandler()
             if (pBlockMNG->delIfComplete(header.prodindex)) {
                 sendRetxEnd(header.prodindex);
                 if (notifier)
-                    notifier->notify_of_eop();
+                    notifier->notify_of_eop(header.prodindex);
 
                 #ifdef DEBUG2
                     std::string debugmsg = "Product #" +

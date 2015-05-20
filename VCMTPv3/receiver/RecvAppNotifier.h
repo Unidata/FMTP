@@ -30,19 +30,20 @@ public:
      * Notifies the receiving application about the beginning of a product. This
      * method is thread-safe.
      *
+     * @param[in]  iProd     VCMTP product-index.
      * @param[in]  prodSize  Size of the product in bytes.
      * @param[in]  metadata  Application-level product metadata.
      * @param[in]  metaSize  Size of the metadata in bytes.
      * @param[out] data      Pointer to where VCMTP should write subsequent data.
      */
-    virtual void notify_of_bop(size_t prodSize, void* metadata,
-            unsigned metaSize, void** data) = 0;
+    virtual void notify_of_bop(const uint32_t iProd, size_t prodSize,
+            void* metadata, unsigned metaSize, void** data) = 0;
 
     /**
      * Notifies the receiving application about the complete reception of the
      * previous product. This method is thread-safe.
      */
-    virtual void notify_of_eop() = 0;
+    virtual void notify_of_eop(uint32_t iProd) = 0;
 
     /**
      * Notifies the receiving application about a product that the VCMTP layer
