@@ -42,6 +42,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "Measure.h"
 #include "ProdBlockMNG.h"
 #include "RecvAppNotifier.h"
 #include "TcpRecv.h"
@@ -268,10 +269,7 @@ private:
     std::atomic_flag        mcastHandlerCanceled;
 
     /* member variables for measurement use only */
-    bool                    rxdone;
-    std::chrono::high_resolution_clock::time_point start_t;
-    std::chrono::high_resolution_clock::time_point end_t;
-    int recvbytes;
+    Measure*                measure;
     /* member variables for measurement use ends */
 };
 

@@ -91,10 +91,9 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcast_t(),
     timer_t(),
     linkspeed(0),
-    rxdone(false),
-    recvbytes(0),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
-    mcastHandlerCanceled(ATOMIC_FLAG_INIT)
+    mcastHandlerCanceled(ATOMIC_FLAG_INIT),
+    measure(new Measure())
 {
 }
 
@@ -113,6 +112,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     BOPmap.clear();
     delete tcprecv;
     delete pBlockMNG;
+    delete measure;
 }
 
 
@@ -303,17 +303,6 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         vcmtpHeader.payloadlen = 0;
     }
 
-    #ifdef DEBUG2
-        std::string debugmsg = "Product #" +
-            std::to_string(vcmtpHeader.prodindex);
-        debugmsg += ": BOP is received. Product size = ";
-        debugmsg += std::to_string(BOPmsg.prodsize);
-        debugmsg += ", Metadata size = ";
-        debugmsg += std::to_string(BOPmsg.metasize);
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-    #endif
-
     /** forcibly terminate the previous timer */
     timerWake.notify_all();
 
@@ -352,7 +341,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * link speed. Besides, a little more extra time would be favorable to
      * tolerate possible fluctuation.
      */
-    double sleeptime = 50 * ((double)BOPmsg.prodsize / (double)linkspeed);
+    double sleeptime = 500 * ((double)BOPmsg.prodsize / (double)linkspeed);
     /** add the new product into timer queue */
     {
         std::unique_lock<std::mutex> lock(timerQmtx);
@@ -360,6 +349,26 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         timerParamQ.push(timerparam);
         timerQfilled.notify_all();
     }
+
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" +
+            std::to_string(vcmtpHeader.prodindex);
+        debugmsg += ": BOP is received. Product size = ";
+        debugmsg += std::to_string(BOPmsg.prodsize);
+        debugmsg += ", Metadata size = ";
+        debugmsg += std::to_string(BOPmsg.metasize);
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
+    #ifdef MEASURE
+        measure->insert(header.prodindex, BOPmsg.prodsize);
+        std::string measuremsg = "Product #" +
+            std::to_string(header.prodindex);
+        measuremsg += ": new product to receive";
+        std::cout << measuremsg << std::endl;
+        WriteToLog(measuremsg);
+    #endif
 }
 
 
@@ -484,6 +493,24 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             debugmsg += " has been completely received";
             std::cout << debugmsg << std::endl;
         #endif
+
+        #ifdef MEASURE
+            uint32_t bytes = measure->getsize(header.prodindex);
+            std::string measuremsg = "Product #" +
+                std::to_string(header.prodindex);
+            measuremsg += ": product received, size = ";
+            measuremsg += std::to_string(bytes);
+            measuremsg += " bytes, elapsed time = ";
+            measuremsg += measure->gettime(header.prodindex);
+            measuremsg += " seconds.";
+            if (measure->getEOPmiss(header.prodindex)) {
+                measuremsg += " EOP is retransmitted";
+            }
+            std::cout << measuremsg << std::endl;
+            WriteToLog(measuremsg);
+            /* remove the measurement if completely received */
+            measure->remove(header.prodindex);
+        #endif
     }
     else {
         /**
@@ -597,45 +624,20 @@ void vcmtpRecvv3::mcastHandler()
 
         if (header.flags == VCMTP_BOP) {
             BOPHandler(header);
-
-            #ifdef MEASURE
-                recvbytes = 0;
-                std::string measure = "Product #" +
-                    std::to_string(header.prodindex);
-                measure += ": Transmission start time (BOP)";
-                std::cout << measure << std::endl;
-                /* set rxdone to false upon receiving BOP */
-                rxdone = false;
-                start_t = std::chrono::high_resolution_clock::now();
-                WriteToLog(measure);
-            #endif
         }
         else if (header.flags == VCMTP_MEM_DATA) {
-            recvMemData(header);
-
             #ifdef MEASURE
-                /* header size + payload length equals whole block size */
-                recvbytes += nbytes;
-                recvbytes += header.payloadlen;
+                measure->setMcastClock(header.prodindex);
             #endif
+
+            recvMemData(header);
         }
         else if (header.flags == VCMTP_EOP) {
-            mcastEOPHandler(header);
-
             #ifdef MEASURE
-                /* header size + payload length equals whole block size */
-                recvbytes += nbytes;
-                recvbytes += header.payloadlen;
-                std::string measure = "Product #" +
-                    std::to_string(header.prodindex);
-                measure += ": Transmission end time (EOP), received bytes = ";
-                measure += std::to_string(recvbytes);
-                std::cout << measure << std::endl;
-                /* set rxdone to true upon receiving EOP */
-                rxdone = true;
-                end_t = std::chrono::high_resolution_clock::now();
-                WriteToLog(measure);
+                measure->setMcastClock(header.prodindex);
             #endif
+
+            mcastEOPHandler(header);
         }
 
         int ignoredState;
@@ -768,6 +770,11 @@ void vcmtpRecvv3::retxHandler()
             pushMissingEopReq(header.prodindex);
         }
         else if (header.flags == VCMTP_RETX_DATA) {
+            #ifdef MEASURE
+                /* log the time first */
+                measure->setRetxClock(header.prodindex);
+            #endif
+
             /**
              * directly writing unwanted data to NULL is not allowed. So here
              * uses a temp buffer as trash to dump the payload content.
@@ -852,6 +859,24 @@ void vcmtpRecvv3::retxHandler()
                     debugmsg += " has been completely received";
                     std::cout << debugmsg << std::endl;
                 #endif
+
+                #ifdef MEASURE
+                    uint32_t bytes = measure->getsize(header.prodindex);
+                    std::string measuremsg = "Product #" +
+                        std::to_string(header.prodindex);
+                    measuremsg += ": product received, size = ";
+                    measuremsg += std::to_string(bytes);
+                    measuremsg += " bytes, elapsed time = ";
+                    measuremsg += measure->gettime(header.prodindex);
+                    measuremsg += " seconds.";
+                    if (measure->getEOPmiss(header.prodindex)) {
+                        measuremsg += " EOP is retransmitted";
+                    }
+                    std::cout << measuremsg << std::endl;
+                    WriteToLog(measuremsg);
+                    /* remove the measurement if completely received */
+                    measure->remove(header.prodindex);
+                #endif
             }
 
             #ifdef DEBUG2
@@ -867,6 +892,11 @@ void vcmtpRecvv3::retxHandler()
             #endif
         }
         else if (header.flags == VCMTP_RETX_EOP) {
+            #ifdef MEASURE
+                measure->setRetxClock(header.prodindex);
+                measure->setEOPmiss(header.prodindex);
+            #endif
+
             retxEOPHandler(header);
         }
         else if (header.flags == VCMTP_RETX_REJ) {
@@ -1546,39 +1576,7 @@ void vcmtpRecvv3::WriteToLog(const std::string& content)
     strftime(buf, 30, "%Y-%m-%d %I:%M:%S  ", timeinfo);
     std::string time(buf);
 
-    /* code block only effective for measurement code */
-    #ifdef MEASURE
-    std::string hrclk;
-    std::string nanosec;
-    if (rxdone) {
-        hrclk = std::to_string(end_t.time_since_epoch().count())
-            + " since epoch, ";
-    }
-    else {
-        hrclk = std::to_string(start_t.time_since_epoch().count())
-            + " since epoch, ";
-    }
-
-    if (rxdone) {
-        std::chrono::duration<double> timespan =
-            std::chrono::duration_cast<std::chrono::duration<double>>
-                (end_t - start_t);
-        nanosec = ", Elapsed time: " + std::to_string(timespan.count());
-        nanosec += " seconds.";
-    }
-    #endif
-    /* code block ends */
-
     std::ofstream logfile(logpath, std::ofstream::out | std::ofstream::app);
-    #ifdef MEASURE
-        if (rxdone) {
-            logfile << time << hrclk << content << nanosec << std::endl;
-        }
-        else {
-            logfile << time << hrclk << content << std::endl;
-        }
-    #else
-        logfile << time << content << std::endl;
-    #endif
+    logfile << time << content << std::endl;
     logfile.close();
 }
