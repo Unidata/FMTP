@@ -65,6 +65,8 @@ public:
 private:
     /* sends all bytes */
     void sendall(int retxsock, void* buf, size_t len);
+    /* receives all bytes */
+    void recvall(int retxsock, void* buf, size_t len);
 
     int                sockfd;
     struct sockaddr_in servAddr;

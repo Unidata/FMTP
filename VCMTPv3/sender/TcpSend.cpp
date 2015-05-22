@@ -37,7 +37,6 @@
 #include <unistd.h>
 #include <stdexcept>
 #include <system_error>
-#include <iostream>
 
 
 #ifndef NULL
@@ -252,9 +251,7 @@ void TcpSend::Init()
 int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
 {
     char recvbuf[VCMTP_HEADER_LEN];
-    int retval = read(retxsockfd, recvbuf, sizeof(recvbuf));
-    if(retval < 0)
-        return retval;
+    recvall(retxsockfd, recvbuf, sizeof(recvbuf));
 
     memcpy(&recvheader->prodindex,  recvbuf,    4);
     memcpy(&recvheader->seqnum,     recvbuf+4,  4);
@@ -265,7 +262,7 @@ int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
     recvheader->payloadlen = ntohs(recvheader->payloadlen);
     recvheader->flags      = ntohs(recvheader->flags);
 
-    return retval;
+    return VCMTP_HEADER_LEN;
 }
 
 
@@ -333,6 +330,28 @@ void TcpSend::sendall(int retxsock, void* buf, size_t len)
         if (nbytes < 0) {
             throw std::runtime_error(
                     "TcpSend::sendall() error sending to socket");
+        }
+        p += nbytes;
+        len -= nbytes;
+    }
+}
+
+
+/**
+ * Guarantees either successfully receive all bytes or crash with exception.
+ *
+ * @param[in] *buf     pointer to a buffer.
+ * @param[in] len      Length of the buffer.
+ */
+void TcpSend::recvall(int retxsock, void* buf, size_t len)
+{
+    ssize_t nbytes;
+    char* p = (char*) buf;
+    while (len > 0) {
+        nbytes = recv(retxsock, p, len, 0);
+        if (nbytes < 0) {
+            throw std::runtime_error(
+                    "TcpSend::recvall() error receiving from socket");
         }
         p += nbytes;
         len -= nbytes;
