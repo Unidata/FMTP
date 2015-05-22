@@ -59,10 +59,13 @@ public:
     int readSock(int retxsockfd, char* pktBuf, int bufSize);
     void rmSockInList(int sockfd);
     /** gathering send by calling io vector system call */
-    int send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
-             size_t paylen);
+    int sendData(int retxsockfd, VcmtpHeader* sendheader, char* payload,
+                 size_t paylen);
 
 private:
+    /* sends all bytes */
+    void sendall(int retxsock, void* buf, size_t len);
+
     int                sockfd;
     struct sockaddr_in servAddr;
     std::string        tcpAddr;

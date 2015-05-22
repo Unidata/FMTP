@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <stdexcept>
 #include <system_error>
+#include <iostream>
 
 
 #ifndef NULL
@@ -295,11 +296,9 @@ void TcpSend::rmSockInList(int sockfd)
 
 
 /**
- * Send a VCMTP packet through the given retransmission connection identified
- * by the passed-in socket file descriptor. This function calls the writev()
- * system call to implement a zero-copy gathering write operation where the
- * packet header and payload are stored in different places. After the writev()
- * is finished, return the status value of the writev() system call.
+ * Sends a VCMTP packet through the given retransmission connection identified
+ * by retxsockfd. It blocks until all sending is finished. Or it can terminate
+ * with error occurred.
  *
  * @param[in] retxsockfd    retransmission socket file descriptor.
  * @param[in] *sendheader   pointer of a VcmtpHeader structure, whose fields
@@ -307,20 +306,35 @@ void TcpSend::rmSockInList(int sockfd)
  * @param[in] *payload      pointer to the ready-to-send memory buffer which
  *                          holds the packet payload.
  * @param[in] paylen        size to be sent (size of the payload)
- * @return    retval        return the status value returned by writev()
+ * @return    retval        return the total bytes sent.
  */
-int TcpSend::send(int retxsockfd, VcmtpHeader* sendheader, char* payload,
-                  size_t paylen)
+int TcpSend::sendData(int retxsockfd, VcmtpHeader* sendheader, char* payload,
+                      size_t paylen)
 {
-    struct iovec iov[2];
+    sendall(retxsockfd, sendheader, sizeof(VcmtpHeader));
+    sendall(retxsockfd, payload, paylen);
 
-    iov[0].iov_base = sendheader;
-    iov[0].iov_len  = sizeof(VcmtpHeader);
-    iov[1].iov_base = payload;
-    iov[1].iov_len  = paylen;
-
-    int retval = writev(retxsockfd, iov, 2);
-    return retval;
+    return (sizeof(VcmtpHeader) + paylen);
 }
 
 
+/**
+ * Guarantees either successfully send out all bytes or crash with exception.
+ *
+ * @param[in] *buf     pointer to a buffer.
+ * @param[in] len      Length of the buffer.
+ */
+void TcpSend::sendall(int retxsock, void* buf, size_t len)
+{
+    ssize_t nbytes;
+    char* p = (char*) buf;
+    while (len > 0) {
+        nbytes = send(retxsock, p, len, 0);
+        if (nbytes < 0) {
+            throw std::runtime_error(
+                    "TcpSend::sendall() error sending to socket");
+        }
+        p += nbytes;
+        len -= nbytes;
+    }
+}

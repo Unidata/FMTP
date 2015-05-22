@@ -570,7 +570,7 @@ void vcmtpSendv3::rejRetxReq(const uint32_t prodindex, const int sock)
     sendheader.seqnum     = 0;
     sendheader.payloadlen = 0;
     sendheader.flags      = htons(VCMTP_RETX_REJ);
-    tcpsend->send(sock, &sendheader, NULL, 0);
+    tcpsend->sendData(sock, &sendheader, NULL, 0);
 }
 
 
@@ -616,7 +616,7 @@ void vcmtpSendv3::retransmit(
 
             sendheader.seqnum     = htonl(start);
             sendheader.payloadlen = htons(payLen);
-            int retval = tcpsend->send(sock, &sendheader,
+            int retval = tcpsend->sendData(sock, &sendheader,
                             (char*)retxMeta->dataprod_p + start, payLen);
             if (retval < 0)
                 throw std::runtime_error(
@@ -669,7 +669,7 @@ void vcmtpSendv3::retransBOP(
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
 
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is corret */
-    int retval = tcpsend->send(sock, &sendheader, (char*)(&bopMsg),
+    int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
                                ntohs(sendheader.payloadlen));
     if (retval < 0)
         throw std::runtime_error(
@@ -706,7 +706,7 @@ void vcmtpSendv3::retransEOP(
     /** notice the flags field should be set to RETX_EOP other than EOP */
     sendheader.flags      = htons(VCMTP_RETX_EOP);
 
-    int retval = tcpsend->send(sock, &sendheader, NULL, 0);
+    int retval = tcpsend->sendData(sock, &sendheader, NULL, 0);
     if (retval < 0)
         throw std::runtime_error(
                 "vcmtpSendv3::retransEOP() TcpSend::send() error");
