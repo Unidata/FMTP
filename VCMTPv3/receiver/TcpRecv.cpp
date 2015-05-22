@@ -186,7 +186,7 @@ void TcpRecv::recvall(void* buf, size_t len)
     char* p = (char*) buf;
     while (len > 0) {
         nbytes = recv(sockfd, p, len, 0);
-        if (nbytes <= 0) {
+        if (nbytes < 0) {
             throw std::runtime_error(
                     "TcpRecv::recvall() error receiving from socket");
         }
@@ -208,7 +208,7 @@ void TcpRecv::sendall(void* buf, size_t len)
     char* p = (char*) buf;
     while (len > 0) {
         nbytes = send(sockfd, p, len, 0);
-        if (nbytes <= 0) {
+        if (nbytes < 0) {
             throw std::runtime_error(
                     "TcpRecv::sendall() error sending to socket");
         }
