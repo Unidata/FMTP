@@ -18,10 +18,9 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details at http://www.gnu.org/copyleft/gpl.html
  *
- * @brief     Define the interfaces of Tcp class.
+ * @brief     Declare the TcpBase class.
  *
- * Base class for the vcmtpRecvv3 and vcmtpSendv3 classes. It handles
- * TCP connections.
+ * Base class for the TcpRecv and TcpSend classes. It handles TCP connections.
  */
 
 #ifndef VCMTP_TCP_H_
@@ -31,7 +30,6 @@
 
 class TcpBase
 {
-public:
 protected:
     TcpBase();
     ~TcpBase();
@@ -86,7 +84,8 @@ protected:
      */
     void sendall(void* const buf, const size_t nbytes);
 
-    int                     sockfd;
+    /// The TCP socket
+    int sockfd;
 };
 
 #endif /* VCMTP_TCP_H_ */

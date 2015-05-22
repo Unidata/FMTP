@@ -18,10 +18,9 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details at http://www.gnu.org/copyleft/gpl.html
  *
- * @brief     Implement the interfaces of Tcp class.
+ * @brief     Implement the TcpBase class.
  *
- * Base class for the vcmtpRecvv3 and vcmtpSendv3 classes. It handles
- * TCP connections.
+ * Base class for the TcpRecv and TcpSend classes. It handles TCP connections.
  */
 
 #include "TcpBase.h"
@@ -29,12 +28,8 @@
 #include <errno.h>
 #include <netdb.h>
 #include <sys/socket.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <cstring>
-#include <iostream>
-#include <stdexcept>
 #include <system_error>
+#include <unistd.h>
 
 
 /**
@@ -47,7 +42,7 @@ TcpBase::TcpBase()
 
 
 /**
- * Destructor of TcpRecv.
+ * Destructor.
  *
  * @param[in] none
  */
@@ -105,8 +100,8 @@ size_t TcpBase::recvall(void* const buf, const size_t nbytes)
 
 
 /**
- * Writes a given number of bytes to a given streaming socket. Returns when that number is written or an
- * error occurs.
+ * Writes a given number of bytes to a given streaming socket. Returns when that
+ * number is written or an error occurs.
  *
  * @param[in] sock    The streaming socket.
  * @param[in] buf     Pointer to a buffer.
