@@ -102,32 +102,15 @@ void TcpRecv::Init()
  * @param[in] payload  Payload.
  * @param[in] payLen   Length of the payload in bytes.
  * @return             Number of bytes received.
- * @throw std::logic_error  if the socket was closed while being read.
- * @throw std::system_error if the socket couldn't be read.
+ * @throw std::runtime_error if received bytes not equal to requested bytes.
  */
 ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
                           size_t payLen)
 {
-    struct iovec iov[2];
+    recvall(header, headLen);
+    recvall(payload, payLen);
 
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headLen;
-    iov[1].iov_base = payload;
-    iov[1].iov_len  = payLen;
-
-    const ssize_t nbytes = readv(sockfd, iov, 2);
-
-    if (nbytes > 0)
-        return nbytes;
-
-    std::string sockStr = std::to_string(static_cast<long long>(sockfd));
-
-    if (nbytes == 0)
-        throw std::logic_error("TcpRecv::recvData(): Socket " + sockStr +
-                " was closed");
-
-    throw std::system_error(errno, std::system_category(),
-            "TcpRecv::recvData(): Couldn't read from socket " + sockStr);
+    return (headLen + payLen);
 }
 
 
@@ -145,14 +128,10 @@ ssize_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
 ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
                           size_t payLen)
 {
-    struct iovec iov[2];
+    sendall(header, headLen);
+    sendall(payload, payLen);
 
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headLen;
-    iov[1].iov_base = payload;
-    iov[1].iov_len  = payLen;
-
-    return writev(sockfd, iov, 2);
+    return (headLen + payLen);
 }
 
 
@@ -191,5 +170,49 @@ void TcpRecv::initSocket()
             throw std::system_error(errno, std::system_category(),
                     "TcpRecv:TcpRecv() Error connecting to " + servAddr);
         }
+    }
+}
+
+
+/**
+ * Guarantees either successfully receive all bytes or crash with exception.
+ *
+ * @param[in] *buf     pointer to a buffer.
+ * @param[in] len      Length of the buffer.
+ */
+void TcpRecv::recvall(void* buf, size_t len)
+{
+    ssize_t nbytes;
+    char* p = (char*) buf;
+    while (len > 0) {
+        nbytes = recv(sockfd, p, len, 0);
+        if (nbytes <= 0) {
+            throw std::runtime_error(
+                    "TcpRecv::recvall() error receiving from socket");
+        }
+        p += nbytes;
+        len -= nbytes;
+    }
+}
+
+
+/**
+ * Guarantees either successfully send out all bytes or crash with exception.
+ *
+ * @param[in] *buf     pointer to a buffer.
+ * @param[in] len      Length of the buffer.
+ */
+void TcpRecv::sendall(void* buf, size_t len)
+{
+    ssize_t nbytes;
+    char* p = (char*) buf;
+    while (len > 0) {
+        nbytes = send(sockfd, p, len, 0);
+        if (nbytes <= 0) {
+            throw std::runtime_error(
+                    "TcpRecv::sendall() error sending to socket");
+        }
+        p += nbytes;
+        len -= nbytes;
     }
 }

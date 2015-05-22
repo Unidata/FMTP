@@ -78,6 +78,10 @@ private:
      * @throws std::system_error  if a system error occurs.
      */
     void initSocket();
+    /* receive the amount of bytes indicated */
+    void recvall(void* buf, size_t len);
+    /* send the amount of bytes indicated */
+    void sendall(void* buf, size_t len);
 
     int                     sockfd;
     struct sockaddr_in      servAddr;
