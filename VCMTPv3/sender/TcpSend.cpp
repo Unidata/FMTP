@@ -56,7 +56,7 @@
  */
 TcpSend::TcpSend(std::string tcpaddr, unsigned short tcpport)
     : tcpAddr(tcpaddr), tcpPort(tcpport), sockListMutex(),
-      sockfd(-1), servAddr()
+      servAddr()
 {
 }
 
@@ -73,7 +73,6 @@ TcpSend::~TcpSend()
         std::unique_lock<std::mutex> lock(sockListMutex); // cache coherence
         connSockList.clear();
     }
-    close(sockfd);
 }
 
 
@@ -312,48 +311,4 @@ int TcpSend::sendData(int retxsockfd, VcmtpHeader* sendheader, char* payload,
     sendall(retxsockfd, payload, paylen);
 
     return (sizeof(VcmtpHeader) + paylen);
-}
-
-
-/**
- * Guarantees either successfully send out all bytes or crash with exception.
- *
- * @param[in] *buf     pointer to a buffer.
- * @param[in] len      Length of the buffer.
- */
-void TcpSend::sendall(int retxsock, void* buf, size_t len)
-{
-    ssize_t nbytes;
-    char* p = (char*) buf;
-    while (len > 0) {
-        nbytes = send(retxsock, p, len, 0);
-        if (nbytes < 0) {
-            throw std::runtime_error(
-                    "TcpSend::sendall() error sending to socket");
-        }
-        p += nbytes;
-        len -= nbytes;
-    }
-}
-
-
-/**
- * Guarantees either successfully receive all bytes or crash with exception.
- *
- * @param[in] *buf     pointer to a buffer.
- * @param[in] len      Length of the buffer.
- */
-void TcpSend::recvall(int retxsock, void* buf, size_t len)
-{
-    ssize_t nbytes;
-    char* p = (char*) buf;
-    while (len > 0) {
-        nbytes = recv(retxsock, p, len, 0);
-        if (nbytes < 0) {
-            throw std::runtime_error(
-                    "TcpSend::recvall() error receiving from socket");
-        }
-        p += nbytes;
-        len -= nbytes;
-    }
 }

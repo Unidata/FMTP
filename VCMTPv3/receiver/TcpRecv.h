@@ -29,17 +29,18 @@
 #define VCMTP_RECEIVER_TCPRECV_H_
 
 
+#include "TcpBase.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <mutex>
 #include <string>
+#include <sys/types.h>
 
 
-class TcpRecv
+class TcpRecv: public TcpBase
 {
 public:
     TcpRecv(const std::string& tcpaddr, unsigned short tcpport);
-    ~TcpRecv();
     void Init();  /*!< the start point which upper layer should call */
     /**
      * Receives a header and a payload on the TCP connection. Blocks until the
@@ -53,7 +54,7 @@ public:
      * @retval    -1       O/S failure.
      * @return             Number of bytes received.
      */
-    ssize_t recvData(void* header, size_t headLen, char* payload,
+    size_t recvData(void* header, size_t headLen, char* payload,
                      size_t payLen);
     /**
      * Sends a header and a payload on the TCP connection. Blocks until the packet
@@ -78,12 +79,7 @@ private:
      * @throws std::system_error  if a system error occurs.
      */
     void initSocket();
-    /* receive the amount of bytes indicated */
-    void recvall(void* buf, size_t len);
-    /* send the amount of bytes indicated */
-    void sendall(void* buf, size_t len);
 
-    int                     sockfd;
     struct sockaddr_in      servAddr;
     std::string             tcpAddr;  /* a copy of the passed-in tcpAddr */
     unsigned short          tcpPort;  /* a copy of the passed-in tcpPort */

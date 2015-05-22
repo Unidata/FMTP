@@ -37,11 +37,12 @@
 #include <list>
 #include <mutex>
 #include <string>
+#include "TcpBase.h"
 
 #include "vcmtpBase.h"
 
 
-class TcpSend
+class TcpSend: public TcpBase
 {
 public:
     /** source port would be initialized to 0 if not being specified. */
@@ -63,12 +64,6 @@ public:
                  size_t paylen);
 
 private:
-    /* sends all bytes */
-    void sendall(int retxsock, void* buf, size_t len);
-    /* receives all bytes */
-    void recvall(int retxsock, void* buf, size_t len);
-
-    int                sockfd;
     struct sockaddr_in servAddr;
     std::string        tcpAddr;
     unsigned short     tcpPort;
