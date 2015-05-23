@@ -88,4 +88,4 @@ protected:
     int sockfd;
 };
 
-#endif /* VCMTP_TCP_H_ */
+#endif /* VCMTP_TCPBASE_H_ */
