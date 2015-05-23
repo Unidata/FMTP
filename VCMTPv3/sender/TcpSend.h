@@ -37,12 +37,12 @@
 #include <list>
 #include <mutex>
 #include <string>
-#include "TcpBase.h"
 
+#include "TcpBase.h"
 #include "vcmtpBase.h"
 
 
-class TcpSend: public TcpBase
+class TcpSend : public TcpBase
 {
 public:
     /** source port would be initialized to 0 if not being specified. */

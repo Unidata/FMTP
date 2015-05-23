@@ -23,8 +23,8 @@
  * Base class for the TcpRecv and TcpSend classes. It handles TCP connections.
  */
 
-#ifndef VCMTP_TCP_H_
-#define VCMTP_TCP_H_
+#ifndef VCMTP_TCPBASE_H_
+#define VCMTP_TCPBASE_H_
 
 #include <sys/types.h>
 
