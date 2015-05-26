@@ -1312,7 +1312,8 @@ void vcmtpRecvv3::stopJoinRetxRequester()
 
 
 /**
- * Start the retxHandler thread using a passed-in vcmtpRecvv3 pointer.
+ * Start the retxHandler thread using a passed-in vcmtpRecvv3 pointer. Called
+ * by `pthread_create()`.
  *
  * @param[in] *ptr        A pointer to the pre-defined data structure in the
  *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
