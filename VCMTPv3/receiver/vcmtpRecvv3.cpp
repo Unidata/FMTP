@@ -1119,15 +1119,18 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  *
  * @pre                       The socket contains a VCMTP data-packet.
  * @param[in] header          The associated, peeked-at and decoded header.
- * @throw std::system_error   if seqnum is out of boundary.
+ * @throw std::system_error   if `seqnum + payloadlen` is out of boundary.
  * @throw std::system_error   if an error occurs while reading the socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
     if (header.seqnum + header.payloadlen > BOPmsg.prodsize) {
-        throw std::system_error(header.seqnum, std::system_category(),
-            "vcmtpRecvv3::recvMemData() block out of boundary");
+        throw std::system_error(errno, std::system_category(),
+            std::string("vcmtpRecvv3::recvMemData() block out of boundary: ") +
+            "seqnum=" + std::to_string(header.seqnum) + ", payloadlen=" +
+            std::to_string(header.payloadlen) + ", prodsize=" +
+            std::to_string(BOPmsg.prodsize));
     }
 
     if (header.prodindex == vcmtpHeader.prodindex) {
