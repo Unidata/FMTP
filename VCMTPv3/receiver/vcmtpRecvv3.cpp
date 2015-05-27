@@ -747,6 +747,13 @@ void vcmtpRecvv3::retxHandler()
         (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
         ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
+        /*
+         * recvData returning 0 indicates an unexpected socket close, thus
+         * VCMTP receiver should stop right away and return
+         */
+        if (nbytes == 0) {
+            Stop();
+        }
 
         decodeHeader(pktHead, nbytes, header, &paytmp);
 
