@@ -727,10 +727,12 @@ void vcmtpRecvv3::retxHandler()
 {
     VcmtpHeader header;
     char        pktHead[VCMTP_HEADER_LEN];
+    char        paytmp[VCMTP_DATA_LEN];
     int         initState;
     int         ignoredState;
 
     (void)memset(pktHead, 0, sizeof(pktHead));
+    (void)memset(paytmp, 0, sizeof(paytmp));
     /*
      * Allow the current thread to be cancelled only when it is likely blocked
      * attempting to read from the unicast socket because that prevents the
@@ -741,8 +743,8 @@ void vcmtpRecvv3::retxHandler()
 
     while(1)
     {
-        /** temp buffer, do not access in case of out of bound issues */
-        char* paytmp;
+        /* a useless place holder for header parsing */
+        char* pholder;
 
         (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
         ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
@@ -755,7 +757,7 @@ void vcmtpRecvv3::retxHandler()
             Stop();
         }
 
-        decodeHeader(pktHead, nbytes, header, &paytmp);
+        decodeHeader(pktHead, nbytes, header, &pholder);
 
         if (header.flags == VCMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
