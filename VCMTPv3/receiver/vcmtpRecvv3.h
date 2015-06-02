@@ -49,7 +49,7 @@
 #include "vcmtpBase.h"
 
 
-typedef std::unordered_map<uint32_t, uint32_t> BOPMap;
+typedef std::unordered_map<uint32_t, BOPMsg> BOPMap;
 
 class vcmtpRecvv3;
 
