@@ -1164,7 +1164,7 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
         BOPMsg tmpBOP = BOPmap[header.prodindex];
         prodsize = tmpBOP.prodsize;
     }
-    if (header.seqnum + header.payloadlen > prodsize) {
+    if ((prodsize > 0) && (header.seqnum + header.payloadlen > prodsize)) {
         throw std::runtime_error(
             std::string("vcmtpRecvv3::recvMemData() block out of boundary: ") +
             "seqnum=" + std::to_string(header.seqnum) + ", payloadlen=" +
@@ -1172,7 +1172,7 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
             std::to_string(prodsize));
     }
 
-    if (header.prodindex == vcmtpHeader.prodindex) {
+    if ((prodsize > 0) && (header.prodindex == vcmtpHeader.prodindex)) {
         /*
          * The data-packet is for the current data-product.
          */
