@@ -67,6 +67,7 @@ typedef struct VcmtpBOPMessage {
     uint32_t   prodsize;     /*!< support 4GB maximum */
     uint16_t   metasize;
     char       metadata[AVAIL_BOP_LEN];
+    VcmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
 } BOPMsg;
 
 
