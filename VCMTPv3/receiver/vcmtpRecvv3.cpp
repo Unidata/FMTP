@@ -787,22 +787,29 @@ void vcmtpRecvv3::retxHandler()
                     prodsize = BOPmap[header.prodindex];
                 }
                 else {
-                    /** dump the payload since there is no product queue */
                     (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
-                            &ignoredState);
+                                                 &ignoredState);
+                    /**
+                     * drop the payload since there is no location allocated
+                     * in the product queue.
+                     */
+                    tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
+                                                 &ignoredState);
+
                     /*
                      * The BOPmap will only be erased when the associated
                      * product has been completely received. So if no valid
                      * prodindex found, it indicates the product is received
-                     * and thus removed.
+                     * and thus removed or there is out-of-order arrival on
+                     * TCP.
                      */
-                    tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
-                    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
-                            &ignoredState);
+                    //requestMissingBops(header.prodindex);
                     continue;
                 }
             }
-            if (header.seqnum + header.payloadlen > prodsize) {
+            if ((prodsize > 0) &&
+                (header.seqnum + header.payloadlen > prodsize)) {
                 throw std::runtime_error("vcmtpRecvv3::retxHandler() "
                         "retx block out of boundary");
             }
