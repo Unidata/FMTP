@@ -794,12 +794,20 @@ void vcmtpRecvv3::retxHandler()
              * blocks will be missing as well. Thus retxHandler should issue
              * RETX_REQ for all data blocks as well as EOP packet.
              */
+            uint32_t prodsize = 0;
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
                 BOPMsg tmpBOP = BOPmap[header.prodindex];
-                requestAnyMissingData(tmpBOP.prodsize);
+                prodsize = tmpBOP.prodsize;
             }
-            pushMissingEopReq(header.prodindex);
+            if (prodsize > 0) {
+                requestAnyMissingData(prodsize);
+                pushMissingEopReq(header.prodindex);
+            }
+            else {
+                throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                        "Product not found in BOPMap after receiving retx BOP");
+            }
         }
         else if (header.flags == VCMTP_RETX_DATA) {
             #ifdef MEASURE
