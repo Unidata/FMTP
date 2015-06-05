@@ -273,23 +273,32 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
 void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
                              const char* const  VcmtpPacketData)
 {
+    uint32_t blknum = 0;
     /**
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    if (header.payloadlen < 6)
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
-    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
-    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
-    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
-                      ? AVAIL_BOP_LEN : BOPmsg.metasize;
-    if (header.payloadlen - 6 < BOPmsg.metasize)
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
-    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
     /* Atomic insertion for BOP of new product */
     {
         std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPmap[header.prodindex] = BOPmsg.prodsize;
+
+        if (header.payloadlen < 6)
+            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
+        BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
+        BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
+        BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
+                          ? AVAIL_BOP_LEN : BOPmsg.metasize;
+        if (header.payloadlen - 6 < BOPmsg.metasize)
+            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
+        (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
+
+        BOPmap[header.prodindex] = BOPmsg;
+
+        if(notifier)
+            notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
+                    BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+
+        blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
     }
 
     /**
@@ -306,15 +315,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     /** forcibly terminate the previous timer */
     timerWake.notify_all();
 
-    if(notifier)
-        notifier->notify_of_bop(vcmtpHeader.prodindex, BOPmsg.prodsize,
-                BOPmsg.metadata, BOPmsg.metasize, &prodptr);
-
-    uint32_t blocknum = BOPmsg.prodsize ?
-        (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
-
     /* check if the product is already under tracking */
-    if (!pBlockMNG->addProd(header.prodindex, blocknum)) {
+    if (!pBlockMNG->addProd(header.prodindex, blknum)) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
                 "Error adding product into ProdBlockMNG");
     }
@@ -341,18 +343,23 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * link speed. Besides, a little more extra time would be favorable to
      * tolerate possible fluctuation.
      */
-    double sleeptime = 500 * ((double)BOPmsg.prodsize / (double)linkspeed);
+    double sleeptime = 0.0;
+    {
+        std::unique_lock<std::mutex> lock(BOPmapmtx);
+        BOPMsg tmpBOP = BOPmap[header.prodindex];
+        sleeptime = 500 * ((double)tmpBOP.prodsize / (double)linkspeed);
+    }
     /** add the new product into timer queue */
     {
         std::unique_lock<std::mutex> lock(timerQmtx);
-        timerParam timerparam = {vcmtpHeader.prodindex, sleeptime};
+        timerParam timerparam = {header.prodindex, sleeptime};
         timerParamQ.push(timerparam);
         timerQfilled.notify_all();
     }
 
     #ifdef DEBUG2
         std::string debugmsg = "Product #" +
-            std::to_string(vcmtpHeader.prodindex);
+            std::to_string(header.prodindex);
         debugmsg += ": BOP is received. Product size = ";
         debugmsg += std::to_string(BOPmsg.prodsize);
         debugmsg += ", Metadata size = ";
@@ -362,7 +369,11 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     #endif
 
     #ifdef MEASURE
-        measure->insert(header.prodindex, BOPmsg.prodsize);
+        {
+            std::unique_lock<std::mutex> lock(BOPmapmtx);
+            BOPMsg tmpBOP = BOPmap[header.prodindex];
+            measure->insert(header.prodindex, tmpBOP.prodsize);
+        }
         std::string measuremsg = "Product #" +
             std::to_string(header.prodindex);
         measuremsg += ": new product to receive";
@@ -521,7 +532,11 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
          * request retx for all the missing blocks including the last one.
          */
         if (!hasLastBlock()) {
-            requestAnyMissingData(BOPmsg.prodsize);
+            {
+                std::unique_lock<std::mutex> lock(BOPmapmtx);
+                BOPMsg tmpBOP = BOPmap[header.prodindex];
+                requestAnyMissingData(tmpBOP.prodsize);
+            }
         }
     }
 }
@@ -538,7 +553,11 @@ bool vcmtpRecvv3::hasLastBlock()
     /**
      * seqnum + payloadlen should always be equal to or smaller than prodsize
      */
-    return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == BOPmsg.prodsize);
+    {
+        std::unique_lock<std::mutex> lock(BOPmapmtx);
+        BOPMsg tmpBOP = BOPmap[vcmtpHeader.prodindex];
+        return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpBOP.prodsize);
+    }
 }
 
 
@@ -727,10 +746,12 @@ void vcmtpRecvv3::retxHandler()
 {
     VcmtpHeader header;
     char        pktHead[VCMTP_HEADER_LEN];
+    char        paytmp[VCMTP_DATA_LEN];
     int         initState;
     int         ignoredState;
 
     (void)memset(pktHead, 0, sizeof(pktHead));
+    (void)memset(paytmp, 0, sizeof(paytmp));
     /*
      * Allow the current thread to be cancelled only when it is likely blocked
      * attempting to read from the unicast socket because that prevents the
@@ -741,14 +762,21 @@ void vcmtpRecvv3::retxHandler()
 
     while(1)
     {
-        /** temp buffer, do not access in case of out of bound issues */
-        char* paytmp;
+        /* a useless place holder for header parsing */
+        char* pholder;
 
         (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
         ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
+        /*
+         * recvData returning 0 indicates an unexpected socket close, thus
+         * VCMTP receiver should stop right away and return
+         */
+        if (nbytes == 0) {
+            Stop();
+        }
 
-        decodeHeader(pktHead, nbytes, header, &paytmp);
+        decodeHeader(pktHead, nbytes, header, &pholder);
 
         if (header.flags == VCMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
@@ -766,7 +794,11 @@ void vcmtpRecvv3::retxHandler()
              * blocks will be missing as well. Thus retxHandler should issue
              * RETX_REQ for all data blocks as well as EOP packet.
              */
-            requestAnyMissingData(BOPmsg.prodsize);
+            {
+                std::unique_lock<std::mutex> lock(BOPmapmtx);
+                BOPMsg tmpBOP = BOPmap[header.prodindex];
+                requestAnyMissingData(tmpBOP.prodsize);
+            }
             pushMissingEopReq(header.prodindex);
         }
         else if (header.flags == VCMTP_RETX_DATA) {
@@ -784,7 +816,8 @@ void vcmtpRecvv3::retxHandler()
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
                 if (BOPmap.find(header.prodindex) != BOPmap.end()) {
-                    prodsize = BOPmap[header.prodindex];
+                    BOPMsg tmpBOP = BOPmap[header.prodindex];
+                    prodsize = tmpBOP.prodsize;
                 }
                 else {
                     (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
@@ -1126,18 +1159,27 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  *
  * @pre                       The socket contains a VCMTP data-packet.
  * @param[in] header          The associated, peeked-at and decoded header.
- * @throw std::system_error   if seqnum is out of boundary.
- * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  if `seqnum + payloadlen` is out of boundary.
  * @throw std::runtime_error  if the packet is invalid.
+ * @throw std::system_error   if an error occurs while reading the socket.
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
-    if (header.seqnum + header.payloadlen > BOPmsg.prodsize) {
-        throw std::system_error(header.seqnum, std::system_category(),
-            "vcmtpRecvv3::recvMemData() block out of boundary");
+    uint32_t prodsize = 0;
+    {
+        std::unique_lock<std::mutex> lock(BOPmapmtx);
+        BOPMsg tmpBOP = BOPmap[header.prodindex];
+        prodsize = tmpBOP.prodsize;
+    }
+    if ((prodsize > 0) && (header.seqnum + header.payloadlen > prodsize)) {
+        throw std::runtime_error(
+            std::string("vcmtpRecvv3::recvMemData() block out of boundary: ") +
+            "seqnum=" + std::to_string(header.seqnum) + ", payloadlen=" +
+            std::to_string(header.payloadlen) + ", prodsize=" +
+            std::to_string(prodsize));
     }
 
-    if (header.prodindex == vcmtpHeader.prodindex) {
+    if ((prodsize > 0) && (header.prodindex == vcmtpHeader.prodindex)) {
         /*
          * The data-packet is for the current data-product.
          */
@@ -1316,7 +1358,8 @@ void vcmtpRecvv3::stopJoinRetxRequester()
 
 
 /**
- * Start the retxHandler thread using a passed-in vcmtpRecvv3 pointer.
+ * Start the retxHandler thread using a passed-in vcmtpRecvv3 pointer. Called
+ * by `pthread_create()`.
  *
  * @param[in] *ptr        A pointer to the pre-defined data structure in the
  *                        caller. Here it's the pointer to a vcmtpRecvv3 class.
