@@ -823,7 +823,7 @@ void vcmtpRecvv3::retxHandler()
             uint32_t prodsize = 0;
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
-                if (BOPmap.find(header.prodindex) != BOPmap.end()) {
+                if (BOPmap.count(header.prodindex)) {
                     BOPMsg tmpBOP = BOPmap[header.prodindex];
                     prodsize = tmpBOP.prodsize;
                 }
