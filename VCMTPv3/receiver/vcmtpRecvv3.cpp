@@ -346,8 +346,14 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     double sleeptime = 0.0;
     {
         std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPMsg tmpBOP = BOPmap[header.prodindex];
-        sleeptime = 500 * ((double)tmpBOP.prodsize / (double)linkspeed);
+        if (BOPmap.count(header.prodindex)) {
+            BOPMsg tmpBOP = BOPmap[header.prodindex];
+            sleeptime = 500 * ((double)tmpBOP.prodsize / (double)linkspeed);
+        }
+        else {
+            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
+                    "Error accessing newly added BOP");
+        }
     }
     /** add the new product into timer queue */
     {
@@ -371,8 +377,14 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     #ifdef MEASURE
         {
             std::unique_lock<std::mutex> lock(BOPmapmtx);
-            BOPMsg tmpBOP = BOPmap[header.prodindex];
-            measure->insert(header.prodindex, tmpBOP.prodsize);
+            if (BOPmap.count(header.prodindex)) {
+                BOPMsg tmpBOP = BOPmap[header.prodindex];
+                measure->insert(header.prodindex, tmpBOP.prodsize);
+            }
+            else {
+                throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
+                        "[Measure] Error accessing newly added BOP");
+            }
         }
         std::string measuremsg = "Product #" +
             std::to_string(header.prodindex);
@@ -534,8 +546,14 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         if (!hasLastBlock()) {
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
-                BOPMsg tmpBOP = BOPmap[header.prodindex];
-                requestAnyMissingData(tmpBOP.prodsize);
+                if (BOPmap.count(header.prodindex)) {
+                    BOPMsg tmpBOP = BOPmap[header.prodindex];
+                    requestAnyMissingData(tmpBOP.prodsize);
+                }
+                else {
+                    throw std::runtime_error("vcmtpRecvv3::EOPHandler(): "
+                            "Error retrieving BOP metadata");
+                }
             }
         }
     }
@@ -555,8 +573,15 @@ bool vcmtpRecvv3::hasLastBlock()
      */
     {
         std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPMsg tmpBOP = BOPmap[vcmtpHeader.prodindex];
-        return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpBOP.prodsize);
+        if (BOPmap.count(vcmtpHeader.prodindex)) {
+            BOPMsg tmpBOP = BOPmap[vcmtpHeader.prodindex];
+            return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen ==
+                    tmpBOP.prodsize);
+        }
+        else {
+            throw std::runtime_error("vcmtpRecvv3::hasLastBlock(): "
+                    "Error retrieving BOP metadata");
+        }
     }
 }
 
@@ -797,9 +822,12 @@ void vcmtpRecvv3::retxHandler()
             uint32_t prodsize = 0;
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
-                BOPMsg tmpBOP = BOPmap[header.prodindex];
-                prodsize = tmpBOP.prodsize;
+                if (BOPmap.count(header.prodindex)) {
+                    BOPMsg tmpBOP = BOPmap[header.prodindex];
+                    prodsize = tmpBOP.prodsize;
+                }
             }
+
             if (prodsize > 0) {
                 requestAnyMissingData(prodsize);
                 pushMissingEopReq(header.prodindex);
@@ -1177,9 +1205,12 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     uint32_t prodsize = 0;
     {
         std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPMsg tmpBOP = BOPmap[header.prodindex];
-        prodsize = tmpBOP.prodsize;
+        if (BOPmap.count(header.prodindex)) {
+            BOPMsg tmpBOP = BOPmap[header.prodindex];
+            prodsize = tmpBOP.prodsize;
+        }
     }
+
     if ((prodsize > 0) && (header.seqnum + header.payloadlen > prodsize)) {
         throw std::runtime_error(
             std::string("vcmtpRecvv3::recvMemData() block out of boundary: ") +

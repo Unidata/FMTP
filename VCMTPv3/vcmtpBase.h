@@ -56,7 +56,7 @@ typedef struct VcmtpRetxReqMessage {
 const int MAX_VCMTP_PACKET_LEN = 1460;
 const int VCMTP_HEADER_LEN     = sizeof(VcmtpHeader);
 const int VCMTP_DATA_LEN       = MAX_VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
-const int AVAIL_BOP_LEN        = VCMTP_DATA_LEN - 4 - 2; /*!< prosize is 4 bytes, metasize is 2 bytes */
+const int AVAIL_BOP_LEN        = VCMTP_DATA_LEN - 4 - 2;
 const int RETX_REQ_LEN         = sizeof(RetxReqMsg);
 
 
@@ -67,6 +67,7 @@ typedef struct VcmtpBOPMessage {
     uint32_t   prodsize;     /*!< support 4GB maximum */
     uint16_t   metasize;
     char       metadata[AVAIL_BOP_LEN];
+    /* Be aware this default constructor could implicitly create a new BOP */
     VcmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
 } BOPMsg;
 
