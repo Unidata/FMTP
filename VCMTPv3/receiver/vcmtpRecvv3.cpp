@@ -346,8 +346,14 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     double sleeptime = 0.0;
     {
         std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPMsg tmpBOP = BOPmap[header.prodindex];
-        sleeptime = 500 * ((double)tmpBOP.prodsize / (double)linkspeed);
+        if (BOPmap.count(header.prodindex)) {
+            BOPMsg tmpBOP = BOPmap[header.prodindex];
+            sleeptime = 500 * ((double)tmpBOP.prodsize / (double)linkspeed);
+        }
+        else {
+            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
+                    "Error accessing newly added BOP");
+        }
     }
     /** add the new product into timer queue */
     {
@@ -371,8 +377,14 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     #ifdef MEASURE
         {
             std::unique_lock<std::mutex> lock(BOPmapmtx);
-            BOPMsg tmpBOP = BOPmap[header.prodindex];
-            measure->insert(header.prodindex, tmpBOP.prodsize);
+            if (BOPmap.count(header.prodindex)) {
+                BOPMsg tmpBOP = BOPmap[header.prodindex];
+                measure->insert(header.prodindex, tmpBOP.prodsize);
+            }
+            else {
+                throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
+                        "[Measure] Error accessing newly added BOP");
+            }
         }
         std::string measuremsg = "Product #" +
             std::to_string(header.prodindex);
@@ -531,11 +543,17 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
          * Otherwise, last block is missing as well, receiver needs to
          * request retx for all the missing blocks including the last one.
          */
-        if (!hasLastBlock()) {
+        if (!hasLastBlock(header.prodindex)) {
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
-                BOPMsg tmpBOP = BOPmap[header.prodindex];
-                requestAnyMissingData(tmpBOP.prodsize);
+                if (BOPmap.count(header.prodindex)) {
+                    BOPMsg tmpBOP = BOPmap[header.prodindex];
+                    requestAnyMissingData(tmpBOP.prodsize);
+                }
+                else {
+                    throw std::runtime_error("vcmtpRecvv3::EOPHandler(): "
+                            "Error retrieving BOP metadata");
+                }
             }
         }
     }
@@ -547,17 +565,9 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
  *
  * @param[in] none
  */
-bool vcmtpRecvv3::hasLastBlock()
+bool vcmtpRecvv3::hasLastBlock(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-    /**
-     * seqnum + payloadlen should always be equal to or smaller than prodsize
-     */
-    {
-        std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPMsg tmpBOP = BOPmap[vcmtpHeader.prodindex];
-        return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen == tmpBOP.prodsize);
-    }
+    return pBlockMNG->getLastBlock(prodindex);
 }
 
 
@@ -797,9 +807,12 @@ void vcmtpRecvv3::retxHandler()
             uint32_t prodsize = 0;
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
-                BOPMsg tmpBOP = BOPmap[header.prodindex];
-                prodsize = tmpBOP.prodsize;
+                if (BOPmap.count(header.prodindex)) {
+                    BOPMsg tmpBOP = BOPmap[header.prodindex];
+                    prodsize = tmpBOP.prodsize;
+                }
             }
+
             if (prodsize > 0) {
                 requestAnyMissingData(prodsize);
                 pushMissingEopReq(header.prodindex);
@@ -1178,9 +1191,12 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     uint32_t prodsize = 0;
     {
         std::unique_lock<std::mutex> lock(BOPmapmtx);
-        BOPMsg tmpBOP = BOPmap[header.prodindex];
-        prodsize = tmpBOP.prodsize;
+        if (BOPmap.count(header.prodindex)) {
+            BOPMsg tmpBOP = BOPmap[header.prodindex];
+            prodsize = tmpBOP.prodsize;
+        }
     }
+
     if ((prodsize > 0) && (header.seqnum + header.payloadlen > prodsize)) {
         throw std::runtime_error(
             std::string("vcmtpRecvv3::recvMemData() block out of boundary: ") +
