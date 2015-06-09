@@ -579,8 +579,7 @@ bool vcmtpRecvv3::hasLastBlock()
                     tmpBOP.prodsize);
         }
         else {
-            throw std::runtime_error("vcmtpRecvv3::hasLastBlock(): "
-                    "Error retrieving BOP metadata");
+            return true;
         }
     }
 }
