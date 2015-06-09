@@ -543,7 +543,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
          * Otherwise, last block is missing as well, receiver needs to
          * request retx for all the missing blocks including the last one.
          */
-        if (!hasLastBlock()) {
+        if (!hasLastBlock(header.prodindex)) {
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
                 if (BOPmap.count(header.prodindex)) {
@@ -565,23 +565,9 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
  *
  * @param[in] none
  */
-bool vcmtpRecvv3::hasLastBlock()
+bool vcmtpRecvv3::hasLastBlock(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-    /**
-     * seqnum + payloadlen should always be equal to or smaller than prodsize
-     */
-    {
-        std::unique_lock<std::mutex> lock(BOPmapmtx);
-        if (BOPmap.count(vcmtpHeader.prodindex)) {
-            BOPMsg tmpBOP = BOPmap[vcmtpHeader.prodindex];
-            return (vcmtpHeader.seqnum + vcmtpHeader.payloadlen ==
-                    tmpBOP.prodsize);
-        }
-        else {
-            return true;
-        }
-    }
+    return pBlockMNG->getLastBlock(prodindex);
 }
 
 

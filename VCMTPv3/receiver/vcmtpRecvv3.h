@@ -117,7 +117,7 @@ private:
     void decodeHeader(char* const packet, const size_t nbytes,
                       VcmtpHeader& header, char** const payload);
     void EOPHandler(const VcmtpHeader& header);
-    bool hasLastBlock();
+    bool hasLastBlock(const uint32_t prodindex);
     bool isEOPReceived();
     void joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     void mcastHandler();

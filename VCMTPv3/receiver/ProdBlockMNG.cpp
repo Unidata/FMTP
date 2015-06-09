@@ -140,6 +140,26 @@ uint32_t ProdBlockMNG::getMapSize(const uint32_t prodindex)
 
 
 /**
+ * Gets the status of the last block of the given product.
+ *
+ * @param[in] prodindex        Product index of the product to get status from.
+ * @return                     Arrival status of the last block.
+ */
+bool ProdBlockMNG::getLastBlock(const uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(mutex);
+    if (bitmapSet.count(prodindex) && bitmapSizeSet.count(prodindex)) {
+        uint32_t blockidx = bitmapSizeSet[prodindex] - 1;
+        map = bitmapSet[prodindex];
+        return map->at(blockidx);
+    }
+    else {
+        return false;
+    }
+}
+
+
+/**
  * Checks if the given product has been completely received.
  *
  * @param[in] prodindex        Product index of the product to query.

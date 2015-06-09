@@ -50,6 +50,7 @@ public:
     bool addProd(const uint32_t prodindex, const uint32_t bitmapsize);
     bool delIfComplete(const uint32_t prodindex);
     uint32_t getMapSize(const uint32_t prodindex);
+    bool getLastBlock(const uint32_t prodindex);
     bool isComplete(const uint32_t prodindex);
     bool rmProd(const uint32_t prodindex);
     void set(const uint32_t prodindex, const uint32_t blockindex);
