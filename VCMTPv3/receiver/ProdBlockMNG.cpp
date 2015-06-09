@@ -70,7 +70,7 @@ bool ProdBlockMNG::addProd(const uint32_t prodindex, const uint32_t bitmapsize)
 {
     std::unique_lock<std::mutex> lock(mutex);
     /* check if the product is already under tracking */
-    if (bitmapSet.find(prodindex) == bitmapSet.end()) {
+    if (!bitmapSet.count(prodindex)) {
         /* put current product under tracking */
         bitmapSet[prodindex] = new std::vector<bool>(bitmapsize, false);
         bitmapSizeSet[prodindex] = bitmapsize;
@@ -97,8 +97,7 @@ bool ProdBlockMNG::addProd(const uint32_t prodindex, const uint32_t bitmapsize)
 bool ProdBlockMNG::delIfComplete(const uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    if ((bitmapSet.find(prodindex) != bitmapSet.end()) &&
-        (bitmapSizeSet.find(prodindex) != bitmapSizeSet.end())) {
+    if (bitmapSet.count(prodindex) && bitmapSizeSet.count(prodindex)) {
         /*
          * if complete, free the bitmap on heap and clear associated maps
          * And count() will return 0 if product does not exist
@@ -131,7 +130,7 @@ bool ProdBlockMNG::delIfComplete(const uint32_t prodindex)
 uint32_t ProdBlockMNG::getMapSize(const uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    if (bitmapSizeSet.find(prodindex) != bitmapSizeSet.end()) {
+    if (bitmapSizeSet.count(prodindex)) {
         return bitmapSizeSet[prodindex];
     }
     else {
@@ -150,8 +149,7 @@ uint32_t ProdBlockMNG::getMapSize(const uint32_t prodindex)
 bool ProdBlockMNG::isComplete(const uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    if ((bitmapSet.find(prodindex) != bitmapSet.end()) &&
-        (bitmapSizeSet.find(prodindex) != bitmapSizeSet.end())) {
+    if (bitmapSet.count(prodindex) && bitmapSizeSet.count(prodindex)) {
         if (count(prodindex) == bitmapSizeSet[prodindex]) {
             return true;
         }
@@ -178,9 +176,8 @@ bool ProdBlockMNG::isComplete(const uint32_t prodindex)
 bool ProdBlockMNG::rmProd(const uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    if ((bitmapSet.find(prodindex) != bitmapSet.end()) &&
-        (bitmapSizeSet.find(prodindex) != bitmapSizeSet.end()) &&
-        (bmRecvBlockSet.find(prodindex) != bmRecvBlockSet.end())) {
+    if (bitmapSet.count(prodindex) && bitmapSizeSet.count(prodindex) &&
+        bmRecvBlockSet.count(prodindex)) {
         delete bitmapSet[prodindex];
         bitmapSet.erase(prodindex);
         bitmapSizeSet.erase(prodindex);
@@ -203,8 +200,7 @@ bool ProdBlockMNG::rmProd(const uint32_t prodindex)
 void ProdBlockMNG::set(const uint32_t prodindex, const uint32_t blockindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    if ((bitmapSet.find(prodindex) != bitmapSet.end()) &&
-        (bmRecvBlockSet.find(prodindex) != bmRecvBlockSet.end())) {
+    if (bitmapSet.count(prodindex) && bmRecvBlockSet.count(prodindex)) {
         map = bitmapSet[prodindex];
         /* if duplicated block is received, just ignore it */
         if (!map->at(blockindex)) {
@@ -224,7 +220,7 @@ void ProdBlockMNG::set(const uint32_t prodindex, const uint32_t blockindex)
  */
 uint32_t ProdBlockMNG::count(const uint32_t prodindex)
 {
-    if (bmRecvBlockSet.find(prodindex) != bmRecvBlockSet.end()) {
+    if (bmRecvBlockSet.count(prodindex)) {
         return bmRecvBlockSet[prodindex];
     }
     else {
