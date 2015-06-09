@@ -823,16 +823,17 @@ void vcmtpRecvv3::retxHandler()
             uint32_t prodsize = 0;
             {
                 std::unique_lock<std::mutex> lock(BOPmapmtx);
-                if (BOPmap.find(header.prodindex) != BOPmap.end()) {
-                    BOPMsg tmpBOP = BOPmap[header.prodindex];
-                    prodsize = tmpBOP.prodsize;
-                }
+                if (BOPmap.count(header.prodindex))
+                    prodsize = BOPmap[header.prodindex].prodsize;
             }
 
             if ((prodsize > 0) &&
                 (header.seqnum + header.payloadlen > prodsize)) {
                 throw std::runtime_error("vcmtpRecvv3::retxHandler() "
-                        "retx block out of boundary");
+                        "retx block out of boundary: seqnum=" +
+                        std::to_string(header.seqnum) + ", payloadlen=" +
+                        std::to_string(header.payloadlen) + "prodsize=" +
+                        std::to_string(prodsize));
             }
             else if (prodsize <= 0) {
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
