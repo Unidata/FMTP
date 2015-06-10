@@ -231,9 +231,10 @@ private:
     struct sockaddr_in      mcastgroup;
     /* struct of multicast object */
     struct ip_mreq          mreq;
-    /* temporary header buffer for each vcmtp packet */
-    VcmtpHeader             vcmtpHeader;
-    std::mutex              vcmtpHeaderMutex;
+    /* the most recently received product index on multicast */
+    uint32_t                prodidx_mcast;
+    /* mutex for updating multicast product index */
+    std::mutex              pidxmtx;
     /* begin of product struct */
     BOPMsg                  BOPmsg;
     /* callback function of the receiving application */

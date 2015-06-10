@@ -69,7 +69,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcastPort(mcastPort),
     mcastgroup(),
     mreq(),
-    vcmtpHeader(),
+    prodidx_mcast(0xFFFFFFFF),
     BOPmsg(),
     ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
@@ -154,8 +154,6 @@ void vcmtpRecvv3::Start()
     /** connect to the sender */
     tcprecv->Init();
 
-    /** set prodindex to max to avoid BOP missing for prodindex=0 */
-    vcmtpHeader.prodindex = 0xFFFFFFFF;
     /** clear EOPStatus for new product */
     clearEOPState();
     joinGroup(mcastAddr, mcastPort);
@@ -256,6 +254,12 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::BOPHandler() recv() error.");
 
+    /* records the most recent product index */
+    {
+        std::unique_lock<std::mutex> lock(pidxmtx);
+        prodidx_mcast = header.prodindex;
+    }
+
     checkPayloadLen(header, nbytes);
     BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
 }
@@ -300,17 +304,6 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         trackermap[header.prodindex] = tracker;
 
         blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
-    }
-
-    /**
-     * Every time a new BOP arrives, save the header to check following data
-     * packets.
-     */
-    {
-        std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-        vcmtpHeader = header;
-        vcmtpHeader.seqnum     = 0;
-        vcmtpHeader.payloadlen = 0;
     }
 
     /** forcibly terminate the previous timer */
@@ -545,17 +538,10 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
          * request retx for all the missing blocks including the last one.
          */
         if (!hasLastBlock(header.prodindex)) {
-            {
-                std::unique_lock<std::mutex> lock(trackermtx);
-                if (trackermap.count(header.prodindex)) {
-                    ProdTracker tracker = trackermap[header.prodindex];
-                    requestAnyMissingData(header.prodindex, tracker.prodsize);
-                }
-                else {
-                    throw std::runtime_error("vcmtpRecvv3::EOPHandler(): "
-                            "Error retrieving metadata of Product #" +
-                            std::to_string(header.prodindex));
-                }
+            std::unique_lock<std::mutex> lock(trackermtx);
+            if (trackermap.count(header.prodindex)) {
+                ProdTracker tracker = trackermap[header.prodindex];
+                requestAnyMissingData(header.prodindex, tracker.prodsize);
             }
         }
     }
@@ -687,6 +673,7 @@ void vcmtpRecvv3::mcastHandler()
 void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
 {
     char          pktBuf[VCMTP_HEADER_LEN];
+    uint32_t      lastprodidx = 0xFFFFFFFF;
     /** read the EOP packet out in order to remove it from buffer */
     const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
 
@@ -694,9 +681,31 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::EOPHandler() recv() error.");
 
-    setEOPReceived();
-    timerWake.notify_all();
-    EOPHandler(header);
+    {
+        std::unique_lock<std::mutex> lock(pidxmtx);
+        lastprodidx = prodidx_mcast;
+    }
+    /**
+     * the application should take care to prevent prodindex from reaching
+     * 0xFFFFFFFF (maximum).
+     * If the two indices don't equal, the only possibility is that this
+     * EOP is the first packet of the product it belongs to. Thus, at least
+     * one BOP needs to be requested.
+     */
+    if (lastprodidx != header.prodindex) {
+        requestMissingBops(header.prodindex);
+    }
+    else {
+        setEOPReceived();
+        timerWake.notify_all();
+        EOPHandler(header);
+    }
+
+    /* records the most recent product index */
+    {
+        std::unique_lock<std::mutex> lock(pidxmtx);
+        prodidx_mcast = header.prodindex;
+    }
 }
 
 
@@ -1189,9 +1198,14 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
  */
 void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
-    // Careful! Product-indexes wrap around!
-    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-    for (uint32_t i = vcmtpHeader.prodindex; i++ != prodindex;) {
+    uint32_t lastprodidx = 0xFFFFFFFF;
+    /* fetches the most recent product index */
+    {
+        std::unique_lock<std::mutex> lock(pidxmtx);
+        lastprodidx = prodidx_mcast;
+    }
+
+    for (uint32_t i = lastprodidx; i++ != prodindex;) {
         if (addUnrqBOPinList(i)) {
             pushMissingBopReq(i);
         }
@@ -1251,6 +1265,12 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
         requestMissingBops(header.prodindex);
+    }
+
+    /* records the most recent product index */
+    {
+        std::unique_lock<std::mutex> lock(pidxmtx);
+        prodidx_mcast = header.prodindex;
     }
 }
 
