@@ -847,7 +847,10 @@ void vcmtpRecvv3::retxHandler()
             if ((prodsize > 0) &&
                 (header.seqnum + header.payloadlen > prodsize)) {
                 throw std::runtime_error("vcmtpRecvv3::retxHandler() "
-                        "retx block out of boundary");
+                        "retx block out of boundary: seqnum=" +
+                        std::to_string(header.seqnum) + ", payloadlen=" +
+                        std::to_string(header.payloadlen) + "prodsize=" +
+                        std::to_string(prodsize));
             }
             else if (prodsize <= 0) {
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
