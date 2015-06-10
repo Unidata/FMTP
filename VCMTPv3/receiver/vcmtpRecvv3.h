@@ -61,6 +61,7 @@ struct StartTimerInfo
 struct ProdTracker
 {
     uint32_t     prodsize;
+    void*        prodptr;
     uint32_t     seqnum;
     uint16_t     paylen;
 };
@@ -237,8 +238,6 @@ private:
     BOPMsg                  BOPmsg;
     /* callback function of the receiving application */
     RecvAppNotifier*        notifier;
-    /* pointer to a start point in product queue */
-    void*                   prodptr;
     TcpRecv*                tcprecv;
     /* a map from prodindex to struct ProdTracker */
     TrackerMap              trackermap;

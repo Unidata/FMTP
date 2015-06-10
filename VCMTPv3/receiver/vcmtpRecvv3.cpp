@@ -73,7 +73,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     BOPmsg(),
     ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
-    prodptr(0),
     notifier(notifier),
     mcastSock(0),
     retxSock(0),
@@ -274,6 +273,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
                              const char* const  VcmtpPacketData)
 {
     uint32_t blknum = 0;
+    void*    prodptr = NULL;
     /**
      * Every time a new BOP arrives, save the msg to check following data
      * packets
@@ -292,12 +292,12 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
         (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
 
-        ProdTracker tracker = {BOPmsg.prodsize, 0, 0};
-        trackermap[header.prodindex] = tracker;
-
         if(notifier)
             notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                     BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+
+        ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
+        trackermap[header.prodindex] = tracker;
 
         blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
     }
@@ -834,13 +834,15 @@ void vcmtpRecvv3::retxHandler()
              * directly writing unwanted data to NULL is not allowed. So here
              * uses a temp buffer as trash to dump the payload content.
              */
-            char tmp[VCMTP_DATA_LEN];
+            char     tmp[VCMTP_DATA_LEN];
             uint32_t prodsize = 0;
+            void*    prodptr  = NULL;
             {
                 std::unique_lock<std::mutex> lock(trackermtx);
                 if (trackermap.count(header.prodindex)) {
                     ProdTracker tracker = trackermap[header.prodindex];
                     prodsize = tracker.prodsize;
+                    prodptr  = tracker.prodptr;
                 }
             }
 
@@ -875,19 +877,20 @@ void vcmtpRecvv3::retxHandler()
             }
 
             if(prodptr) {
-                (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
+                (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
+                                             &ignoredState);
                 tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
                                   header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
-                        &ignoredState);
+                                             &ignoredState);
             }
             else {
                 /** dump the payload since there is no product queue */
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
-                        &ignoredState);
+                                             &ignoredState);
                 tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
-                        &ignoredState);
+                                             &ignoredState);
             }
 
             uint32_t iBlock = header.seqnum/VCMTP_DATA_LEN;
@@ -1075,7 +1078,15 @@ void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
  */
 void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
 {
-    ssize_t nbytes;
+    ssize_t nbytes = 0;
+    void*   prodptr = NULL;
+    {
+        std::unique_lock<std::mutex> lock(trackermtx);
+        if (trackermap.count(header.prodindex)) {
+            ProdTracker tracker = trackermap[header.prodindex];
+            prodptr = tracker.prodptr;
+        }
+    }
 
     if (0 == prodptr) {
         char pktbuf[MAX_VCMTP_PACKET_LEN];
