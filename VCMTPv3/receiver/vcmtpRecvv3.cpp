@@ -1123,20 +1123,15 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
  * data-packet of the current data-product and its most recently-received
  * data-packet.
  *
- * @pre               The most recently-received data-packet is for the
- *                    current data-product.
- * @param[in] seqnum  The most recently-received data-packet of the current
- *                    data-product.
+ * @pre                 The most recently-received data-packet is for the
+ *                      current data-product.
+ * @param[in] prodindex Product index.
+ * @param[in] seqnum    The most recently-received data-packet of the current
+ *                      data-product.
  */
 void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
                                         const uint32_t mostRecent)
 {
-    /*
-    std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
-    uint32_t seqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
-    uint32_t prodindex = vcmtpHeader.prodindex;
-    lock.unlock();
-    */
     uint32_t seqnum = 0;
     {
         std::unique_lock<std::mutex> lock(trackermtx);
@@ -1146,11 +1141,13 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
         }
     }
 
+    /**
+     * requests for missing blocks counting from the last received
+     * block sequence number.
+     */
     if (seqnum != mostRecent) {
         seqnum = (seqnum / VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
-        /**
-         * The data-packet associated with the VCMTP header is out-of-order.
-         */
+
         std::unique_lock<std::mutex> lock(msgQmutex);
 
         for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN) {
@@ -1220,12 +1217,17 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
             std::to_string(prodsize));
     }
 
+    /**
+     * If prodsize > 0, the BOP of the currently receiving product is
+     * received, otherwise, it is either removed or not even received.
+     * Since this function is called by multicast thread, it is likely
+     * to be the first time a product arrives. So BOP loss is the only
+     * possibility.
+     */
     if (prodsize > 0) {
-        /*
-         * The data-packet is for the current data-product.
-         */
         readMcastData(header);
         requestAnyMissingData(header.prodindex, header.seqnum);
+        /* update most recent seqnum and payloadlen */
         {
             std::unique_lock<std::mutex> lock(trackermtx);
             if (trackermap.count(header.prodindex)) {
@@ -1235,10 +1237,6 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
         }
     }
     else {
-        /*
-         * The data-packet is not for the current data-product. At least one BOP
-         * packet was missed.
-         */
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
         requestMissingBops(header.prodindex);
