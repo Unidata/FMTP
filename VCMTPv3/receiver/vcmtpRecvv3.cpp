@@ -549,7 +549,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
                 std::unique_lock<std::mutex> lock(trackermtx);
                 if (trackermap.count(header.prodindex)) {
                     ProdTracker tracker = trackermap[header.prodindex];
-                    requestAnyMissingData(tracker.prodsize);
+                    requestAnyMissingData(header.prodindex, tracker.prodsize);
                 }
                 else {
                     throw std::runtime_error("vcmtpRecvv3::EOPHandler(): "
@@ -816,7 +816,7 @@ void vcmtpRecvv3::retxHandler()
             }
 
             if (prodsize > 0) {
-                requestAnyMissingData(prodsize);
+                requestAnyMissingData(header.prodindex, prodsize);
                 pushMissingEopReq(header.prodindex);
             }
             else {
@@ -1128,12 +1128,23 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
  * @param[in] seqnum  The most recently-received data-packet of the current
  *                    data-product.
  */
-void vcmtpRecvv3::requestAnyMissingData(const uint32_t mostRecent)
+void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
+                                        const uint32_t mostRecent)
 {
+    /*
     std::unique_lock<std::mutex> lock(vcmtpHeaderMutex);
     uint32_t seqnum = vcmtpHeader.seqnum + vcmtpHeader.payloadlen;
     uint32_t prodindex = vcmtpHeader.prodindex;
     lock.unlock();
+    */
+    uint32_t seqnum = 0;
+    {
+        std::unique_lock<std::mutex> lock(trackermtx);
+        if (trackermap.count(prodindex)) {
+            ProdTracker tracker = trackermap[prodindex];
+            seqnum = tracker.seqnum + tracker.paylen;
+        }
+    }
 
     if (seqnum != mostRecent) {
         seqnum = (seqnum / VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
@@ -1209,14 +1220,19 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
             std::to_string(prodsize));
     }
 
-    //if ((prodsize > 0) && (header.prodindex == vcmtpHeader.prodindex)) {
     if (prodsize > 0) {
         /*
          * The data-packet is for the current data-product.
          */
         readMcastData(header);
-        requestAnyMissingData(header.seqnum);
-        //vcmtpHeader = header;
+        requestAnyMissingData(header.prodindex, header.seqnum);
+        {
+            std::unique_lock<std::mutex> lock(trackermtx);
+            if (trackermap.count(header.prodindex)) {
+                trackermap[header.prodindex].seqnum = header.seqnum;
+                trackermap[header.prodindex].paylen = header.payloadlen;
+            }
+        }
     }
     else {
         /*

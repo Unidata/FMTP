@@ -170,10 +170,12 @@ private:
      * data-packet of the current data-product and its most recently-received
      * data-packet.
      *
+     * @param[in] prodindex Product index.
      * @param[in] seqnum  The most recently-received data-packet of the current
      *                    data-product.
      */
-    void requestAnyMissingData(uint32_t mostRecent);
+    void requestAnyMissingData(const uint32_t prodindex,
+                               const uint32_t mostRecent);
     /**
      * Requests BOP packets for data-products that come after the current
      * data-product up to and including a given data-product.
@@ -238,7 +240,7 @@ private:
     /* pointer to a start point in product queue */
     void*                   prodptr;
     TcpRecv*                tcprecv;
-    /* a map from prodindex to prodsize */
+    /* a map from prodindex to struct ProdTracker */
     TrackerMap              trackermap;
     std::mutex              trackermtx;
     ProdBlockMNG*           pBlockMNG;
