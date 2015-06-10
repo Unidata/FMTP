@@ -109,7 +109,7 @@ vcmtpRecvv3::~vcmtpRecvv3()
     close(mcastSock);
     (void)close(retxSock); // failure is irrelevant
     misBOPlist.clear();
-    BOPmap.clear();
+    trackermap.clear();
     delete tcprecv;
     delete pBlockMNG;
     delete measure;
@@ -280,7 +280,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      */
     /* Atomic insertion for BOP of new product */
     {
-        std::unique_lock<std::mutex> lock(BOPmapmtx);
+        std::unique_lock<std::mutex> lock(trackermtx);
 
         if (header.payloadlen < 6)
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
@@ -292,7 +292,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
         (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
 
-        BOPmap[header.prodindex] = BOPmsg;
+        ProdTracker tracker = {BOPmsg.prodsize, 0, 0};
+        trackermap[header.prodindex] = tracker;
 
         if(notifier)
             notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
@@ -345,10 +346,10 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      */
     double sleeptime = 0.0;
     {
-        std::unique_lock<std::mutex> lock(BOPmapmtx);
-        if (BOPmap.count(header.prodindex)) {
-            BOPMsg tmpBOP = BOPmap[header.prodindex];
-            sleeptime = 500 * ((double)tmpBOP.prodsize / (double)linkspeed);
+        std::unique_lock<std::mutex> lock(trackermtx);
+        if (trackermap.count(header.prodindex)) {
+            ProdTracker tracker = trackermap[header.prodindex];
+            sleeptime = 500 * ((double)tracker.prodsize / (double)linkspeed);
         }
         else {
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
@@ -376,10 +377,10 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
 
     #ifdef MEASURE
         {
-            std::unique_lock<std::mutex> lock(BOPmapmtx);
-            if (BOPmap.count(header.prodindex)) {
-                BOPMsg tmpBOP = BOPmap[header.prodindex];
-                measure->insert(header.prodindex, tmpBOP.prodsize);
+            std::unique_lock<std::mutex> lock(trackermtx);
+            if (trackermap.count(header.prodindex)) {
+                ProdTracker tracker = trackermap[header.prodindex];
+                measure->insert(header.prodindex, tracker.prodsize);
             }
             else {
                 throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
@@ -500,8 +501,8 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         if (notifier)
             notifier->notify_of_eop(header.prodindex);
         {
-            std::unique_lock<std::mutex> lock(BOPmapmtx);
-            BOPmap.erase(header.prodindex);
+            std::unique_lock<std::mutex> lock(trackermtx);
+            trackermap.erase(header.prodindex);
         }
 
         #ifdef DEBUG2
@@ -545,14 +546,15 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
          */
         if (!hasLastBlock(header.prodindex)) {
             {
-                std::unique_lock<std::mutex> lock(BOPmapmtx);
-                if (BOPmap.count(header.prodindex)) {
-                    BOPMsg tmpBOP = BOPmap[header.prodindex];
-                    requestAnyMissingData(tmpBOP.prodsize);
+                std::unique_lock<std::mutex> lock(trackermtx);
+                if (trackermap.count(header.prodindex)) {
+                    ProdTracker tracker = trackermap[header.prodindex];
+                    requestAnyMissingData(tracker.prodsize);
                 }
                 else {
                     throw std::runtime_error("vcmtpRecvv3::EOPHandler(): "
-                            "Error retrieving BOP metadata");
+                            "Error retrieving metadata of Product #" +
+                            std::to_string(header.prodindex));
                 }
             }
         }
@@ -806,10 +808,10 @@ void vcmtpRecvv3::retxHandler()
              */
             uint32_t prodsize = 0;
             {
-                std::unique_lock<std::mutex> lock(BOPmapmtx);
-                if (BOPmap.count(header.prodindex)) {
-                    BOPMsg tmpBOP = BOPmap[header.prodindex];
-                    prodsize = tmpBOP.prodsize;
+                std::unique_lock<std::mutex> lock(trackermtx);
+                if (trackermap.count(header.prodindex)) {
+                    ProdTracker tracker = trackermap[header.prodindex];
+                    prodsize = tracker.prodsize;
                 }
             }
 
@@ -835,10 +837,10 @@ void vcmtpRecvv3::retxHandler()
             char tmp[VCMTP_DATA_LEN];
             uint32_t prodsize = 0;
             {
-                std::unique_lock<std::mutex> lock(BOPmapmtx);
-                if (BOPmap.count(header.prodindex)) {
-                    BOPMsg tmpBOP = BOPmap[header.prodindex];
-                    prodsize = tmpBOP.prodsize;
+                std::unique_lock<std::mutex> lock(trackermtx);
+                if (trackermap.count(header.prodindex)) {
+                    ProdTracker tracker = trackermap[header.prodindex];
+                    prodsize = tracker.prodsize;
                 }
             }
 
@@ -859,7 +861,7 @@ void vcmtpRecvv3::retxHandler()
                                              &ignoredState);
 
                 /*
-                 * The BOPmap will only be erased when the associated
+                 * The TrackerMap will only be erased when the associated
                  * product has been completely received. So if no valid
                  * prodindex found, it indicates the product is received
                  * and thus removed or there is out-of-order arrival on
@@ -905,8 +907,8 @@ void vcmtpRecvv3::retxHandler()
                 if (notifier)
                     notifier->notify_of_eop(header.prodindex);
                 {
-                    std::unique_lock<std::mutex> lock(BOPmapmtx);
-                    BOPmap.erase(header.prodindex);
+                    std::unique_lock<std::mutex> lock(trackermtx);
+                    trackermap.erase(header.prodindex);
                 }
 
                 #ifdef DEBUG2
@@ -1189,10 +1191,10 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
     uint32_t prodsize = 0;
     {
-        std::unique_lock<std::mutex> lock(BOPmapmtx);
-        if (BOPmap.count(header.prodindex)) {
-            BOPMsg tmpBOP = BOPmap[header.prodindex];
-            prodsize = tmpBOP.prodsize;
+        std::unique_lock<std::mutex> lock(trackermtx);
+        if (trackermap.count(header.prodindex)) {
+            ProdTracker tracker = trackermap[header.prodindex];
+            prodsize = tracker.prodsize;
         }
     }
 
@@ -1204,13 +1206,14 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
             std::to_string(prodsize));
     }
 
-    if ((prodsize > 0) && (header.prodindex == vcmtpHeader.prodindex)) {
+    //if ((prodsize > 0) && (header.prodindex == vcmtpHeader.prodindex)) {
+    if (prodsize > 0) {
         /*
          * The data-packet is for the current data-product.
          */
         readMcastData(header);
         requestAnyMissingData(header.seqnum);
-        vcmtpHeader = header;
+        //vcmtpHeader = header;
     }
     else {
         /*

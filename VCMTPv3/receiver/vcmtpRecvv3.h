@@ -49,8 +49,6 @@
 #include "vcmtpBase.h"
 
 
-typedef std::unordered_map<uint32_t, BOPMsg> BOPMap;
-
 class vcmtpRecvv3;
 
 struct StartTimerInfo
@@ -59,6 +57,15 @@ struct StartTimerInfo
     float        seconds;    /*!< product index */
     vcmtpRecvv3* receiver;   /*!< a poniter to the vcmtpRecvv3 instance */
 };
+
+struct ProdTracker
+{
+    uint32_t     prodsize;
+    uint32_t     seqnum;
+    uint16_t     paylen;
+};
+
+typedef std::unordered_map<uint32_t, ProdTracker> TrackerMap;
 
 
 class vcmtpRecvv3 {
@@ -232,8 +239,8 @@ private:
     void*                   prodptr;
     TcpRecv*                tcprecv;
     /* a map from prodindex to prodsize */
-    BOPMap                  BOPmap;
-    std::mutex              BOPmapmtx;
+    TrackerMap              trackermap;
+    std::mutex              trackermtx;
     ProdBlockMNG*           pBlockMNG;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
