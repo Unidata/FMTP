@@ -80,7 +80,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     msgQfilled(),
     msgQmutex(),
     BOPListMutex(),
-    EOPStatus(false),
     exitMutex(),
     exitCond(),
     stopRequested(false),
@@ -154,8 +153,6 @@ void vcmtpRecvv3::Start()
     /** connect to the sender */
     tcprecv->Init();
 
-    /** clear EOPStatus for new product */
-    clearEOPState();
     joinGroup(mcastAddr, mcastPort);
 
     StartRetxProcedure();
@@ -315,12 +312,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
                 "Error adding product into ProdBlockMNG");
     }
 
-    /**
-     * clear EOPStatus for new product. due to the sequencial feature that VC
-     * has, if new BOP arrives and previous EOP is missing, then the EOP is
-     * really missing. In which case, should be requested.
-     */
-    clearEOPState();
+    initEOPStatus(header.prodindex);
 
     /**
      * Set the amount of sleeping time. Based on a precise network delay model,
@@ -406,14 +398,14 @@ void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes
 
 
 /**
- * Clears the EOPStatus to false as initialization for new product.
+ * Clears the EOP arrival status.
  *
- * @param[in] none
+ * @param[in] prodindex    Product index which the EOP belongs to.
  */
-void vcmtpRecvv3::clearEOPState()
+void vcmtpRecvv3::clearEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    EOPStatus = false;
+    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    EOPmap.erase(prodindex);
 }
 
 
@@ -469,14 +461,6 @@ void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
  */
 void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 {
-    /**
-     * Under the assumption that all packets are in sequence, the EOP should
-     * always come in after the BOP. In which case, BOP and EOP are mapped
-     * one to one. When timer thread checks the EOPStatus, it always reflects
-     * the status of current EOP which associates with the latest BOP.
-     */
-    setEOPReceived();
-
     #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(header.prodindex);
         debugmsg += ": EOP is received";
@@ -549,6 +533,18 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 
 
 /**
+ * Gets the EOP arrival status.
+ *
+ * @param[in] prodindex    Product index which the EOP belongs to.
+ */
+bool vcmtpRecvv3::getEOPStatus(const uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    return EOPmap[prodindex];
+}
+
+
+/**
  * Check if the last data block has been received.
  *
  * @param[in] none
@@ -560,14 +556,14 @@ bool vcmtpRecvv3::hasLastBlock(const uint32_t prodindex)
 
 
 /**
- * Returns the current EOPStatus.
+ * Initialize the EOP arrival status.
  *
- * @param[in] none
+ * @param[in] prodindex    Product index which the EOP belongs to.
  */
-bool vcmtpRecvv3::isEOPReceived()
+void vcmtpRecvv3::initEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    return EOPStatus;
+    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    EOPmap[prodindex] = false;
 }
 
 
@@ -696,7 +692,7 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         requestMissingBops(header.prodindex);
     }
     else {
-        setEOPReceived();
+        setEOPStatus(header.prodindex);
         timerWake.notify_all();
         EOPHandler(header);
     }
@@ -1286,8 +1282,7 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 bool vcmtpRecvv3::reqEOPifMiss(const uint32_t prodindex)
 {
     bool hasReq = false;
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    if (!EOPStatus) {
+    if (!getEOPStatus(prodindex)) {
         pushMissingEopReq(prodindex);
         hasReq = true;
     }
@@ -1593,14 +1588,15 @@ void vcmtpRecvv3::stopJoinTimerThread()
 
 
 /**
- * Sets the EOPStatus to true, which indicates the successful reception of EOP.
+ * Sets the EOP arrival status to true, which indicates the successful
+ * reception of EOP.
  *
- * @param[in] none
+ * @param[in] prodindex    Product index which the EOP belongs to.
  */
-void vcmtpRecvv3::setEOPReceived()
+void vcmtpRecvv3::setEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPStatMtx);
-    EOPStatus = true;
+    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    EOPmap[prodindex] = true;
 }
 
 
@@ -1649,6 +1645,12 @@ void vcmtpRecvv3::timerThread()
                 WriteToLog(debugmsg);
             #endif
         }
+        /**
+         * After waking up, the timer checks the EOP arrival status of
+         * a product and decides whether to request for re-transmission.
+         * Only the timer can clear the EOPmap.
+         */
+        clearEOPStatus(timerparam.prodindex);
     }
 }
 

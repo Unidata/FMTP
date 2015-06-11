@@ -67,6 +67,7 @@ struct ProdTracker
 };
 
 typedef std::unordered_map<uint32_t, ProdTracker> TrackerMap;
+typedef std::unordered_map<uint32_t, bool> EOPStatusMap;
 
 
 class vcmtpRecvv3 {
@@ -105,7 +106,7 @@ private:
     void BOPHandler(const VcmtpHeader& header,
                     const char* const  VcmtpPacketData);
     void checkPayloadLen(const VcmtpHeader& header, const size_t nbytes);
-    void clearEOPState();
+    void clearEOPStatus(const uint32_t prodindex);
     /**
      * Decodes the header of a VCMTP packet in-place.
      *
@@ -125,8 +126,9 @@ private:
     void decodeHeader(char* const packet, const size_t nbytes,
                       VcmtpHeader& header, char** const payload);
     void EOPHandler(const VcmtpHeader& header);
+    bool getEOPStatus(const uint32_t prodindex);
     bool hasLastBlock(const uint32_t prodindex);
-    bool isEOPReceived();
+    void initEOPStatus(const uint32_t prodindex);
     void joinGroup(std::string mcastAddr, const unsigned short mcastPort);
     void mcastHandler();
     void mcastEOPHandler(const VcmtpHeader& header);
@@ -211,7 +213,7 @@ private:
     static void*  StartMcastHandler(void* ptr);
     void StartRetxProcedure();
     void startTimerThread();
-    void setEOPReceived();
+    void setEOPStatus(const uint32_t prodindex);
     void timerThread();
     void taskExit(const std::exception&);
     void WriteToLog(const std::string& content);
@@ -243,6 +245,9 @@ private:
     /* a map from prodindex to struct ProdTracker */
     TrackerMap              trackermap;
     std::mutex              trackermtx;
+    /* a map from prodindex to EOP arrival status */
+    EOPStatusMap            EOPmap;
+    std::mutex              EOPmapmtx;
     ProdBlockMNG*           pBlockMNG;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
@@ -250,9 +255,6 @@ private:
     /* track all the missing BOP until received */
     std::list<uint32_t>     misBOPlist;
     std::mutex              BOPListMutex;
-    /* the state of EOP, true: received false: missing */
-    bool                    EOPStatus;
-    std::mutex              EOPStatMtx;
     /* Retransmission request thread */
     pthread_t               retx_rq;
     /* Retransmission receive thread */
