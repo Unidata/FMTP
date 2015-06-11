@@ -245,6 +245,8 @@ private:
     /* a map from prodindex to struct ProdTracker */
     TrackerMap              trackermap;
     std::mutex              trackermtx;
+    /* eliminate race conditions between mcast and retx */
+    std::mutex              antiracemtx;
     /* a map from prodindex to EOP arrival status */
     EOPStatusMap            EOPmap;
     std::mutex              EOPmapmtx;
