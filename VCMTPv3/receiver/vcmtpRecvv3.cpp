@@ -686,15 +686,26 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
      * 0xFFFFFFFF (maximum).
      * If the two indices don't equal, the only possibility is that this
      * EOP is the first packet of the product it belongs to. Thus, at least
-     * one BOP needs to be requested.
+     * one BOP needs to be requested. Otherwise, a data block of this product
+     * can be received earlier but BOP can be missing. In which case,
+     * EOPHandler shouldn't do anything until BOP arrives.
      */
     if (lastprodidx != header.prodindex) {
         requestMissingBops(header.prodindex);
     }
     else {
-        setEOPStatus(header.prodindex);
-        timerWake.notify_all();
-        EOPHandler(header);
+        bool hasBOP = false;
+        {
+            std::unique_lock<std::mutex> lock(trackermtx);
+            if (trackermap.count(header.prodindex)) {
+                hasBOP = true;
+            }
+        }
+        if (hasBOP) {
+            setEOPStatus(header.prodindex);
+            timerWake.notify_all();
+            EOPHandler(header);
+        }
     }
 
     /* records the most recent product index */
@@ -805,24 +816,42 @@ void vcmtpRecvv3::retxHandler()
             /** remove the BOP from missing list */
             (void)rmMisBOPinList(header.prodindex);
 
-            /**
-             * Under the assumption that all packets are coming in sequence,
-             * when a missing BOP is retransmitted, all the following data
-             * blocks will be missing as well. Thus retxHandler should issue
-             * RETX_REQ for all data blocks as well as EOP packet.
-             */
-            uint32_t prodsize = 0;
+            uint32_t prodsize    = 0;
+            uint32_t seqnum      = 0;
+            uint32_t lastprodidx = 0xFFFFFFFF;
             {
                 std::unique_lock<std::mutex> lock(trackermtx);
                 if (trackermap.count(header.prodindex)) {
-                    ProdTracker tracker = trackermap[header.prodindex];
-                    prodsize = tracker.prodsize;
+                    ProdTracker tracker  = trackermap[header.prodindex];
+                    prodsize             = tracker.prodsize;
+                    seqnum               = tracker.seqnum;
+                    {
+                        std::unique_lock<std::mutex> lock(pidxmtx);
+                        lastprodidx = prodidx_mcast;
+                    }
                 }
             }
 
             if (prodsize > 0) {
-                requestAnyMissingData(header.prodindex, prodsize);
-                pushMissingEopReq(header.prodindex);
+                /**
+                 * If seqnum != 0, the seqnum is updated right after the
+                 * retx BOP is handled, which means the multicast thread
+                 * is receiving blocks. In this case, nothing needs to be
+                 * done.
+                 */
+                if (seqnum == 0) {
+                    /**
+                     * If two indices don't equal, the product is totally
+                     * missed. Thus, all blocks should be requested.
+                     * On the other hand, if they equal, there could be
+                     * concurrency or a gap before next product arrives.
+                     * Only requesting EOP is the most economic choice.
+                     */
+                    if (lastprodidx != header.prodindex) {
+                        requestAnyMissingData(header.prodindex, prodsize);
+                    }
+                    pushMissingEopReq(header.prodindex);
+                }
             }
             else {
                 throw std::runtime_error("vcmtpRecvv3::retxHandler() "
