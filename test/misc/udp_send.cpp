@@ -28,11 +28,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
 #include <cstdlib>
 #include <cstring>
 
 
-int main(int argc, char **argv)
+int main(int argc, char* argv[])
 {
     int s;
     int ret;
@@ -59,9 +60,11 @@ int main(int argc, char **argv)
     }
 
     while(1) {
-        ret = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&addr, sizeof(addr));
+        ret = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&addr,
+                     sizeof(addr));
         if (ret == -1) {
-            perror("sendto"); exit(1);
+            perror("sendto");
+            exit(1);
         }
     }
 
