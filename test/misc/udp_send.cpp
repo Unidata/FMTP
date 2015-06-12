@@ -37,8 +37,9 @@ int main(int argc, char* argv[])
 {
     int s;
     int ret;
-    char buf[] = "hello world!";
+    char buf[1472];
     struct sockaddr_in addr;
+    (void*)memset(buf, 0xa, sizeof(buf));
 
     if (argc != 3) {
         puts("usage: send ipaddr port");
