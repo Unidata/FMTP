@@ -27,7 +27,6 @@
 
 
 #include "Timer.h"
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
@@ -39,14 +38,11 @@
 class RateShaper {
 public:
     RateShaper();
-    virtual ~RateShaper();
-
+    ~RateShaper();
     void SetRate(double rate_bps);
     void RetrieveTokens(int num_tokens);
 
 private:
-    /* maximum rate in bytes per second */
-    double rate;
     int bucket_volume;
     int overflow_tolerance;
     int tokens_in_bucket;
@@ -57,15 +53,6 @@ private:
     CpuCycleCounter cpu_counter;
     double last_check_time;
     struct timespec time_spec;
-
-    timer_t timer_id;
-    struct sigevent signal_event;
-    struct sigaction signal_action;
-    struct itimerspec timer_specs;
-
-    void StartTimer();
-    static void AddTokensHandler(int cause, siginfo_t *si, void *ucontext);
-    void AddTokens();
 };
 
 #endif /* VCMTP_VCMTPV3_RATESHAPER_H_ */

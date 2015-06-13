@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    rateshaper.SetRate(0.2 * 1000000);
+    rateshaper.SetRate(0.02 * 1000000);
     while(1) {
         rateshaper.RetrieveTokens(sizeof(buf));
         ret = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&addr,
