@@ -237,8 +237,6 @@ private:
     uint32_t                prodidx_mcast;
     /* mutex for updating multicast product index */
     std::mutex              pidxmtx;
-    /* begin of product struct */
-    BOPMsg                  BOPmsg;
     /* callback function of the receiving application */
     RecvAppNotifier*        notifier;
     TcpRecv*                tcprecv;

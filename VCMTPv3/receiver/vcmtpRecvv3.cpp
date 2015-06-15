@@ -70,7 +70,6 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcastgroup(),
     mreq(),
     prodidx_mcast(0xFFFFFFFF),
-    BOPmsg(),
     ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort)),
     notifier(notifier),
@@ -278,6 +277,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
 {
     uint32_t blknum = 0;
     void*    prodptr = NULL;
+    BOPMsg   BOPmsg;
     /**
      * Every time a new BOP arrives, save the msg to check following data
      * packets
