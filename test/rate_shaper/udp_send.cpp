@@ -21,6 +21,7 @@
  * @brief     UDP sending test program
  */
 
+#include "RateShaper.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -39,6 +40,8 @@ int main(int argc, char* argv[])
     int ret;
     char buf[1472];
     struct sockaddr_in addr;
+    RateShaper rateshaper;
+
     (void*)memset(buf, 0xa, sizeof(buf));
 
     if (argc != 3) {
@@ -60,7 +63,9 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
+    rateshaper.SetRate(0.02 * 1000000);
     while(1) {
+        rateshaper.RetrieveTokens(sizeof(buf));
         ret = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&addr,
                      sizeof(addr));
         if (ret == -1) {
