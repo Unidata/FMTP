@@ -107,7 +107,10 @@ vcmtpRecvv3::~vcmtpRecvv3()
     close(mcastSock);
     (void)close(retxSock); // failure is irrelevant
     misBOPlist.clear();
-    trackermap.clear();
+    {
+        std::unique_lock<std::mutex> lock(trackermtx);
+        trackermap.clear();
+    }
     delete tcprecv;
     delete pBlockMNG;
     delete measure;
@@ -281,8 +284,6 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      */
     /* Atomic insertion for BOP of new product */
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
-
         if (header.payloadlen < 6)
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
         BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
@@ -297,8 +298,11 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
             notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                     BOPmsg.metadata, BOPmsg.metasize, &prodptr);
 
-        ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
-        trackermap[header.prodindex] = tracker;
+        {
+            ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
+            std::unique_lock<std::mutex> lock(trackermtx);
+            trackermap[header.prodindex] = tracker;
+        }
 
         blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
     }
@@ -333,8 +337,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     {
         std::unique_lock<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
-            ProdTracker tracker = trackermap[header.prodindex];
-            sleeptime = 500 * ((double)tracker.prodsize / (double)linkspeed);
+            sleeptime = 500 * ((double)trackermap[header.prodindex].prodsize /
+                    (double)linkspeed);
         }
         else {
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
@@ -522,11 +526,16 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
          * request retx for all the missing blocks including the last one.
          */
         if (!hasLastBlock(header.prodindex)) {
-            std::unique_lock<std::mutex> lock(trackermtx);
-            if (trackermap.count(header.prodindex)) {
-                ProdTracker tracker = trackermap[header.prodindex];
-                requestAnyMissingData(header.prodindex, tracker.prodsize);
+            uint32_t prodsize;
+            bool     haveProdsize;
+            {
+                std::unique_lock<std::mutex> lock(trackermtx);
+                haveProdsize = trackermap.count(header.prodindex) > 0;
+                if (haveProdsize)
+                    prodsize = trackermap[header.prodindex].prodsize;
             }
+            if (haveProdsize)
+                requestAnyMissingData(header.prodindex, prodsize);
         }
     }
 }
