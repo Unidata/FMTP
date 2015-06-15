@@ -282,30 +282,28 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
+    if (header.payloadlen < 6)
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
+    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
+    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
+    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
+                      ? AVAIL_BOP_LEN : BOPmsg.metasize;
+    if (header.payloadlen - 6 < BOPmsg.metasize)
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
+    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
+
+    if(notifier)
+        notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
+                BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+
     /* Atomic insertion for BOP of new product */
     {
-        if (header.payloadlen < 6)
-            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
-        BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
-        BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
-        BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
-                          ? AVAIL_BOP_LEN : BOPmsg.metasize;
-        if (header.payloadlen - 6 < BOPmsg.metasize)
-            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
-        (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
-
-        if(notifier)
-            notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
-                    BOPmsg.metadata, BOPmsg.metasize, &prodptr);
-
-        {
-            ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
-            std::unique_lock<std::mutex> lock(trackermtx);
-            trackermap[header.prodindex] = tracker;
-        }
-
-        blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
+        ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
+        std::unique_lock<std::mutex> lock(trackermtx);
+        trackermap[header.prodindex] = tracker;
     }
+
+    blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
 
     /** forcibly terminate the previous timer */
     timerWake.notify_all();
