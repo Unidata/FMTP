@@ -22,19 +22,20 @@
  * @brief     Rate shaper to limit rate in application layer.
  */
 
+
 #include "RateShaper.h"
+
+#include <math.h>
 
 
 RateShaper::RateShaper()
 {
-    bucket_volume       = 0;
-    tokens_in_bucket    = 0;
-    token_unit          = 0;
-    token_time_interval = 200;
-    overflow_tolerance  = 1500;
-
-    time_spec.tv_sec    = 0;
-    time_spec.tv_nsec   = 0;
+    bucket_size   = 0;
+    overflow      = 0;
+    avail_tokens  = 0;
+    token_gentime = 0;
+    tim.tv_sec    = 0;
+    tim.tv_nsec   = 0;
 }
 
 
@@ -46,40 +47,72 @@ RateShaper::~RateShaper()
 
 void RateShaper::SetRate(double rate_bps)
 {
-    token_unit = token_time_interval / 1000000.0 * rate_bps / 8;
-    tokens_in_bucket = token_unit;
-    overflow_tolerance = rate_bps * 0.0;  // allow 0ms burst tolerance
-    bucket_volume = overflow_tolerance + token_unit;
+    token_gentime = 8 / rate_bps;
+    /* round up to an integer */
+    bucket_size = static_cast<unsigned int>(ceil(rate_bps / 8));
+    avail_tokens = bucket_size;
+    /* allow 0ms burst tolerance */
+    overflow = static_cast<unsigned int>(rate_bps * 0.0);
+    bucket_size += overflow;
 
-    AccessCPUCounter(&cpu_counter.hi, &cpu_counter.lo);
-    last_check_time = 0.0;
+    /* record the latest time point */
+    last_check_time = HRC::now();
 }
 
 
-void RateShaper::RetrieveTokens(int num_tokens)
+int RateShaper::RetrieveTokens(unsigned int num_tokens)
 {
-    if (tokens_in_bucket >= num_tokens) {
-        tokens_in_bucket -= num_tokens;
-        return;
-    }
-    else {
-        double elapsed_sec = GetElapsedSeconds(cpu_counter);
-        double time_interval = elapsed_sec - last_check_time;
-        while (time_interval * 1000000 < token_time_interval) {
-            time_spec.tv_nsec = (token_time_interval -
-                                 time_interval * 1000000) * 1000;
-            nanosleep(&time_spec, NULL);
+    /* update the token number first */
+    double timespan = getElapsedTime(last_check_time);
+    last_check_time = HRC::now();
+    addTokens(timespan);
 
-            elapsed_sec = GetElapsedSeconds(cpu_counter);
-            time_interval = elapsed_sec - last_check_time;
-        }
-
-        last_check_time = elapsed_sec;
-        int tokens = time_interval * 1000000.0 / token_time_interval
-                     * token_unit;
-        tokens_in_bucket += tokens - num_tokens;
-        if (tokens_in_bucket > bucket_volume) {
-            tokens_in_bucket = bucket_volume;
-        }
+    /**
+     * If the number of tokens requested exceeds the bucket size,
+     * there is no way to give back sufficient tokens. Thus, just
+     * return all the available tokens.
+     */
+    if (num_tokens > bucket_size) {
+        unsigned int tmp = avail_tokens;
+        avail_tokens = 0;
+        return tmp;
     }
+
+    while (num_tokens > avail_tokens) {
+        /* compute how much time it needs to generate enough tokens */
+        double required_time = (num_tokens - avail_tokens) / token_gentime;
+        double sec_part = floor(required_time);
+        tim.tv_sec = static_cast<long int>(sec_part);
+        tim.tv_nsec = static_cast<long int>((required_time - sec_part) * 1e9);
+        nanosleep(&tim , NULL);
+
+        double timespan = getElapsedTime(last_check_time);
+        last_check_time = HRC::now();
+        addTokens(timespan);
+    }
+
+    avail_tokens -= num_tokens;
+    return num_tokens;
+}
+
+
+void RateShaper::addTokens(double elapsed_time)
+{
+    unsigned int generated_tokens = static_cast<unsigned int>(floor(
+        elapsed_time * token_gentime));
+    avail_tokens += generated_tokens;
+    /* bucket will overflow if too much tokens are added */
+    if (avail_tokens > bucket_size) {
+        avail_tokens = bucket_size;
+    }
+}
+
+
+double RateShaper::getElapsedTime(HRC::time_point last_check_time)
+{
+    HRC::time_point current_time = HRC::now();
+    std::chrono::duration<double> timespan =
+        std::chrono::duration_cast<std::chrono::duration<double>>
+            (current_time - last_check_time);
+    return timespan.count();
 }

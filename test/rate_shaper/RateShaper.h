@@ -26,33 +26,38 @@
 #define VCMTP_VCMTPV3_RATESHAPER_H_
 
 
-#include "Timer.h"
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <time.h>
-#include <unistd.h>
+#include <chrono>
+
+typedef std::chrono::high_resolution_clock HRC;
 
 
 class RateShaper {
 public:
     RateShaper();
     ~RateShaper();
+    /* sets the expected rate in bits/sec */
     void SetRate(double rate_bps);
-    void RetrieveTokens(int num_tokens);
+    /* retrieves specified number of tokens, otherwise blocks. */
+    int RetrieveTokens(unsigned int num_tokens);
 
 private:
-    int bucket_volume;
-    int overflow_tolerance;
-    int tokens_in_bucket;
-    int token_unit;
-    /* the gap between two generated tokens in microseconds */
-    int token_time_interval;
+    /* add tokens to the bucket */
+    void addTokens(double elapsed_time);
+    /* get elapsed time in seconds */
+    double getElapsedTime(HRC::time_point last_check_time);
 
-    CpuCycleCounter cpu_counter;
-    double last_check_time;
-    struct timespec time_spec;
+    /* amount of tokens a bucket can hold */
+    unsigned int bucket_size;
+    /* tokens allowed to overflow */
+    unsigned int overflow;
+    /* number of tokens currently in bucket */
+    unsigned int avail_tokens;
+    /* the time it takes to generate a token (in seconds) */
+    double token_gentime;
+
+    struct timespec tim;
+    HRC::time_point last_check_time;
 };
 
 #endif /* VCMTP_VCMTPV3_RATESHAPER_H_ */

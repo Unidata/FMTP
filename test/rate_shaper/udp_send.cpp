@@ -63,9 +63,14 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
+    unsigned int bufsize = sizeof(buf);
     rateshaper.SetRate(0.02 * 1000000);
     while(1) {
-        rateshaper.RetrieveTokens(sizeof(buf));
+        while (bufsize) {
+            unsigned int retr_tokens = rateshaper.RetrieveTokens(bufsize);
+            bufsize -= retr_tokens;
+        }
+
         ret = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&addr,
                      sizeof(addr));
         if (ret == -1) {
