@@ -39,10 +39,12 @@ int main(int argc, char* argv[])
     int s;
     int ret;
     char buf[1472];
+    char buf2[50];
     struct sockaddr_in addr;
     RateShaper rateshaper;
 
     (void*)memset(buf, 0xa, sizeof(buf));
+    (void*)memset(buf2, 0xa, sizeof(buf));
 
     if (argc != 3) {
         puts("usage: send ipaddr port");
@@ -64,15 +66,27 @@ int main(int argc, char* argv[])
     }
 
     unsigned int bufsize = sizeof(buf);
+    unsigned int buf2size = sizeof(buf2);
     rateshaper.SetRate(0.02 * 1000000);
     while(1) {
+        /*
         while (bufsize) {
             unsigned int retr_tokens = rateshaper.RetrieveTokens(bufsize);
             bufsize -= retr_tokens;
         }
+        */
+        while (buf2size) {
+            unsigned int retr_tokens = rateshaper.RetrieveTokens(buf2size);
+            buf2size -= retr_tokens;
+        }
 
+        /*
         ret = sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&addr,
                      sizeof(addr));
+        */
+        ret = sendto(s, buf2, strlen(buf2), 0, (struct sockaddr *)&addr,
+                     sizeof(addr));
+
         if (ret == -1) {
             perror("sendto");
             exit(1);
