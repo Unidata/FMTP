@@ -867,9 +867,11 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
         {}
         else {
 #endif
+        rateshaper.CalPeriod(sizeof(header) + payloadlen);
         if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
             throw std::runtime_error(
                     "vcmtpSendv3::sendProduct::SendData() error");
+        rateshaper.Sleep();
 
 #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(prodIndex);
