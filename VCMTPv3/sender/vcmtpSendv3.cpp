@@ -867,11 +867,24 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
         {}
         else {
 #endif
-        rateshaper.CalPeriod(sizeof(header) + payloadlen);
+
+        /**
+         * linkspeed is initialized to 0. If SetSendRate() is never called,
+         * linkspeed will remain 0, which implies application itself doesn't
+         * need to take care of rate shaping. On the other hand, if app
+         * should shape its rate, SetSendRate() must be called first. Thus,
+         * linkspeed will be a non-zero value. By checking linkspeed, app
+         * can decide whether to do rate shaping.
+         */
+        if (linkspeed) {
+            rateshaper.CalPeriod(sizeof(header) + payloadlen);
+        }
         if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
             throw std::runtime_error(
                     "vcmtpSendv3::sendProduct::SendData() error");
-        rateshaper.Sleep();
+        if (linkspeed) {
+            rateshaper.Sleep();
+        }
 
 #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(prodIndex);
