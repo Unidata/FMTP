@@ -2,8 +2,7 @@
  * Copyright (C) 2015 University of Virginia. All rights reserved.
  *
  * @file      RateShaper.h
- * @author    Jie Li
- *            Shawn Chen <sc7cq@virginia.edu>
+ * @author    Shawn Chen <sc7cq@virginia.edu>
  * @version   1.0
  * @date      June 19, 2015
  *
@@ -48,8 +47,6 @@ private:
     unsigned int txsize;
     HRC::time_point start_time;
     HRC::time_point end_time;
-    //auto start_time;
-    //auto end_time;
 };
 
 #endif /* VCMTP_VCMTPV3_RATESHAPER_H_ */

@@ -2,8 +2,7 @@
  * Copyright (C) 2015 University of Virginia. All rights reserved.
  *
  * @file      RateShaper.cpp
- * @author    Jie Li
- *            Shawn Chen <sc7cq@virginia.edu>
+ * @author    Shawn Chen <sc7cq@virginia.edu>
  * @version   1.0
  * @date      June 19, 2015
  *
@@ -63,12 +62,7 @@ void RateShaper::Sleep()
 {
     end_time = HRC::now();
     std::chrono::duration<double> txtime = end_time - start_time;
-    //std::chrono::duration<double> p = std::chrono::duration<double>(period);
     std::chrono::duration<double> p(period);
-    /*
-    std::chrono::nanoseconds newp =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(p);
-    */
     /* sleep for the computed time */
     std::this_thread::sleep_for(p - txtime);
 }
