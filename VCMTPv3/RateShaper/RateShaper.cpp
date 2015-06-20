@@ -24,7 +24,6 @@
 
 #include "RateShaper.h"
 
-#include <math.h>
 #include <thread>
 
 
@@ -57,7 +56,7 @@ RateShaper::~RateShaper()
  */
 void RateShaper::SetRate(double rate_bps)
 {
-    rate = ceil(rate_bps);
+    rate = rate_bps;
 }
 
 
