@@ -15,7 +15,8 @@ $(ELFFILE): *.cpp *.h
 	$(CC) -D$(DEBUG_FLAG) -D$(TEST_FLAG) -D$(MEASURE_FLAG) \
 		-g -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
 		ProdIndexDelayQueue.cpp RetxThreads.cpp senderMetadata.cpp \
-		../TcpBase.cpp TcpSend.cpp UdpSend.cpp vcmtpSendv3.cpp testSendApp.cpp
+		../TcpBase.cpp TcpSend.cpp UdpSend.cpp vcmtpSendv3.cpp testSendApp.cpp \
+		../RateShaper/RateShaper.cpp
 
 .PHONY : clean
 clean:

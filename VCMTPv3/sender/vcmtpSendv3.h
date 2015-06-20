@@ -38,6 +38,7 @@
 #include <set>
 
 #include "ProdIndexDelayQueue.h"
+#include "../RateShaper/RateShaper.h"
 #include "RetxThreads.h"
 #include "SendAppNotifier.h"
 #include "senderMetadata.h"
@@ -97,7 +98,7 @@ public:
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
                                unsigned metaSize);
-    void           SetLinkSpeed(uint64_t speed);
+    void           SetSendRate(uint64_t speed);
     /** Sender side start point, the first function to be called */
     void           Start();
     /** Sender side stop point */
@@ -236,6 +237,7 @@ private:
     std::mutex          exitMutex;
     std::exception      except;
     bool                exceptIsSet;
+    RateShaper          rateshaper;
 
     /* member variables for measurement use only */
     bool                txdone;

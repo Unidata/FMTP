@@ -217,14 +217,15 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
 
 
 /**
- * Link speed setter. In a VC environment, link speed is always a fixed value
- * which enables the link rate to be set in advance. The timer thread needs
- * this link speed to calculate the sleep time.
+ * Sets sending rate. The timer thread needs this link speed to calculate
+ * the sleep time.
  *
  * @param[in] speed         Given link speed, which supports up to 18000 Pbps
  */
-void vcmtpSendv3::SetLinkSpeed(uint64_t speed)
+void vcmtpSendv3::SetSendRate(uint64_t speed)
 {
+    /* speed should be in the form of bits per second */
+    rateshaper.SetRate(speed);
     std::unique_lock<std::mutex> lock(linkmtx);
     linkspeed = speed;
 }
