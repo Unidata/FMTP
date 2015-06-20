@@ -5,7 +5,7 @@
  * @author    Jie Li
  *            Shawn Chen <sc7cq@virginia.edu>
  * @version   1.0
- * @date      June 13, 2015
+ * @date      June 19, 2015
  *
  * @section   LICENSE
  *
@@ -26,16 +26,15 @@
 #include "RateShaper.h"
 
 #include <math.h>
+#include <thread>
 
 
 RateShaper::RateShaper()
 {
-    bucket_size   = 0;
-    overflow      = 0;
-    avail_tokens  = 0;
-    token_gentime = 0;
-    tim.tv_sec    = 0;
-    tim.tv_nsec   = 0;
+    period    = 0;
+    sleeptime = 0;
+    rate      = 0;
+    txsize    = 0;
 }
 
 
@@ -47,72 +46,29 @@ RateShaper::~RateShaper()
 
 void RateShaper::SetRate(double rate_bps)
 {
-    token_gentime = 8 / rate_bps;
-    /* round up to an integer */
-    bucket_size = static_cast<unsigned int>(ceil(rate_bps / 8));
-    avail_tokens = bucket_size;
-    /* allow 0ms burst tolerance */
-    overflow = static_cast<unsigned int>(rate_bps * 0.0);
-    bucket_size += overflow;
-
-    /* record the latest time point */
-    last_check_time = HRC::now();
+    rate = ceil(rate_bps);
 }
 
 
-int RateShaper::RetrieveTokens(unsigned int num_tokens)
+void RateShaper::CalPeriod(unsigned int size)
 {
-    /* update the token number first */
-    double timespan = getElapsedTime(last_check_time);
-    last_check_time = HRC::now();
-    addTokens(timespan);
-
-    /**
-     * If the number of tokens requested exceeds the bucket size,
-     * there is no way to give back sufficient tokens. Thus, just
-     * return all the available tokens.
-     */
-    if (num_tokens > bucket_size) {
-        unsigned int tmp = avail_tokens;
-        avail_tokens = 0;
-        return tmp;
-    }
-
-    while (num_tokens > avail_tokens) {
-        /* compute how much time it needs to generate enough tokens */
-        double required_time = (num_tokens - avail_tokens) / token_gentime;
-        double sec_part = floor(required_time);
-        tim.tv_sec = static_cast<long int>(sec_part);
-        tim.tv_nsec = static_cast<long int>((required_time - sec_part) * 1e9);
-        nanosleep(&tim , NULL);
-
-        double timespan = getElapsedTime(last_check_time);
-        last_check_time = HRC::now();
-        addTokens(timespan);
-    }
-
-    avail_tokens -= num_tokens;
-    return num_tokens;
+    txsize = size;
+    /* compute time period in seconds */
+    period = (size * 8) / rate;
+    start_time  = HRC::now();
 }
 
 
-void RateShaper::addTokens(double elapsed_time)
+void RateShaper::Sleep()
 {
-    unsigned int generated_tokens = static_cast<unsigned int>(floor(
-        elapsed_time * token_gentime));
-    avail_tokens += generated_tokens;
-    /* bucket will overflow if too much tokens are added */
-    if (avail_tokens > bucket_size) {
-        avail_tokens = bucket_size;
-    }
-}
-
-
-double RateShaper::getElapsedTime(HRC::time_point last_check_time)
-{
-    HRC::time_point current_time = HRC::now();
-    std::chrono::duration<double> timespan =
-        std::chrono::duration_cast<std::chrono::duration<double>>
-            (current_time - last_check_time);
-    return timespan.count();
+    end_time = HRC::now();
+    std::chrono::duration<double> txtime = end_time - start_time;
+    //std::chrono::duration<double> p = std::chrono::duration<double>(period);
+    std::chrono::duration<double> p(period);
+    /*
+    std::chrono::nanoseconds newp =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(p);
+    */
+    /* sleep for the computed time */
+    std::this_thread::sleep_for(p - txtime);
 }
