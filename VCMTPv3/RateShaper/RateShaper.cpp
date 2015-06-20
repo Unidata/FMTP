@@ -28,6 +28,9 @@
 #include <thread>
 
 
+/**
+ * Constructor of RateShaper.
+ */
 RateShaper::RateShaper()
 {
     period    = 0;
@@ -37,18 +40,33 @@ RateShaper::RateShaper()
 }
 
 
+/**
+ * Destructor of RateShaper.
+ */
 RateShaper::~RateShaper()
 {
     // TODO Auto-generated destructor stub
 }
 
 
+/**
+ * Sets the sending rate to a given value.
+ *
+ * @param[in] rate_bps Sending rate in bits per second.
+ * @return    None
+ */
 void RateShaper::SetRate(double rate_bps)
 {
     rate = ceil(rate_bps);
 }
 
 
+/**
+ * Calculates the time period based the pre-set rate, and starts to time.
+ *
+ * @param[in] size     Size of the packet to be sent.
+ * @return    None
+ */
 void RateShaper::CalPeriod(unsigned int size)
 {
     txsize = size;
@@ -58,6 +76,13 @@ void RateShaper::CalPeriod(unsigned int size)
 }
 
 
+/**
+ * Stops the clock, calculates the transmission time, and sleeps for the
+ * rest of the time period.
+ *
+ * @param[in] None
+ * @return    None
+ */
 void RateShaper::Sleep()
 {
     end_time = HRC::now();
