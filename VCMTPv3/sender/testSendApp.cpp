@@ -40,6 +40,10 @@
 
 /**
  * Read a metadata file which contains the file sizes of a pareto distribution.
+
+ * @param[in] *pvec        Pointer to the heap vector.
+ * @param[in] pvecsize     Heap size
+ * @param[in] filename     Filename of the metadata file.
  */
 void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
 {
@@ -48,6 +52,10 @@ void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
     if (fp.is_open()) {
         for(int i=0; i < pvecsize; ++i) {
             std::getline(fp, line);
+            /* skip a line starting with '#' */
+            if (line.find_first_of("#") != std::string::npos) {
+                continue;
+            }
             if (line.find_first_not_of("\t\n ") != std::string::npos)
                 pvec[i] = std::stoi(line);
             else
@@ -61,6 +69,8 @@ void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
 /**
  * Generates a pareto distributed file filled with random bytes. The content
  * of this file would be stored in heap and pointed by a pointer.
+
+ * @param[in] size    Size to dynamically generate.
  */
 char* paretoGen(unsigned int size)
 {
@@ -76,6 +86,8 @@ char* paretoGen(unsigned int size)
 
 /**
  * Delete dynamically allocated heap pointer.
+
+ * @param[in] *data    Pointer to the heap.
  */
 void paretoDestroy(char* data)
 {
@@ -119,11 +131,15 @@ int main(int argc, char const* argv[])
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 1, ifAddr.c_str());
 
-    sender->SetSendRate(2000000);
+    // disable application layer shaper
+    //sender->SetSendRate(2000000);
     sender->Start();
     sleep(2);
 
-    /* specify how many metadata files to send */
+    /**
+     * specify how many data products to send, that is the amount of lines
+     * to read in the metadata file.
+     */
     unsigned int pvecsize = 20;
     unsigned int * pvec = new unsigned int[pvecsize];
     metaParse(pvec, pvecsize, filename);
