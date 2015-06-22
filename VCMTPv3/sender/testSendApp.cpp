@@ -33,33 +33,79 @@
 
 #include <pthread.h>
 #include <unistd.h>
+
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <vector>
 
 
 /**
- * Read a metadata file which contains the file sizes of a pareto distribution.
+ * Parses a string with given delimitation.
+ *
+ * @param[in] s            Input string of a line in the metadata.
+ * @param[in] delim        Separator.
+ * @param[in] elems        Empty vector to contain splitted fields.
+ *
+ * @return    elems        Vector containing splitted elements.
+ */
+std::vector<std::string> &split(const std::string &s,
+                                char delim,
+                                std::vector<std::string> &elems)
+{
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
 
- * @param[in] *pvec        Pointer to the heap vector.
- * @param[in] pvecsize     Heap size
+
+/**
+ * Parses a string with given delimitation.
+ *
+ * @param[in] s            Input string of a line in the metadata.
+ * @param[in] delim        Separator.
+ *
+ * @return    elems        Vector containing splitted elements.
+ */
+std::vector<std::string> split(const std::string &s, char delim)
+{
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
+}
+
+
+/**
+ * Read a metadata file which contains the file sizes and inteer-arrival time
+ * of a metadata log file.
+
+ * @param[in] *sizevec     Vector that contains the size of each product.
+ * @param[in] *timevec     Vector that contains the inter-arrival time of
+                           each product.
+ * @param[in] prodnum      Number of products.
  * @param[in] filename     Filename of the metadata file.
  */
-void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
+void metaParse(unsigned int* sizevec, unsigned int* timevec,
+               unsigned int  prodnum, std::string&  filename)
 {
     std::string line;
     std::ifstream fp(filename, std::ios::binary);
     if (fp.is_open()) {
-        for(int i=0; i < pvecsize; ++i) {
+        for(int i=0; i < prodnum; ++i) {
             std::getline(fp, line);
-            /* skip a line starting with '#' */
-            if (line.find_first_of("#") != std::string::npos) {
-                continue;
+
+            if (line.find_first_not_of("\t\n ") != std::string::npos) {
+                std::vector<std::string> linevec = split(line, ',');
+                sizevec[i] = std::stoi(linevec[0]);
+                timevec[i] = std::stoi(linevec[2]);
             }
-            if (line.find_first_not_of("\t\n ") != std::string::npos)
-                pvec[i] = std::stoi(line);
-            else
+            else {
                 std::cout << "newline" << std::endl;
+            }
         }
     }
     fp.close();
@@ -67,19 +113,13 @@ void metaParse(unsigned int* pvec, unsigned int pvecsize, std::string& filename)
 
 
 /**
- * Generates a pareto distributed file filled with random bytes. The content
- * of this file would be stored in heap and pointed by a pointer.
-
+ * Allocates a memory region initialized to 0.
+ *
  * @param[in] size    Size to dynamically generate.
  */
 char* paretoGen(unsigned int size)
 {
-    char* data = new char[size];
-    std::ifstream fp("/dev/urandom", std::ios::binary);
-    if (fp.is_open()) {
-        fp.read(data, size);
-    }
-    fp.close();
+    char* data = new char[size]();
     return data;
 }
 
@@ -137,22 +177,27 @@ int main(int argc, char const* argv[])
     sleep(2);
 
     /**
-     * specify how many data products to send, that is the amount of lines
+     * specify how many data products to send, this is the amount of lines
      * to read in the metadata file.
      */
-    unsigned int pvecsize = 20;
-    unsigned int * pvec = new unsigned int[pvecsize];
-    metaParse(pvec, pvecsize, filename);
+    unsigned int prodnum = 2000;
+    /* array to store size of each product */
+    unsigned int * sizevec = new unsigned int[prodnum];
+    /* array to store inter-arrival time of each product */
+    unsigned int * timevec = new unsigned int[prodnum];
+    metaParse(sizevec, timevec, prodnum, filename);
 
-    for(int i=0; i < pvecsize; ++i) {
+    for(int i=0; i < prodnum; ++i) {
         /* generate pareto distributed data */
-        char * data = paretoGen(pvec[i]);
-        sender->sendProduct(data, pvec[i], metadata, metaSize);
+        char * data = paretoGen(sizevec[i]);
+        sender->sendProduct(data, sizevec[i], metadata, metaSize);
         paretoDestroy(data);
-        /* 0.1 sec interval between two products */
-        usleep(100000);
+
+        /* sleep for the inter-arrival time */
+        usleep(timevec[i] * 1000);
     }
-    delete[] pvec;
+    delete[] sizevec;
+    delete[] timevec;
 
     while(1);
 
