@@ -5,3 +5,4 @@ size.txt
 .deps/
 .idea/
 size.txt-bak
+*.csv
