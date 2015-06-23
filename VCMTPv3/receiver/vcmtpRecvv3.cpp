@@ -1248,11 +1248,11 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
             pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
 
             #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
+                std::string debugmsg = "[RETX REQ] Product #" +
                     std::to_string(prodindex);
                 debugmsg += ": Data block is missing. SeqNum = ";
                 debugmsg += std::to_string(seqnum);
-                debugmsg += ". Requesting retx";
+                debugmsg += ". Request retx.";
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
             #endif
@@ -1719,9 +1719,9 @@ void vcmtpRecvv3::timerThread()
         /** if EOP has not been received yet, issue a request for retx */
         if (reqEOPifMiss(timerparam.prodindex)) {
             #ifdef DEBUG2
-                std::string debugmsg = "Timer has waken up. Product #" +
+            std::string debugmsg = "[TIMER] Timer has waken up. Product #" +
                     std::to_string(timerparam.prodindex);
-                debugmsg += " is still missing EOP. Reuquest retx";
+                debugmsg += " is still missing EOP. Request retx.";
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
             #endif
