@@ -367,7 +367,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     {
         std::unique_lock<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
-            sleeptime = 500 * ((double)trackermap[header.prodindex].prodsize /
+            sleeptime = 5000 * ((double)trackermap[header.prodindex].prodsize /
                     (double)linkspeed);
         }
         else {
