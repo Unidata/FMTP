@@ -247,8 +247,16 @@ bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
  * @throw std::system_error   if an error occurs while reading the socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
-void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
+void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
 {
+    #ifdef DEBUG2
+        std::string debugmsg = "[MCAST BOP] Product #" +
+            std::to_string(header.prodindex);
+        debugmsg += ": BOP received from multicast.";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
     char          pktBuf[MAX_VCMTP_PACKET_LEN];
     const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
 
@@ -264,6 +272,27 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header)
 
     checkPayloadLen(header, nbytes);
     BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
+}
+
+
+/**
+ * Handles a retransmitted BOP message given its VCMTP header.
+ *
+ * @param[in] header           Header associated with the packet.
+ * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
+ */
+void vcmtpRecvv3::retxBOPHandler(const VcmtpHeader& header,
+                                 const char* const  VcmtpPacketData)
+{
+    #ifdef DEBUG2
+        std::string debugmsg = "[RETX BOP] Product #" +
+            std::to_string(header.prodindex);
+        debugmsg += ": BOP received from unicast.";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
+    BOPHandler(header, VcmtpPacketData);
 }
 
 
@@ -354,17 +383,6 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         timerQfilled.notify_all();
     }
 
-    #ifdef DEBUG2
-        std::string debugmsg = "Product #" +
-            std::to_string(header.prodindex);
-        debugmsg += ": BOP is received. Product size = ";
-        debugmsg += std::to_string(BOPmsg.prodsize);
-        debugmsg += ", Metadata size = ";
-        debugmsg += std::to_string(BOPmsg.metasize);
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-    #endif
-
     #ifdef MEASURE
         {
             std::unique_lock<std::mutex> lock(trackermtx);
@@ -377,9 +395,12 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
                         "[Measure] Error accessing newly added BOP");
             }
         }
-        std::string measuremsg = "Product #" +
+        std::string measuremsg = "[MEASURE] Product #" +
             std::to_string(header.prodindex);
-        measuremsg += ": new product to receive";
+        measuremsg += ": BOP is received. Product size = ";
+        measuremsg += std::to_string(BOPmsg.prodsize);
+        measuremsg += ", Metadata size = ";
+        measuremsg += std::to_string(BOPmsg.metasize);
         std::cout << measuremsg << std::endl;
         WriteToLog(measuremsg);
     #endif
@@ -466,13 +487,6 @@ void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
  */
 void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 {
-    #ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(header.prodindex);
-        debugmsg += ": EOP is received";
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-    #endif
-
     /**
      * if bitmap check tells everything is completed, then sends the
      * RETX_END message back to sender. Meanwhile notify receiving
@@ -488,13 +502,13 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         }
 
         #ifdef DEBUG2
-            std::string debugmsg = "Product #" +
+            std::string debugmsg = "[MSG] Product #" +
                 std::to_string(header.prodindex);
             debugmsg += " has been completely received";
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
         #elif DEBUG1
-            std::string debugmsg = "Product #" +
+            std::string debugmsg = "[MSG] Product #" +
                 std::to_string(header.prodindex);
             debugmsg += " has been completely received";
             std::cout << debugmsg << std::endl;
@@ -502,7 +516,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 
         #ifdef MEASURE
             uint32_t bytes = measure->getsize(header.prodindex);
-            std::string measuremsg = "Product #" +
+            std::string measuremsg = "[SUCCESS] Product #" +
                 std::to_string(header.prodindex);
             measuremsg += ": product received, size = ";
             measuremsg += std::to_string(bytes);
@@ -646,7 +660,7 @@ void vcmtpRecvv3::mcastHandler()
         decodeHeader(header);
 
         if (header.flags == VCMTP_BOP) {
-            BOPHandler(header);
+            mcastBOPHandler(header);
         }
         else if (header.flags == VCMTP_MEM_DATA) {
             #ifdef MEASURE
@@ -704,6 +718,14 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         requestMissingBops(header.prodindex);
     }
     else {
+        #ifdef DEBUG2
+            std::string debugmsg = "[MCAST EOP] Product #" +
+                std::to_string(header.prodindex);
+            debugmsg += ": EOP is received";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
+
         bool hasBOP = false;
         {
             std::unique_lock<std::mutex> lock(trackermtx);
@@ -821,7 +843,7 @@ void vcmtpRecvv3::retxHandler()
             tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
-            BOPHandler(header, paytmp);
+            retxBOPHandler(header, paytmp);
 
             /** remove the BOP from missing list */
             (void)rmMisBOPinList(header.prodindex);
@@ -874,6 +896,17 @@ void vcmtpRecvv3::retxHandler()
             #ifdef MEASURE
                 /* log the time first */
                 measure->setRetxClock(header.prodindex);
+            #endif
+
+            #ifdef DEBUG2
+                std::string debugmsg = "[RETX DATA] Product #" +
+                    std::to_string(header.prodindex);
+                debugmsg += ": Data block received on unicast, SeqNum = ";
+                debugmsg += std::to_string(header.seqnum);
+                debugmsg += ", Paylen = ";
+                debugmsg += std::to_string(header.payloadlen);
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
             #endif
 
             /**
@@ -964,13 +997,13 @@ void vcmtpRecvv3::retxHandler()
                 }
 
                 #ifdef DEBUG2
-                    std::string debugmsg = "Product #" +
+                    std::string debugmsg = "[MSG] Product #" +
                         std::to_string(header.prodindex);
                     debugmsg += " has been completely received";
                     std::cout << debugmsg << std::endl;
                     WriteToLog(debugmsg);
                 #elif DEBUG1
-                    std::string debugmsg = "Product #" +
+                    std::string debugmsg = "[MSG] Product #" +
                         std::to_string(header.prodindex);
                     debugmsg += " has been completely received";
                     std::cout << debugmsg << std::endl;
@@ -978,7 +1011,7 @@ void vcmtpRecvv3::retxHandler()
 
                 #ifdef MEASURE
                     uint32_t bytes = measure->getsize(header.prodindex);
-                    std::string measuremsg = "Product #" +
+                    std::string measuremsg = "[SUCCESS] Product #" +
                         std::to_string(header.prodindex);
                     measuremsg += ": product received, size = ";
                     measuremsg += std::to_string(bytes);
@@ -994,18 +1027,6 @@ void vcmtpRecvv3::retxHandler()
                     measure->remove(header.prodindex);
                 #endif
             }
-
-            #ifdef DEBUG2
-                if (!pBlockMNG->isComplete(header.prodindex)) {
-                    std::string debugmsg = "Product #" +
-                        std::to_string(header.prodindex);
-                    debugmsg += ": RETX data block (SeqNum = ";
-                    debugmsg += std::to_string(header.seqnum);
-                    debugmsg += ") is received";
-                    std::cout << debugmsg << std::endl;
-                    WriteToLog(debugmsg);
-                }
-            #endif
         }
         else if (header.flags == VCMTP_RETX_EOP) {
             #ifdef MEASURE
@@ -1021,7 +1042,16 @@ void vcmtpRecvv3::retxHandler()
              * duplicated notification if the product's bitmap has
              * already been removed.
              */
-            if (pBlockMNG->rmProd(header.prodindex)) {
+            if (!pBlockMNG->isComplete(header.prodindex) &&
+                pBlockMNG->rmProd(header.prodindex)) {
+                #ifdef DEBUG2
+                    std::string debugmsg = "[FAILURE] Product #" +
+                        std::to_string(header.prodindex);
+                    debugmsg += " is not completely received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
+                #endif
+
                 if (notifier)
                     notifier->notify_of_missed_prod(header.prodindex);
             }
@@ -1107,6 +1137,14 @@ bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
  */
 void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
 {
+    #ifdef DEBUG2
+        std::string debugmsg = "[RETX EOP] Product #" +
+            std::to_string(header.prodindex);
+        debugmsg += ": EOP is received";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
     EOPHandler(header);
 }
 
@@ -1157,18 +1195,17 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
     else {
         checkPayloadLen(header, nbytes);
 
-        if (0 == prodptr) {
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(header.prodindex);
-                debugmsg += ": Data block is received. SeqNum = ";
-                debugmsg += std::to_string(header.seqnum);
-                debugmsg += ", Paylen = ";
-                debugmsg += std::to_string(header.payloadlen);
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-        }
+        #ifdef DEBUG2
+            std::string debugmsg = "[MCAST DATA] Product #" +
+                std::to_string(header.prodindex);
+            debugmsg += ": Data block received from multicast. SeqNum = ";
+            debugmsg += std::to_string(header.seqnum);
+            debugmsg += ", Paylen = ";
+            debugmsg += std::to_string(header.payloadlen);
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
+
         /** receiver should trust the packet from sender is legal */
         pBlockMNG->set(header.prodindex, header.seqnum/VCMTP_DATA_LEN);
     }

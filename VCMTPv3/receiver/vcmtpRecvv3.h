@@ -90,16 +90,6 @@ public:
 private:
     bool addUnrqBOPinList(uint32_t prodindex);
     /**
-     * Handles a multicast BOP message given a peeked-at VCMTP header.
-     *
-     * @pre                           The multicast socket contains a VCMTP BOP
-     *                                packet.
-     * @param[in] header              The associated, already-decoded VCMTP header.
-     * @throw     std::system_error   if an error occurs while reading the socket.
-     * @throw     std::runtime_error  if the packet is invalid.
-     */
-    void BOPHandler(const VcmtpHeader& header);
-    /**
      * Parse BOP message and call notifier to notify receiving application.
      *
      * @param[in] header           Header associated with the packet.
@@ -133,6 +123,16 @@ private:
     bool hasLastBlock(const uint32_t prodindex);
     void initEOPStatus(const uint32_t prodindex);
     void joinGroup(std::string mcastAddr, const unsigned short mcastPort);
+    /**
+     * Handles a multicast BOP message given a peeked-at VCMTP header.
+     *
+     * @pre                           The multicast socket contains a VCMTP BOP
+     *                                packet.
+     * @param[in] header              The associated, already-decoded VCMTP header.
+     * @throw     std::system_error   if an error occurs while reading the socket.
+     * @throw     std::runtime_error  if the packet is invalid.
+     */
+    void mcastBOPHandler(const VcmtpHeader& header);
     void mcastHandler();
     void mcastEOPHandler(const VcmtpHeader& header);
     /**
@@ -159,6 +159,14 @@ private:
     void retxHandler();
     void retxRequester();
     bool rmMisBOPinList(uint32_t prodindex);
+    /**
+     * Handles a retransmitted BOP message.
+     *
+     * @param[in] header           Header associated with the packet.
+     * @param[in] VcmtpPacketData  Pointer to payload of VCMTP packet.
+     */
+    void retxBOPHandler(const VcmtpHeader& header,
+                        const char* const  VcmtpPacketData);
     void retxEOPHandler(const VcmtpHeader& header);
     /**
      * Reads the data portion of a VCMTP data-packet into the location specified
