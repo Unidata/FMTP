@@ -26,3 +26,4 @@ TESTDATA
 submit_to_coverity
 cov-int
 vcmtp.tgz
+m4/*

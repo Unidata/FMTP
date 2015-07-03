@@ -106,6 +106,7 @@ AC_CONFIG_FILES([
     test/Makefile
     test/sender/Makefile
     VCMTPv3/Makefile
+    VCMTPv3/RateShaper/Makefile
     VCMTPv3/receiver/Makefile
     VCMTPv3/sender/Makefile
 ])
