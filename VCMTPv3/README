@@ -27,11 +27,11 @@ The sender timer is used to form a window for legal retransmission and release
 resources after the window is closed. And the receiver timer is used to watch
 the EOPs. If it finds missing EOP, a requested will be sent back immediately.
 The whole program is written in C++.
-VCMTPv3 is supposed to be integrated into LDM7 as an underlying layer. Also, a
-testing application suite is provided as a simple replacement for LDM. The test
-application only provides single product transmission so far. But later a
-product-queue-like structure will be added. Besides, another unit will be added
-to create random sized data to mock real idd feedtypes.
+VCMTPv3 is integrated into LDM7 as an underlying layer. Also, a testing
+application suite is provided as a simple replacement for LDM. The test
+application provides product stream transmission. It reads the metadata of LDM
+to replay the feedtype with exactly the same product size and inter-arrival
+time. The only difference is that the content of a product is all 0.
 
 
 
@@ -56,12 +56,14 @@ INSTALLATION
 
 Before actually start to compile and install the protocol. Make sure the listed
 pre-requisites have been met. All of the following instructions will be given
-based on CentOS 6.6 x86_64.
+based on CentOS 6.6 x86_64. Here, only the instructions for installing VCMTPv3
+with test applications are provided. To use LDM along with VCMTPv3, please see
+LDM Tutorial (http://www.unidata.ucar.edu/software/ldm/ldm-current/tutorial/).
 
 * Git
   $ sudo yum install git
 
-* G++ 4.4 or above
+* G++ 4.8 or above
   $ sudo yum install gcc-c++
 
 * For Mac OS X users, Apple has been moved to LLVM, thus no default gcc is
