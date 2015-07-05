@@ -180,7 +180,7 @@ int main(int argc, char const* argv[])
      * specify how many data products to send, this is the amount of lines
      * to read in the metadata file.
      */
-    unsigned int prodnum = 2000;
+    unsigned int prodnum = 6446;
     /* array to store size of each product */
     unsigned int * sizevec = new unsigned int[prodnum];
     /* array to store inter-arrival time of each product */
