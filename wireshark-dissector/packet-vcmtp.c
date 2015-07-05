@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2015 University of Virginia. All rights reserved.
  *
  * @file      packet-vcmtp.h
  * @author    Shawn Chen <sc7cq@virginia.edu>
@@ -8,15 +8,18 @@
  *
  * @section   LICENSE
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or（at your option）
- * any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details at http://www.gnu.org/copyleft/gpl.html
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @brief     Dissector plugin of wireshark, used to parse VCMTP packet header.
  */
@@ -26,7 +29,7 @@
 #include <epan/packet.h>
 
 #define VCMTP_MCAST_PORT 5173
-#define VCMTP_RETX_PORT 1234
+#define VCMTP_RETX_PORT  1234
 
 /* packet types in the flag field */
 #define VCMTP_BOP        0x0001

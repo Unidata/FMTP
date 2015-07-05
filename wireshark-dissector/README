@@ -36,7 +36,7 @@ This wireshark plugin is built with cmake (in a separate build/ directory):
   make install
 
 This will build the .so plugin for wireshark and install it into the user's 
-~/.wireshark/plugins/ directory, where wireshark will load plugins from.
+~/.wireshark/plugins/ directory, which wireshark will load plugins from.
 
 For developers:
 This dissector is allowed to be further modified and improved. Regarding any
