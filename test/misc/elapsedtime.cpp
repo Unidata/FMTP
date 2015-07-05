@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2015 University of Virginia. All rights reserved.
  *
  * @file      elapsedtime.cpp
  * @author    Shawn Chen <sc7cq@virginia.edu>
