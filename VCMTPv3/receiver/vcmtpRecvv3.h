@@ -83,9 +83,9 @@ public:
                 const std::string    ifAddr = "0.0.0.0");
     ~vcmtpRecvv3();
 
-    void    SetLinkSpeed(uint64_t speed);
-    void    Start();
-    void    Stop();
+    void SetLinkSpeed(uint64_t speed);
+    void Start();
+    void Stop();
 
 private:
     bool addUnrqBOPinList(uint32_t prodindex);
