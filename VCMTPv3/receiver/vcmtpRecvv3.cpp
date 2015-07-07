@@ -342,8 +342,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
 
     /* check if the product is already under tracking */
     if (!pBlockMNG->addProd(header.prodindex, blknum)) {
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
-                "Error adding product into ProdBlockMNG");
+        std::cout << "vcmtpRecvv3::BOPHandler(): duplicate BOP for product #"
+            << header.prodindex << "received." << std::endl;
     }
 
     initEOPStatus(header.prodindex);
