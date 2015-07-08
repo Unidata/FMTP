@@ -50,6 +50,11 @@ void runVCMTP(void* ptr)
 }
 
 
+/**
+ * Establishes a TCP connection to the sender test application.
+ *
+ * @param[in] *tcpaddr    A string of the TCP address.
+ */
 int tcpconn(char* tcpaddr)
 {
     int sockfd = 0, n = 0;
@@ -82,6 +87,13 @@ int tcpconn(char* tcpaddr)
 }
 
 
+/**
+ * Sends a message to the peer.
+ *
+ * @param[in] connfd    TCP socket.
+ * @param[in] *sendBuff A buffer containing the content.
+ * @param[in] bufsize   Size of the buffer.
+ */
 void tcpsend(int connfd, char* sendBuff, int bufsize)
 {
     int n = write(connfd, sendBuff, bufsize);
@@ -118,6 +130,7 @@ int main(int argc, char* argv[])
 
     char sendBuff[1];
     memset(sendBuff, 'Z', sizeof(sendBuff));
+    /* establish a TCP connection */
     int tcpfd = tcpconn(argv[1]);
 
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
@@ -135,6 +148,7 @@ int main(int argc, char* argv[])
     std::cout << "Received product: " << index2 << std::endl;
     recv->Stop();
 
+    /* sends a message to the server */
     tcpsend(tcpfd, sendBuff, sizeof(sendBuff));
     close(tcpfd);
 
