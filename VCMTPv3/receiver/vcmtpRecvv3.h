@@ -83,6 +83,7 @@ public:
                 const std::string    ifAddr = "0.0.0.0");
     ~vcmtpRecvv3();
 
+    uint32_t getLastProdindex();
     void SetLinkSpeed(uint64_t speed);
     void Start();
     void Stop();
