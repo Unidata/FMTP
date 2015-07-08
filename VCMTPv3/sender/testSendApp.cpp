@@ -128,7 +128,7 @@ char* paretoGen(unsigned int size)
 
 /**
  * Delete dynamically allocated heap pointer.
-
+ *
  * @param[in] *data    Pointer to the heap.
  */
 void paretoDestroy(char* data)
@@ -138,6 +138,9 @@ void paretoDestroy(char* data)
 }
 
 
+/**
+ * Creates a TCP socket and listens for connections.
+ */
 int tcpconn()
 {
     int listenfd = 0, connfd = 0;
@@ -159,6 +162,13 @@ int tcpconn()
 }
 
 
+/**
+ * Reads data from the TCP socket and check if it's valid.
+ *
+ * @param[in] sockfd    File descriptor of the socket.
+ * @param[in] *recvBuff Pointer to the receiving buffer.
+ * @param[in] size      Number of bytes to read.
+ */
 void tcpread(int sockfd, char* recvBuff, int size)
 {
     int n = read(sockfd, recvBuff, size);
@@ -201,6 +211,7 @@ int main(int argc, char const* argv[])
 
     char recvBuff[2];
     memset(recvBuff, 0, sizeof(recvBuff));
+    /* ready to establish a TCP connection */
     int tcpfd = tcpconn();
 
     vcmtpSendv3* sender =
@@ -233,6 +244,7 @@ int main(int argc, char const* argv[])
         usleep(timevec[i] * 1000);
     }
 
+    /* waits for receivers to report their status */
     tcpread(tcpfd, recvBuff, 1);
 
     close(tcpfd);
