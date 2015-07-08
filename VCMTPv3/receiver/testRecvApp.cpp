@@ -34,6 +34,7 @@
 #include <iostream>
 #include <thread>
 
+#include <netinet/tcp.h>
 #include <unistd.h>
 
 
@@ -46,6 +47,47 @@ void runVCMTP(void* ptr)
 {
     vcmtpRecvv3 *recv = static_cast<vcmtpRecvv3*>(ptr);
     recv->Start();
+}
+
+
+int tcpconn(char* tcpaddr)
+{
+    int sockfd = 0, n = 0;
+    struct sockaddr_in serv_addr;
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("\n Error : Could not create socket \n");
+        return -1;
+    }
+
+    int flag = 1;
+    int result = setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY,
+                            (char *) &flag, sizeof(int));
+    if (result < 0) {
+        printf("set TCP_NODELAY failed");
+    }
+
+    memset(&serv_addr, '0', sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(50000);
+    if (inet_pton(AF_INET, tcpaddr, &serv_addr.sin_addr) <= 0) {
+        printf("\n inet_pton error occured\n");
+        return -1;
+    }
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        printf("\n Error : Connect Failed \n");
+        return -1;
+    }
+
+    return sockfd;
+}
+
+
+void tcpsend(int connfd, char* sendBuff, int bufsize)
+{
+    int n = write(connfd, sendBuff, bufsize);
+    if (n == 1) {
+        std::cout << "MSG sent" << std::endl;
+    }
 }
 
 
@@ -74,6 +116,10 @@ int main(int argc, char* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
 
+    char sendBuff[1];
+    memset(sendBuff, 'Z', sizeof(sendBuff));
+    int tcpfd = tcpconn(argv[1]);
+
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);
     recv->SetLinkSpeed(1000000000);
@@ -85,9 +131,12 @@ int main(int argc, char* argv[])
         index1 = recv->getLastProdindex();
         sleep(10);
         index2 = recv->getLastProdindex();
-    } while ((index1 != index2) || (index2 != 9));
+    } while ((index1 != index2) || (index2 != 2));
     std::cout << "Received product: " << index2 << std::endl;
     recv->Stop();
+
+    tcpsend(tcpfd, sendBuff, sizeof(sendBuff));
+    close(tcpfd);
 
     delete recv;
     return 0;
