@@ -34,6 +34,8 @@
 #include <iostream>
 #include <thread>
 
+#include <unistd.h>
+
 
 /**
  * A separate thread to run VCMTP receiver.
@@ -61,6 +63,7 @@ void runVCMTP(void* ptr)
  */
 int main(int argc, char* argv[])
 {
+    uint32_t index1, index2;
     if (argc < 5) {
         std::cerr << "ERROR: Insufficient arguments." << std::endl;
         return 1;
@@ -75,7 +78,16 @@ int main(int argc, char* argv[])
                                         mcastPort, NULL, ifAddr);
     recv->SetLinkSpeed(1000000000);
     std::thread t(runVCMTP, recv);
-    t.join();
+    t.detach();
+
+    /* double check the product index to ensure transmission is finished */
+    do {
+        index1 = recv->getLastProdindex();
+        sleep(10);
+        index2 = recv->getLastProdindex();
+    } while ((index1 != index2) || (index2 != 9));
+    std::cout << "Received product: " << index2 << std::endl;
+    recv->Stop();
 
     delete recv;
     return 0;
