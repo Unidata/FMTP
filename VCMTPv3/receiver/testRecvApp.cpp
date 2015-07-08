@@ -36,6 +36,18 @@
 
 
 /**
+ * A separate thread to run VCMTP receiver.
+ *
+ * @param[in] *ptr    A pointer to a vcmtpRecvv3 object.
+ */
+void runVCMTP(void* ptr)
+{
+    vcmtpRecvv3 *recv = static_cast<vcmtpRecvv3*>(ptr);
+    recv->Start();
+}
+
+
+/**
  * Since the LDM could be too heavy to use for testing purposes only. This main
  * function is a light weight replacement of the LDM receiving application. It
  * sets up the whole environment and call Start() to start receiving. All the
@@ -62,7 +74,8 @@ int main(int argc, char* argv[])
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);
     recv->SetLinkSpeed(1000000000);
-    recv->Start();
+    std::thread t(runVCMTP, recv);
+    t.join();
 
     delete recv;
     return 0;
