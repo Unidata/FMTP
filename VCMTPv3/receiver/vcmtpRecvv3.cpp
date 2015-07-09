@@ -120,18 +120,6 @@ vcmtpRecvv3::~vcmtpRecvv3()
 
 
 /**
- * Gets the most recently received product index and returns it.
- *
- * @return    The most recent product index.
- */
-uint32_t vcmtpRecvv3::getLastProdindex()
-{
-    std::unique_lock<std::mutex> lock(pidxmtx);
-    return prodidx_mcast;
-}
-
-
-/**
  * A public setter of link speed. The setter is thread-safe, but a recommended
  * way is to set the link speed before the receiver starts. Due to the feature
  * of virtual circuits, the link speed won't change when it's set up. So the
