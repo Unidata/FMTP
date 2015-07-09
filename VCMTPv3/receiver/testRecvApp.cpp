@@ -128,30 +128,15 @@ int main(int argc, char* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
 
-    char sendBuff[1];
-    memset(sendBuff, 'Z', sizeof(sendBuff));
-    /* establish a TCP connection */
-    int tcpfd = tcpconn(argv[1]);
-
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);
     recv->SetLinkSpeed(1000000000);
     std::thread t(runVCMTP, recv);
     t.detach();
 
-    /* double check the product index to ensure transmission is finished */
-    do {
-        index1 = recv->getLastProdindex();
-        sleep(10);
-        index2 = recv->getLastProdindex();
-    } while ((index1 != index2) || (index2 != 2));
-    std::cout << "Received product: " << index2 << std::endl;
+    while(1);
+
     recv->Stop();
-
-    /* sends a message to the server */
-    tcpsend(tcpfd, sendBuff, sizeof(sendBuff));
-    close(tcpfd);
-
     delete recv;
     return 0;
 }

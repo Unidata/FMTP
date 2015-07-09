@@ -139,46 +139,6 @@ void paretoDestroy(char* data)
 
 
 /**
- * Creates a TCP socket and listens for connections.
- */
-int tcpconn()
-{
-    int listenfd = 0, connfd = 0;
-    struct sockaddr_in serv_addr;
-
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&serv_addr, '0', sizeof(serv_addr));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(50000);
-
-    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-
-    listen(listenfd, 10);
-    connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-
-    return connfd;
-}
-
-
-/**
- * Reads data from the TCP socket and check if it's valid.
- *
- * @param[in] sockfd    File descriptor of the socket.
- * @param[in] *recvBuff Pointer to the receiving buffer.
- * @param[in] size      Number of bytes to read.
- */
-void tcpread(int sockfd, char* recvBuff, int size)
-{
-    int n = read(sockfd, recvBuff, size);
-    if (strcmp(recvBuff, "Z") == 0) {
-        std::cout << "MSG received: " << recvBuff << std::endl;
-    }
-}
-
-
-/**
  * Since the LDM could be too heavy to use for testing purposes only. This main
  * function is a light weight replacement of the LDM sending application. It
  * sets up the whole environment and call sendProduct() to send data. All the
@@ -209,11 +169,6 @@ int main(int argc, char const* argv[])
     char* metadata = tmp;
     unsigned int metaSize = sizeof(tmp);
 
-    char recvBuff[2];
-    memset(recvBuff, 0, sizeof(recvBuff));
-    /* ready to establish a TCP connection */
-    int tcpfd = tcpconn();
-
     vcmtpSendv3* sender =
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 1, ifAddr.c_str());
@@ -227,7 +182,7 @@ int main(int argc, char const* argv[])
      * specify how many data products to send, this is the amount of lines
      * to read in the metadata file.
      */
-    unsigned int prodnum = 3;
+    unsigned int prodnum = 6447;
     /* array to store size of each product */
     unsigned int * sizevec = new unsigned int[prodnum];
     /* array to store inter-arrival time of each product */
@@ -244,10 +199,8 @@ int main(int argc, char const* argv[])
         usleep(timevec[i] * 1000);
     }
 
-    /* waits for receivers to report their status */
-    tcpread(tcpfd, recvBuff, 1);
+    while(1);
 
-    close(tcpfd);
     delete[] sizevec;
     delete[] timevec;
     delete sender;
