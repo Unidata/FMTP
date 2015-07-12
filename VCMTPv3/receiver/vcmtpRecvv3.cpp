@@ -997,20 +997,8 @@ void vcmtpRecvv3::retxHandler()
             }
 
             uint32_t iBlock = header.seqnum/VCMTP_DATA_LEN;
-            try {
-                pBlockMNG->set(header.prodindex, iBlock);
-            }
-            catch (std::exception& e) {
-                throw std::runtime_error(
-                        "vcmtpRecvv3::retxHandler(): header.seqnum=" +
-                        std::to_string(header.seqnum) +
-                        ", iBlock=" + std::to_string(iBlock) +
-                        ", bitmap->getMapSize()=" +
-                        std::to_string(
-                            pBlockMNG->getMapSize(header.prodindex)) +
-                        ", header.prodindex=" +
-                        std::to_string(header.prodindex));
-            }
+            pBlockMNG->set(header.prodindex, iBlock);
+
             if (pBlockMNG->delIfComplete(header.prodindex)) {
                 sendRetxEnd(header.prodindex);
                 if (notifier) {
