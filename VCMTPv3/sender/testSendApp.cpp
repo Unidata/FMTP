@@ -205,7 +205,6 @@ int main(int argc, char const* argv[])
         sleep(1);
     }
     std::cout << "All Finished" << std::endl;
-    sleep(5);
 
     delete[] sizevec;
     delete[] timevec;
