@@ -174,7 +174,7 @@ int main(int argc, char const* argv[])
                         0, 1, ifAddr.c_str());
 
     // disable application layer shaper
-    sender->SetSendRate(5000000);
+    //sender->SetSendRate(5000000);
     sender->Start();
     sleep(5);
 
