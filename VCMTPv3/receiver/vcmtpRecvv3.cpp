@@ -120,6 +120,18 @@ vcmtpRecvv3::~vcmtpRecvv3()
 
 
 /**
+ * Gets the most recent completed product index.
+ *
+ * @return    The product index of the latest completed product.
+ */
+uint32_t vcmtpRecvv3::getMostRecentProd()
+{
+    std::unique_lock<std::mutex> lock(completeprodmtx);
+    return completeprod;
+}
+
+
+/**
  * A public setter of link speed. The setter is thread-safe, but a recommended
  * way is to set the link speed before the receiver starts. Due to the feature
  * of virtual circuits, the link speed won't change when it's set up. So the
@@ -494,8 +506,19 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
      */
     if (pBlockMNG->delIfComplete(header.prodindex)) {
         sendRetxEnd(header.prodindex);
-        if (notifier)
+        if (notifier) {
             notifier->notify_of_eop(header.prodindex);
+        }
+        else {
+            /**
+             * Tracks the most recent completed product and updates the
+             * completeprod instead of calling notifier. This is for
+             * test application use only.
+             */
+            std::unique_lock<std::mutex> lock(completeprodmtx);
+            completeprod = header.prodindex;
+        }
+
         {
             std::unique_lock<std::mutex> lock(trackermtx);
             trackermap.erase(header.prodindex);
@@ -990,8 +1013,19 @@ void vcmtpRecvv3::retxHandler()
             }
             if (pBlockMNG->delIfComplete(header.prodindex)) {
                 sendRetxEnd(header.prodindex);
-                if (notifier)
+                if (notifier) {
                     notifier->notify_of_eop(header.prodindex);
+                }
+                else {
+                    /**
+                     * Tracks the most recent completed product and updates the
+                     * completeprod instead of calling notifier. This is for
+                     * test application use only.
+                     */
+                    std::unique_lock<std::mutex> lock(completeprodmtx);
+                    completeprod = header.prodindex;
+                }
+
                 {
                     std::unique_lock<std::mutex> lock(trackermtx);
                     trackermap.erase(header.prodindex);
