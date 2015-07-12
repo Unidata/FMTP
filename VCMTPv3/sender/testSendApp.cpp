@@ -174,7 +174,7 @@ int main(int argc, char const* argv[])
                         0, 1, ifAddr.c_str());
 
     // disable application layer shaper
-    //sender->SetSendRate(50000000);
+    //sender->SetSendRate(5000000);
     sender->Start();
     sleep(2);
 
@@ -183,6 +183,7 @@ int main(int argc, char const* argv[])
      * to read in the metadata file.
      */
     unsigned int prodnum = 6447;
+    //unsigned int prodnum = 500;
     /* array to store size of each product */
     unsigned int * sizevec = new unsigned int[prodnum];
     /* array to store inter-arrival time of each product */
@@ -199,7 +200,12 @@ int main(int argc, char const* argv[])
         usleep(timevec[i] * 1000);
     }
 
-    while(1);
+    while(sender->getLastProd() != (prodnum - 1)) {
+        std::cout << "Not finished " << sender->getLastProd() << std::endl;
+        sleep(1);
+    }
+    std::cout << "All Finished" << std::endl;
+    sleep(5);
 
     delete[] sizevec;
     delete[] timevec;

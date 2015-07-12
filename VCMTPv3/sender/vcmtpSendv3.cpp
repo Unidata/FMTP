@@ -110,6 +110,18 @@ vcmtpSendv3::~vcmtpSendv3()
 
 
 /**
+ * Returns the most recent product index completed received by all receivers.
+ *
+ * @return   Product index of the most recent product.
+ */
+uint32_t vcmtpSendv3::getLastProd()
+{
+    std::unique_lock<std::mutex> lock(lastprodmtx);
+    return lastprodindex;
+}
+
+
+/**
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
@@ -423,8 +435,18 @@ void vcmtpSendv3::handleRetxEnd(VcmtpHeader* const  recvheader,
              * since this receiver is the last one in the unfinished set,
              * notify the sending application.
              */
-            if (notifier)
+            if (notifier) {
                 notifier->notify_of_eop(recvheader->prodindex);
+            }
+            else {
+                /**
+                 * Updates a variable to track the most recent product index
+                 * that is indicated to be completely received. This is to
+                 * work with getLastProd() for test application to use only.
+                 */
+                std::unique_lock<std::mutex> lock(lastprodmtx);
+                lastprodindex = recvheader->prodindex;
+            }
         }
     }
 }

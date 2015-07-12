@@ -97,6 +97,7 @@ public:
                  const float           timeoutRatio = 500000.0);
     ~vcmtpSendv3();
 
+    uint32_t       getLastProd();
     unsigned short getTcpPortNum();
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
@@ -241,6 +242,9 @@ private:
     std::exception      except;
     bool                exceptIsSet;
     RateShaper          rateshaper;
+    std::mutex          lastprodmtx;
+    uint32_t            lastprodindex;
+
 
     /* member variables for measurement use only */
     bool                txdone;
