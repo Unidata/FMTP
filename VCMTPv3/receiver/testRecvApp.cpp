@@ -37,7 +37,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-#define PRODNUM 500
+#define PRODNUM 5
 
 /**
  * A separate thread to run VCMTP receiver.
