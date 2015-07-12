@@ -10,10 +10,10 @@ dot="."
 
 for i in {1..10}
 do
-    ./testRecvApp 127.0.0.1 1234 233.0.225.123 5173 0.0.0.0
+    ./testRecvApp 127.0.0.1 1234 233.0.225.123 5173 $bindip
     newlog=$(ls -t logs | head -n1)
     filename="${newlog%.*}"
     ext="${newlog##*.}"
     mv logs/$newlog logs/$filename$run$i$dot$ext
-    sleep 2
+    sleep 6
 done
