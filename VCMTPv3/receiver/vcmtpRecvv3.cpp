@@ -1075,8 +1075,18 @@ void vcmtpRecvv3::retxHandler()
                     WriteToLog(debugmsg);
                 #endif
 
-                if (notifier)
+                if (notifier) {
                     notifier->notify_of_missed_prod(header.prodindex);
+                }
+                else {
+                    /**
+                     * Tracks the most recent rejected product and updates the
+                     * completeprod instead of calling notifier. This is for
+                     * test application use only.
+                     */
+                    std::unique_lock<std::mutex> lock(completeprodmtx);
+                    completeprod = header.prodindex;
+                }
             }
         }
     }
