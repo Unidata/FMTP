@@ -1087,8 +1087,18 @@ void vcmtpSendv3::timerThread()
          * Only if the product is removed by this remove call, notify the
          * sending application
          */
-        if (notifier && isRemoved)
+        if (notifier && isRemoved) {
             notifier->notify_of_eop(prodindex);
+        }
+        else if (isRemoved) {
+            /**
+             * Updates a variable to track the most recent product index
+             * that is indicated to be expired and thus removed. This is to
+             * work with getLastProd() for test application use only.
+             */
+            std::unique_lock<std::mutex> lock(lastprodmtx);
+            lastprodindex = prodindex;
+        }
     }
 }
 
