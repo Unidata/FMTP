@@ -7,7 +7,7 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 SENDER_SRCDIR	= $(top_srcdir)/VCMTPv3/sender
-CPPFLAGS	= -I$(SENDER_SRCDIR) @GTEST_CPPFLAGS@
+AM_CPPFLAGS	= -I$(SENDER_SRCDIR) @GTEST_CPPFLAGS@
 ProdIndexDelayQueueTest_SOURCES 	= \
         ProdIndexDelayQueueTest.cpp \
         $(SENDER_SRCDIR)/ProdIndexDelayQueue.cpp
