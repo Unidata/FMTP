@@ -6,7 +6,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-CPPFLAGS	= -I$(top_srcdir)/protocol
+AM_CPPFLAGS	= -I$(top_srcdir)/protocol
 ExecutorTest_SOURCES 	= \
 	ExecutorTest.cpp ExecutorTest.h \
         $(top_srcdir)/protocol/Executor.cpp \
