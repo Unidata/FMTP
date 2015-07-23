@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 {
     int s;
     int ret;
-    char buf[1472];
+    char buf[1460];
     struct sockaddr_in addr;
     (void*)memset(buf, 0xa, sizeof(buf));
 
