@@ -30,6 +30,7 @@
 
 #include "vcmtpSendv3.h"
 
+#include <algorithm>
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
@@ -213,7 +214,6 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
         /* Set the retransmission timeout parameters */
         setTimerParameters(senderProdMeta);
         /* start a new timer for this product in a separate thread */
-        //timerDelayQ.push(prodIndex, 0.1);
         timerDelayQ.push(prodIndex, senderProdMeta->retxTimeoutPeriod);
     }
     catch (std::exception& e) {
@@ -243,6 +243,18 @@ void vcmtpSendv3::SetSendRate(uint64_t speed)
     rateshaper.SetRate(speed);
     std::unique_lock<std::mutex> lock(linkmtx);
     linkspeed = speed;
+}
+
+
+/**
+ * Sets the maximum RTT in the multicast group.
+ *
+ * @param[in] rtt     Maximum RTT value in milliseconds.
+ */
+void vcmtpSendv3::SetMaxRTT(double rtt)
+{
+    std::unique_lock<std::mutex> lock(rttmtx);
+    maxrtt = rtt;
 }
 
 
@@ -954,9 +966,13 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
         std::chrono::duration_cast<std::chrono::duration<double>>
         (senderProdMeta->mcastEndTime - senderProdMeta->mcastStartTime);
 
-    /* Set up timer timeout period */
-    senderProdMeta->retxTimeoutPeriod = mcastPeriod.count() *
-                                        senderProdMeta->retxTimeoutRatio;
+    /**
+     * Set up timer timeout period. According to the VCMTP design, the timeout
+     * period should be the larger value between fsnd * multicast time and max
+     * RTT.
+     */
+    senderProdMeta->retxTimeoutPeriod = std::max(mcastPeriod.count() *
+            senderProdMeta->retxTimeoutRatio, maxrtt / 1000);
 }
 
 

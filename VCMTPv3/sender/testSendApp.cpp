@@ -175,6 +175,7 @@ int main(int argc, char const* argv[])
 
     // disable application layer shaper
     //sender->SetSendRate(5000000);
+    sender->SetMaxRTT(50);
     sender->Start();
     sleep(5);
 
@@ -183,7 +184,7 @@ int main(int argc, char const* argv[])
      * to read in the metadata file.
      */
     //unsigned int prodnum = 6447;
-    unsigned int prodnum = 5;
+    unsigned int prodnum = 1;
     /* array to store size of each product */
     unsigned int * sizevec = new unsigned int[prodnum];
     /* array to store inter-arrival time of each product */
