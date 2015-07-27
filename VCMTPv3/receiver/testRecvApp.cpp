@@ -37,7 +37,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-#define PRODNUM 5
+#define PRODNUM 207684
 
 /**
  * A separate thread to run VCMTP receiver.
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);
-    recv->SetLinkSpeed(1000000000);
+    recv->SetLinkSpeed(50000000);
     std::thread t(runVCMTP, recv);
     t.detach();
 
