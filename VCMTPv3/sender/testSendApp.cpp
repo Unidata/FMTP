@@ -70,6 +70,12 @@ void SilenceSuppressor(void* ptr)
     std::set<int> prodset(initval, initval + PRODNUM);
     vcmtpSendv3 *send = static_cast<vcmtpSendv3*>(ptr);
 
+    /**
+     * Blocks at getNotify(). Only unblocks when a new product is released.
+     * Goes through the set to see if there are still outstanding products
+     * with an index less than the one returned by getNotify(). If so, try
+     * to suppress silence by notifying the sending thread.
+     */
     while (1) {
         notified_prod = send->getNotify();
         std::cout << "Current ACKed Product: " << notified_prod << std::endl;
@@ -158,7 +164,7 @@ void metaParse(unsigned int* sizevec, unsigned int* timevec,
  *
  * @param[in] size    Size to dynamically generate.
  */
-char* paretoGen(unsigned int size)
+char* contentGen(unsigned int size)
 {
     char* data = new char[size]();
     return data;
@@ -170,7 +176,7 @@ char* paretoGen(unsigned int size)
  *
  * @param[in] *data    Pointer to the heap.
  */
-void paretoDestroy(char* data)
+void contentDestroy(char* data)
 {
     delete[] data;
     data = NULL;
@@ -234,20 +240,26 @@ int main(int argc, char const* argv[])
 
     for(int i=0; i < prodnum; ++i) {
         /* generate pareto distributed data */
-        char * data = paretoGen(sizevec[i]);
+        char * data = contentGen(sizevec[i]);
         curr_prod = sender->sendProduct(data, sizevec[i], metadata, metaSize);
-        paretoDestroy(data);
+        contentDestroy(data);
 
-        /* sleep for the inter-arrival time */
+        /**
+         * Condition variable blocks the thread, either sleeping for the
+         * inter-arrival time or waiting to be notified. A lambda expression
+         * here guarantees that silence can only be suppressed if there is no
+         * active products to be served.
+         */
         {
             std::unique_lock<std::mutex> sup_lk(supmtx);
-            bool state = sup.wait_for(sup_lk, std::chrono::microseconds(timevec[i] * 1000),
-                []() {return (curr_prod == notified_prod);} );
+            bool state = sup.wait_for(sup_lk,
+                    std::chrono::microseconds(timevec[i] * 1000),
+                    []() {return (curr_prod == notified_prod);} );
             if (state) {
-                std::cout << "Sleeping waked up, silence suppressed" << std::endl;
+                std::cout << "Waked up, silence suppressed" << std::endl;
             }
             else {
-                std::cout << "Sleeping waked up, silence not suppressed" << std::endl;
+                std::cout << "Waked up, silence not suppressed" << std::endl;
             }
         }
     }
