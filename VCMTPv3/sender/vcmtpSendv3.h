@@ -94,11 +94,11 @@ public:
                  const unsigned char   ttl = 1,
                  const std::string     ifAddr = "0.0.0.0",
                  const uint32_t        initProdIndex = 0,
-                 //const float           timeoutRatio = 500000.0);
                  const float           timeoutRatio = 500.0);
     ~vcmtpSendv3();
 
     uint32_t       getLastProd();
+    uint32_t       getNotify();
     unsigned short getTcpPortNum();
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
@@ -250,6 +250,9 @@ private:
     RateShaper          rateshaper;
     std::mutex          lastprodmtx;
     uint32_t            lastprodindex;
+    std::mutex          notifyprodmtx;
+    uint32_t            notifyprodidx;
+    std::condition_variable notify_cv;
 
 
     /* member variables for measurement use only */

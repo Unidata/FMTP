@@ -35,12 +35,51 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <atomic>
+#include <condition_variable>
+#include <chrono>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <set>
 #include <string>
 #include <sstream>
 #include <thread>
 #include <vector>
+
+//#define PRODNUM 207684
+#define PRODNUM 5
+
+std::atomic<uint32_t> notified_prod{0xFFFFFFFF};
+std::atomic<uint32_t> curr_prod{0xFFFFFFFF};
+std::condition_variable sup;
+std::mutex supmtx;
+
+
+/**
+ * Suppresses silence in feedtypes in order to speed up the replay.
+ *
+ * @param[in] *ptr    A pointer to a vcmtpSendv3 object.
+ */
+void SilenceSuppressor(void* ptr)
+{
+    int initval[PRODNUM];
+    for (int i = 0; i < PRODNUM; ++i) {
+        initval[i] = i;
+    }
+    std::set<int> prodset(initval, initval + PRODNUM);
+    vcmtpSendv3 *send = static_cast<vcmtpSendv3*>(ptr);
+
+    while (1) {
+        notified_prod = send->getNotify();
+        std::cout << "Current ACKed Product: " << notified_prod << std::endl;
+        prodset.erase(notified_prod);
+        if (*(prodset.begin()) > notified_prod) {
+            std::cout << "Try to suppress silence" << std::endl;
+            sup.notify_one();
+        }
+    }
+}
 
 
 /**
@@ -175,7 +214,7 @@ int main(int argc, char const* argv[])
 
     // disable application layer shaper
     //sender->SetSendRate(5000000);
-    sender->SetMaxRTT(50);
+    sender->SetMaxRTT(1);
     sender->Start();
     sleep(5);
 
@@ -183,30 +222,45 @@ int main(int argc, char const* argv[])
      * specify how many data products to send, this is the amount of lines
      * to read in the metadata file.
      */
-    unsigned int prodnum = 207684;
-    //unsigned int prodnum = 1;
+    unsigned int prodnum = PRODNUM;
     /* array to store size of each product */
     unsigned int * sizevec = new unsigned int[prodnum];
     /* array to store inter-arrival time of each product */
     unsigned int * timevec = new unsigned int[prodnum];
     metaParse(sizevec, timevec, prodnum, filename);
 
+    std::thread t(SilenceSuppressor, sender);
+    t.detach();
+
     for(int i=0; i < prodnum; ++i) {
         /* generate pareto distributed data */
         char * data = paretoGen(sizevec[i]);
-        sender->sendProduct(data, sizevec[i], metadata, metaSize);
+        curr_prod = sender->sendProduct(data, sizevec[i], metadata, metaSize);
         paretoDestroy(data);
 
         /* sleep for the inter-arrival time */
-        usleep(timevec[i] * 1000);
+        {
+            std::unique_lock<std::mutex> sup_lk(supmtx);
+            bool state = sup.wait_for(sup_lk, std::chrono::microseconds(timevec[i] * 1000),
+                []() {return (curr_prod == notified_prod);} );
+            if (state) {
+                std::cout << "Sleeping waked up, silence suppressed" << std::endl;
+            }
+            else {
+                std::cout << "Sleeping waked up, silence not suppressed" << std::endl;
+            }
+        }
     }
 
+    /*
     while(sender->getLastProd() != (prodnum - 1)) {
         std::cout << "Not finished " << sender->getLastProd() << std::endl;
         sleep(1);
     }
     std::cout << "All Finished" << std::endl;
     sleep(2);
+    */
+    while(1);
 
     delete[] sizevec;
     delete[] timevec;

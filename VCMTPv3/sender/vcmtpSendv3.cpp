@@ -123,6 +123,20 @@ uint32_t vcmtpSendv3::getLastProd()
 
 
 /**
+ * Blocks until a product is acknowledged by all receivers, returns the product
+ * index.
+ *
+ * @return   Product index of the most recent ACKed product.
+ */
+uint32_t vcmtpSendv3::getNotify()
+{
+    std::unique_lock<std::mutex> lock(notifyprodmtx);
+    notify_cv.wait(lock);
+    return notifyprodidx;
+}
+
+
+/**
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
@@ -456,8 +470,19 @@ void vcmtpSendv3::handleRetxEnd(VcmtpHeader* const  recvheader,
                  * that is indicated to be completely received. This is to
                  * work with getLastProd() for test application to use only.
                  */
-                std::unique_lock<std::mutex> lock(lastprodmtx);
-                lastprodindex = recvheader->prodindex;
+                {
+                    std::unique_lock<std::mutex> lock(lastprodmtx);
+                    lastprodindex = recvheader->prodindex;
+                }
+                /**
+                 * Updates the most recently acknowledged product and notifies
+                 * a dummy notification handler (getNotify()).
+                 */
+                {
+                    std::unique_lock<std::mutex> lock(notifyprodmtx);
+                    notifyprodidx = recvheader->prodindex;
+                }
+                notify_cv.notify_one();
             }
         }
     }
@@ -1112,8 +1137,19 @@ void vcmtpSendv3::timerThread()
              * that is indicated to be expired and thus removed. This is to
              * work with getLastProd() for test application use only.
              */
-            std::unique_lock<std::mutex> lock(lastprodmtx);
-            lastprodindex = prodindex;
+            {
+                std::unique_lock<std::mutex> lock(lastprodmtx);
+                lastprodindex = prodindex;
+            }
+            /**
+             * Updates the most recently acknowledged product and notifies
+             * a dummy notification handler (getNotify()).
+             */
+            {
+                std::unique_lock<std::mutex> lock(notifyprodmtx);
+                notifyprodidx = prodindex;
+            }
+            notify_cv.notify_one();
         }
     }
 }
