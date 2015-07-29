@@ -41,5 +41,11 @@ int main(int argc, char* argv[])
     std::cout << "Smallest in set: " << *(prodset.begin()) << std::endl;
     std::cout << "Largest in set: " << *(prodset.rbegin()) << std::endl;
 
+    prodset.erase(0);
+    prodset.erase(9);
+
+    std::cout << "Smallest in set: " << *(prodset.begin()) << std::endl;
+    std::cout << "Largest in set: " << *(prodset.rbegin()) << std::endl;
+
     return 0;
 }
