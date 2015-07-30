@@ -52,6 +52,7 @@
 
 std::atomic<uint32_t> notified_prod{0xFFFFFFFF};
 std::atomic<uint32_t> curr_prod{0xFFFFFFFF};
+std::atomic<bool> allfin{false};
 std::condition_variable sup;
 std::mutex supmtx;
 
@@ -80,7 +81,10 @@ void SilenceSuppressor(void* ptr)
         notified_prod = send->getNotify();
         std::cout << "Current ACKed Product: " << notified_prod << std::endl;
         prodset.erase(notified_prod);
-        if (*(prodset.begin()) > notified_prod) {
+        if (prodset.empty()) {
+            allfin = true;
+        }
+        else if (*(prodset.begin()) > notified_prod) {
             std::cout << "Try to suppress silence" << std::endl;
             sup.notify_one();
         }
@@ -264,15 +268,12 @@ int main(int argc, char const* argv[])
         }
     }
 
-    /*
-    while(sender->getLastProd() != (prodnum - 1)) {
+    while(!allfin) {
         std::cout << "Not finished " << sender->getLastProd() << std::endl;
         sleep(1);
     }
     std::cout << "All Finished" << std::endl;
     sleep(2);
-    */
-    while(1);
 
     delete[] sizevec;
     delete[] timevec;
