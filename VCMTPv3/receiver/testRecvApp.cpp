@@ -32,12 +32,15 @@
 #include "vcmtpRecvv3.h"
 
 #include <iostream>
+#include <set>
 #include <thread>
 
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-#define PRODNUM 207684
+//#define PRODNUM 207684
+#define PRODNUM 5
+
 
 /**
  * A separate thread to run VCMTP receiver.
@@ -76,15 +79,23 @@ int main(int argc, char* argv[])
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
 
+    int initval[PRODNUM];
+    for (int i = 0; i < PRODNUM; ++i) {
+        initval[i] = i;
+    }
+    std::set<int> prodset(initval, initval + PRODNUM);
+
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);
     recv->SetLinkSpeed(50000000);
     std::thread t(runVCMTP, recv);
     t.detach();
 
-    while(recv->getMostRecentProd() != (PRODNUM - 1)) {
-        std::cout << "Not finished " << recv->getMostRecentProd() << std::endl;
-        sleep(1);
+    while(!prodset.empty()) {
+        uint32_t notified_prod = recv->getNotify();
+        std::cout << "Not finished, Current notified Product: "
+            << notified_prod << std::endl;
+        prodset.erase(notified_prod);
     }
     std::cout << "All Finished " << recv->getMostRecentProd() << std::endl;
 

@@ -132,6 +132,19 @@ uint32_t vcmtpRecvv3::getMostRecentProd()
 
 
 /**
+ * Gets the notified product index.
+ *
+ * @return    The product index of the latest completed product.
+ */
+uint32_t vcmtpRecvv3::getNotify()
+{
+    std::unique_lock<std::mutex> lock(notifyprodmtx);
+    notify_cv.wait(lock);
+    return notifyprodidx;
+}
+
+
+/**
  * A public setter of link speed. The setter is thread-safe, but a recommended
  * way is to set the link speed before the receiver starts. Due to the feature
  * of virtual circuits, the link speed won't change when it's set up. So the
@@ -515,8 +528,19 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
              * completeprod instead of calling notifier. This is for
              * test application use only.
              */
-            std::unique_lock<std::mutex> lock(completeprodmtx);
-            completeprod = header.prodindex;
+            {
+                std::unique_lock<std::mutex> lock(completeprodmtx);
+                completeprod = header.prodindex;
+            }
+            /**
+             * Updates the most recently acknowledged product and notifies
+             * a dummy notification handler (getNotify()).
+             */
+            {
+                std::unique_lock<std::mutex> lock(notifyprodmtx);
+                notifyprodidx = header.prodindex;
+            }
+            notify_cv.notify_one();
         }
 
         {
@@ -1010,8 +1034,19 @@ void vcmtpRecvv3::retxHandler()
                      * completeprod instead of calling notifier. This is for
                      * test application use only.
                      */
-                    std::unique_lock<std::mutex> lock(completeprodmtx);
-                    completeprod = header.prodindex;
+                    {
+                        std::unique_lock<std::mutex> lock(completeprodmtx);
+                        completeprod = header.prodindex;
+                    }
+                    /**
+                     * Updates the most recently acknowledged product and notifies
+                     * a dummy notification handler (getNotify()).
+                     */
+                    {
+                        std::unique_lock<std::mutex> lock(notifyprodmtx);
+                        notifyprodidx = header.prodindex;
+                    }
+                    notify_cv.notify_one();
                 }
 
                 {
@@ -1084,8 +1119,19 @@ void vcmtpRecvv3::retxHandler()
                      * completeprod instead of calling notifier. This is for
                      * test application use only.
                      */
-                    std::unique_lock<std::mutex> lock(completeprodmtx);
-                    completeprod = header.prodindex;
+                    {
+                        std::unique_lock<std::mutex> lock(completeprodmtx);
+                        completeprod = header.prodindex;
+                    }
+                    /**
+                     * Updates the most recently acknowledged product and notifies
+                     * a dummy notification handler (getNotify()).
+                     */
+                    {
+                        std::unique_lock<std::mutex> lock(notifyprodmtx);
+                        notifyprodidx = header.prodindex;
+                    }
+                    notify_cv.notify_one();
                 }
             }
         }

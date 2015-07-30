@@ -84,6 +84,7 @@ public:
     ~vcmtpRecvv3();
 
     uint32_t getMostRecentProd();
+    uint32_t getNotify();
     void SetLinkSpeed(uint64_t speed);
     void Start();
     void Stop();
@@ -293,6 +294,9 @@ private:
     /* tracks the most recent completed product index */
     std::mutex              completeprodmtx;
     uint32_t                completeprod;
+    std::mutex              notifyprodmtx;
+    uint32_t                notifyprodidx;
+    std::condition_variable notify_cv;
 
     /* member variables for measurement use only */
     Measure*                measure;
