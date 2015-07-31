@@ -46,6 +46,8 @@
 #include <iostream>
 #include <system_error>
 
+#define Frcv 5
+
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -392,7 +394,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     {
         std::unique_lock<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
-            sleeptime = 2 * ((double)trackermap[header.prodindex].prodsize /
+            sleeptime = Frcv * ((double)trackermap[header.prodindex].prodsize /
                     (double)linkspeed);
         }
         else {
