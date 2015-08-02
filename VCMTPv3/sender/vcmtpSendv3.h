@@ -45,6 +45,7 @@
 #include "RetxThreads.h"
 #include "SendAppNotifier.h"
 #include "senderMetadata.h"
+#include "../SilenceSuppressor/SilenceSuppressor.h"
 #include "TcpSend.h"
 #include "UdpSend.h"
 #include "vcmtpBase.h"
@@ -253,6 +254,7 @@ private:
     std::mutex          notifyprodmtx;
     uint32_t            notifyprodidx;
     std::condition_variable notify_cv;
+    SilenceSuppressor*  suppressor;
 
 
     /* member variables for measurement use only */

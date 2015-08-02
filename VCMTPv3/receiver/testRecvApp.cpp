@@ -39,7 +39,7 @@
 #include <unistd.h>
 
 //#define PRODNUM 207684
-#define PRODNUM 5
+#define PRODNUM 5000
 
 
 /**

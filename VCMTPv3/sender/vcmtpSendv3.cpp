@@ -38,6 +38,7 @@
 #include <stdexcept>
 #include <system_error>
 
+#define PRODNUM 207684
 
 #ifndef NULL
     #define NULL 0
@@ -132,7 +133,7 @@ uint32_t vcmtpSendv3::getNotify()
 {
     std::unique_lock<std::mutex> lock(notifyprodmtx);
     notify_cv.wait(lock);
-    return notifyprodidx;
+    return suppressor->query();
 }
 
 
@@ -290,6 +291,9 @@ void vcmtpSendv3::Start()
     tcpsend->Init();
     /** initialize UDP connection */
     udpsend->Init();
+
+    /** initializes a new SilenceSuppressor instance. */
+    suppressor = new SilenceSuppressor(PRODNUM);
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
     if(retval != 0)
@@ -474,6 +478,7 @@ void vcmtpSendv3::handleRetxEnd(VcmtpHeader* const  recvheader,
                     std::unique_lock<std::mutex> lock(lastprodmtx);
                     lastprodindex = recvheader->prodindex;
                 }
+                suppressor->remove(recvheader->prodindex);
                 /**
                  * Updates the most recently acknowledged product and notifies
                  * a dummy notification handler (getNotify()).
@@ -1141,6 +1146,7 @@ void vcmtpSendv3::timerThread()
                 std::unique_lock<std::mutex> lock(lastprodmtx);
                 lastprodindex = prodindex;
             }
+            suppressor->remove(prodindex);
             /**
              * Updates the most recently acknowledged product and notifies
              * a dummy notification handler (getNotify()).

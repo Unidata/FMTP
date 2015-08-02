@@ -16,7 +16,7 @@ $(ELFFILE): *.cpp *.h
 		-g -std=c++11 -I$(INCLUDE) -pthread -lm -o $(ELFFILE) \
 		ProdIndexDelayQueue.cpp RetxThreads.cpp senderMetadata.cpp \
 		../TcpBase.cpp TcpSend.cpp UdpSend.cpp vcmtpSendv3.cpp testSendApp.cpp \
-		../RateShaper/RateShaper.cpp
+		../RateShaper/RateShaper.cpp ../SilenceSuppressor/SilenceSuppressor.cpp
 
 .PHONY : clean
 clean:

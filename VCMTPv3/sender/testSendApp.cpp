@@ -41,18 +41,15 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
-#include <set>
 #include <string>
 #include <sstream>
 #include <thread>
 #include <vector>
 
-//#define PRODNUM 207684
-#define PRODNUM 5
+#define PRODNUM 207684
 
 std::atomic<uint32_t> notified_prod{0xFFFFFFFF};
 std::atomic<uint32_t> curr_prod{0xFFFFFFFF};
-std::atomic<bool> allfin{false};
 std::condition_variable sup;
 std::mutex supmtx;
 
@@ -64,13 +61,7 @@ std::mutex supmtx;
  */
 void SilenceSuppressor(void* ptr)
 {
-    int initval[PRODNUM];
-    for (int i = 0; i < PRODNUM; ++i) {
-        initval[i] = i;
-    }
-    std::set<int> prodset(initval, initval + PRODNUM);
     vcmtpSendv3 *send = static_cast<vcmtpSendv3*>(ptr);
-
     /**
      * Blocks at getNotify(). Only unblocks when a new product is released.
      * Goes through the set to see if there are still outstanding products
@@ -79,15 +70,8 @@ void SilenceSuppressor(void* ptr)
      */
     while (1) {
         notified_prod = send->getNotify();
-        std::cout << "Current ACKed Product: " << notified_prod << std::endl;
-        prodset.erase(notified_prod);
-        if (prodset.empty()) {
-            allfin = true;
-        }
-        else if (*(prodset.begin()) > notified_prod) {
-            std::cout << "Try to suppress silence" << std::endl;
-            sup.notify_one();
-        }
+        std::cout << "Earliest product = " << notified_prod << std::endl;
+        sup.notify_one();
     }
 }
 
@@ -256,24 +240,20 @@ int main(int argc, char const* argv[])
          */
         {
             std::unique_lock<std::mutex> sup_lk(supmtx);
-            bool state = sup.wait_for(sup_lk,
-                    std::chrono::microseconds(timevec[i] * 1000),
-                    []() {return (curr_prod == notified_prod);} );
-            if (state) {
-                std::cout << "Waked up, silence suppressed" << std::endl;
-            }
-            else {
-                std::cout << "Waked up, silence not suppressed" << std::endl;
-            }
+            sup.wait_for(sup_lk, std::chrono::microseconds(timevec[i] * 1000),
+                    []() {return (curr_prod < notified_prod);} );
         }
     }
 
+    /*
     while(!allfin) {
         std::cout << "Not finished " << sender->getLastProd() << std::endl;
         sleep(1);
     }
     std::cout << "All Finished" << std::endl;
     sleep(2);
+    */
+    while(1);
 
     delete[] sizevec;
     delete[] timevec;
