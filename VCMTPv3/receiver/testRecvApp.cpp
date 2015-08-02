@@ -91,11 +91,9 @@ int main(int argc, char* argv[])
     std::thread t(runVCMTP, recv);
     t.detach();
 
-    while(!prodset.empty()) {
-        uint32_t notified_prod = recv->getNotify();
-        std::cout << "Not finished, Current notified Product: "
-            << notified_prod << std::endl;
-        prodset.erase(notified_prod);
+    while(recv->getMostRecentProd() != (PRODNUM - 1)) {
+        std::cout << "Not finished " << recv->getMostRecentProd() << std::endl;
+        sleep(1);
     }
     std::cout << "All Finished " << recv->getMostRecentProd() << std::endl;
 

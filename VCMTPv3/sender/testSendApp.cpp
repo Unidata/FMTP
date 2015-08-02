@@ -46,7 +46,8 @@
 #include <thread>
 #include <vector>
 
-#define PRODNUM 207684
+//#define PRODNUM 207684
+#define PRODNUM 5000
 
 std::atomic<uint32_t> notified_prod{0xFFFFFFFF};
 std::atomic<uint32_t> curr_prod{0xFFFFFFFF};
@@ -245,15 +246,12 @@ int main(int argc, char const* argv[])
         }
     }
 
-    /*
-    while(!allfin) {
+    while(sender->getLastProd() != (prodnum - 1)) {
         std::cout << "Not finished " << sender->getLastProd() << std::endl;
         sleep(1);
     }
     std::cout << "All Finished" << std::endl;
     sleep(2);
-    */
-    while(1);
 
     delete[] sizevec;
     delete[] timevec;
