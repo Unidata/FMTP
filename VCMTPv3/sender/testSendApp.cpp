@@ -227,31 +227,38 @@ int main(int argc, char const* argv[])
     std::thread t(SilenceSuppressor, sender);
     t.detach();
 
-    for(int i=0; i < prodnum; ++i) {
-        /* generate pareto distributed data */
-        char * data = contentGen(sizevec[i]);
-        curr_prod = sender->sendProduct(data, sizevec[i], metadata, metaSize);
-        contentDestroy(data);
+    for(int run=0; run < 10; ++run) {
+        for(int i=0; i < prodnum; ++i) {
+            /* generate pareto distributed data */
+            char * data = contentGen(sizevec[i]);
+            curr_prod = sender->sendProduct(data, sizevec[i], metadata,
+                                            metaSize);
+            contentDestroy(data);
 
-        /**
-         * Condition variable blocks the thread, either sleeping for the
-         * inter-arrival time or waiting to be notified. A lambda expression
-         * here guarantees that silence can only be suppressed if there is no
-         * active products to be served.
-         */
-        {
-            std::unique_lock<std::mutex> sup_lk(supmtx);
-            sup.wait_for(sup_lk, std::chrono::microseconds(timevec[i] * 1000),
-                    []() {return (curr_prod < notified_prod);} );
+            /**
+             * Condition variable blocks the thread, either sleeping for the
+             * inter-arrival time or waiting to be notified. A lambda expression
+             * here guarantees that silence can only be suppressed if there is
+             * no active products to be served.
+             */
+            {
+                std::unique_lock<std::mutex> sup_lk(supmtx);
+                sup.wait_for(sup_lk,
+                        std::chrono::microseconds(timevec[i] * 1000),
+                        []() {return (curr_prod < notified_prod);} );
+            }
         }
+
+        while(sender->getLastProd() != (prodnum - 1)) {
+            std::cout << "Not finished " << sender->getLastProd() << std::endl;
+            sleep(1);
+        }
+        std::cout << "All Finished" << std::endl;
+        sleep(2);
+        sender->rstProdIndex();
     }
 
-    while(sender->getLastProd() != (prodnum - 1)) {
-        std::cout << "Not finished " << sender->getLastProd() << std::endl;
-        sleep(1);
-    }
-    std::cout << "All Finished" << std::endl;
-    sleep(2);
+    while(1);
 
     delete[] sizevec;
     delete[] timevec;
