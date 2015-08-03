@@ -91,11 +91,7 @@ int main(int argc, char* argv[])
     std::thread t(runVCMTP, recv);
     t.detach();
 
-    while(recv->getMostRecentProd() != (PRODNUM - 1)) {
-        std::cout << "Not finished " << recv->getMostRecentProd() << std::endl;
-        sleep(1);
-    }
-    std::cout << "All Finished " << recv->getMostRecentProd() << std::endl;
+    while(1);
 
     recv->Stop();
     delete recv;
