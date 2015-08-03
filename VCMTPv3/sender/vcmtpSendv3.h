@@ -101,6 +101,7 @@ public:
     uint32_t       getLastProd();
     uint32_t       getNotify();
     unsigned short getTcpPortNum();
+    void           rstProdIndex();
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
                                unsigned metaSize);

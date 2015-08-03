@@ -151,6 +151,15 @@ unsigned short vcmtpSendv3::getTcpPortNum()
 
 
 /**
+ * Resets the product index to 0.
+ */
+void vcmtpSendv3::rstProdIndex()
+{
+    prodIndex = 0;
+}
+
+
+/**
  * Transfers a contiguous block of memory (without metadata).
  *
  * @param[in] data      Memory data to be sent.
