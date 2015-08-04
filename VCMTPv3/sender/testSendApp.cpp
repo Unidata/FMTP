@@ -246,16 +246,10 @@ int main(int argc, char const* argv[])
                         []() {return (curr_prod < notified_prod);} );
             }
         }
-
-        while(sender->getLastProd() != (prodnum - 1)) {
-            std::cout << "Not finished " << sender->getLastProd() << std::endl;
-            sleep(1);
-        }
-        std::cout << "All Finished" << std::endl;
-        sleep(2);
-        sender->rstProdIndex();
+        sleep(60);
     }
 
+    std::cout << "10 runs finished" << std::endl;
     while(1);
 
     delete[] sizevec;
