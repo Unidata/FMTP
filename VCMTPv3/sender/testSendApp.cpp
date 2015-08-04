@@ -246,7 +246,7 @@ int main(int argc, char const* argv[])
                         []() {return (curr_prod < notified_prod);} );
             }
         }
-        sleep(60);
+        sleep(30);
     }
 
     std::cout << "10 runs finished" << std::endl;

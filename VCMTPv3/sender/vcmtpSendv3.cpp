@@ -111,18 +111,6 @@ vcmtpSendv3::~vcmtpSendv3()
 
 
 /**
- * Returns the most recent product index completed received by all receivers.
- *
- * @return   Product index of the most recent product.
- */
-uint32_t vcmtpSendv3::getLastProd()
-{
-    std::unique_lock<std::mutex> lock(lastprodmtx);
-    return lastprodindex;
-}
-
-
-/**
  * Blocks until a product is acknowledged by all receivers, returns the product
  * index.
  *
@@ -474,15 +462,6 @@ void vcmtpSendv3::handleRetxEnd(VcmtpHeader* const  recvheader,
                 notifier->notify_of_eop(recvheader->prodindex);
             }
             else {
-                /**
-                 * Updates a variable to track the most recent product index
-                 * that is indicated to be completely received. This is to
-                 * work with getLastProd() for test application to use only.
-                 */
-                {
-                    std::unique_lock<std::mutex> lock(lastprodmtx);
-                    lastprodindex = recvheader->prodindex;
-                }
                 suppressor->remove(recvheader->prodindex);
                 /**
                  * Updates the most recently acknowledged product and notifies
@@ -1187,15 +1166,6 @@ void vcmtpSendv3::timerThread()
             notifier->notify_of_eop(prodindex);
         }
         else if (isRemoved) {
-            /**
-             * Updates a variable to track the most recent product index
-             * that is indicated to be expired and thus removed. This is to
-             * work with getLastProd() for test application use only.
-             */
-            {
-                std::unique_lock<std::mutex> lock(lastprodmtx);
-                lastprodindex = prodindex;
-            }
             suppressor->remove(prodindex);
             /**
              * Updates the most recently acknowledged product and notifies
