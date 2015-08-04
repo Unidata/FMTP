@@ -122,18 +122,6 @@ vcmtpRecvv3::~vcmtpRecvv3()
 
 
 /**
- * Gets the most recent completed product index.
- *
- * @return    The product index of the latest completed product.
- */
-uint32_t vcmtpRecvv3::getMostRecentProd()
-{
-    std::unique_lock<std::mutex> lock(completeprodmtx);
-    return completeprod;
-}
-
-
-/**
  * Gets the notified product index.
  *
  * @return    The product index of the latest completed product.
@@ -543,15 +531,6 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             notifier->notify_of_eop(header.prodindex);
         }
         else {
-            /**
-             * Tracks the most recent completed product and updates the
-             * completeprod instead of calling notifier. This is for
-             * test application use only.
-             */
-            {
-                std::unique_lock<std::mutex> lock(completeprodmtx);
-                completeprod = header.prodindex;
-            }
             /**
              * Updates the most recently acknowledged product and notifies
              * a dummy notification handler (getNotify()).
@@ -1068,15 +1047,6 @@ void vcmtpRecvv3::retxHandler()
                 }
                 else {
                     /**
-                     * Tracks the most recent completed product and updates the
-                     * completeprod instead of calling notifier. This is for
-                     * test application use only.
-                     */
-                    {
-                        std::unique_lock<std::mutex> lock(completeprodmtx);
-                        completeprod = header.prodindex;
-                    }
-                    /**
                      * Updates the most recently acknowledged product and notifies
                      * a dummy notification handler (getNotify()).
                      */
@@ -1158,15 +1128,6 @@ void vcmtpRecvv3::retxHandler()
                     notifier->notify_of_missed_prod(header.prodindex);
                 }
                 else {
-                    /**
-                     * Tracks the most recent rejected product and updates the
-                     * completeprod instead of calling notifier. This is for
-                     * test application use only.
-                     */
-                    {
-                        std::unique_lock<std::mutex> lock(completeprodmtx);
-                        completeprod = header.prodindex;
-                    }
                     /**
                      * Updates the most recently acknowledged product and notifies
                      * a dummy notification handler (getNotify()).

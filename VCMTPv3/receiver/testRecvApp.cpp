@@ -32,7 +32,6 @@
 #include "vcmtpRecvv3.h"
 
 #include <iostream>
-#include <set>
 #include <thread>
 
 #include <netinet/tcp.h>
@@ -75,12 +74,6 @@ int main(int argc, char* argv[])
     std::string mcastAddr(argv[3]);
     const unsigned short mcastPort = (unsigned short)atoi(argv[4]);
     std::string ifAddr(argv[5]);
-
-    int initval[PRODNUM];
-    for (int i = 0; i < PRODNUM; ++i) {
-        initval[i] = i;
-    }
-    std::set<int> prodset(initval, initval + PRODNUM);
 
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);

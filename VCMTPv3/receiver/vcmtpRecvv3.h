@@ -83,7 +83,6 @@ public:
                 const std::string    ifAddr = "0.0.0.0");
     ~vcmtpRecvv3();
 
-    uint32_t getMostRecentProd();
     uint32_t getNotify();
     void SetLinkSpeed(uint64_t speed);
     void Start();
@@ -291,9 +290,6 @@ private:
     uint64_t                linkspeed;
     std::atomic_flag        retxHandlerCanceled;
     std::atomic_flag        mcastHandlerCanceled;
-    /* tracks the most recent completed product index */
-    std::mutex              completeprodmtx;
-    uint32_t                completeprod;
     std::mutex              notifyprodmtx;
     uint32_t                notifyprodidx;
     std::condition_variable notify_cv;
