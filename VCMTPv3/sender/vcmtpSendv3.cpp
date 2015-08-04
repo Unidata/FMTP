@@ -38,8 +38,6 @@
 #include <stdexcept>
 #include <system_error>
 
-//#define PRODNUM 207684
-#define PRODNUM 5000
 
 #ifndef NULL
     #define NULL 0

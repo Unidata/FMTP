@@ -46,8 +46,6 @@
 #include <thread>
 #include <vector>
 
-//#define PRODNUM 207684
-#define PRODNUM 5000
 
 std::atomic<uint32_t> notified_prod{0xFFFFFFFF};
 std::atomic<uint32_t> curr_prod{0xFFFFFFFF};
