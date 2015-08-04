@@ -35,9 +35,10 @@
 #include <string.h>
 #include <strings.h>
 
-#define PRODNUM 207684
+//#define PRODNUM 207684
+//#define MODBASE 207684
 #define PRODNUM 500
-#define MODBASE 207684
+#define MODBASE 500
 
 /**
  * struct of Vcmtp header

@@ -244,8 +244,14 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
         throw e;
     }
 
+#ifdef MODBASE
+    uint32_t tmpidx = prodIndex % MODBASE;
+#else
+    uint32_t tmpidx = prodIndex;
+#endif
+
 #ifdef DEBUG1
-    std::string debugmsg = "Product #" + std::to_string(prodIndex);
+    std::string debugmsg = "Product #" + std::to_string(tmpidx);
     debugmsg += " has been sent.";
     std::cout << debugmsg << std::endl;
 #endif
@@ -705,9 +711,15 @@ void vcmtpSendv3::retransmit(
                 throw std::runtime_error(
                         "vcmtpSendv3::retransmit() TcpSend::send() error");
 
+            #ifdef MODBASE
+                uint32_t tmpidx = recvheader->prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = recvheader->prodindex;
+            #endif
+
             #ifdef DEBUG2
                 std::string debugmsg = "Product #" +
-                    std::to_string(recvheader->prodindex);
+                    std::to_string(tmpidx);
                 debugmsg += ": Data block (SeqNum = ";
                 debugmsg += std::to_string(start);
                 debugmsg += ") has been retransmitted";
@@ -758,9 +770,15 @@ void vcmtpSendv3::retransBOP(
         throw std::runtime_error(
                 "vcmtpSendv3::retransBOP() TcpSend::send() error");
 
+    #ifdef MODBASE
+        uint32_t tmpidx = recvheader->prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = recvheader->prodindex;
+    #endif
+
     #ifdef DEBUG2
         std::string debugmsg = "Product #" +
-            std::to_string(recvheader->prodindex);
+            std::to_string(tmpidx);
         debugmsg += ": BOP has been retransmitted";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -794,9 +812,15 @@ void vcmtpSendv3::retransEOP(
         throw std::runtime_error(
                 "vcmtpSendv3::retransEOP() TcpSend::send() error");
 
+    #ifdef MODBASE
+        uint32_t tmpidx = recvheader->prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = recvheader->prodindex;
+    #endif
+
     #ifdef DEBUG2
         std::string debugmsg = "Product #" +
-            std::to_string(recvheader->prodindex);
+            std::to_string(tmpidx);
         debugmsg += ": EOP has been retransmitted";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -842,16 +866,22 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     ioVec[2].iov_base = metadata;
     ioVec[2].iov_len  = metaSize;
 
+    #ifdef MODBASE
+        uint32_t tmpidx = prodIndex % MODBASE;
+    #else
+        uint32_t tmpidx = prodIndex;
+    #endif
+
 #ifdef TEST_BOP
     #ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        std::string debugmsg = "Product #" + std::to_string(tmpidx);
         debugmsg += ": Test BOP missing (BOP not sent)";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
     #endif
 #else
     #ifdef MEASURE
-        std::string measuremsg = "Product #" + std::to_string(prodIndex);
+        std::string measuremsg = "Product #" + std::to_string(tmpidx);
         measuremsg += ": Transmission start time (BOP), Prodsize = ";
         measuremsg += std::to_string(prodSize);
         measuremsg += " bytes";
@@ -866,7 +896,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     udpsend->SendTo(ioVec, 3);
 
     #ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        std::string debugmsg = "Product #" + std::to_string(tmpidx);
         debugmsg += ": BOP has been sent";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -890,9 +920,15 @@ void vcmtpSendv3::sendEOPMessage()
     header.payloadlen = 0;
     header.flags      = htons(VCMTP_EOP);
 
+    #ifdef MODBASE
+        uint32_t tmpidx = prodIndex % MODBASE;
+    #else
+        uint32_t tmpidx = prodIndex;
+    #endif
+
 #ifdef TEST_EOP
     #ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        std::string debugmsg = "Product #" + std::to_string(tmpidx);
         debugmsg += ": EOP missing case (EOP not sent).";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -901,7 +937,7 @@ void vcmtpSendv3::sendEOPMessage()
     udpsend->SendTo(&header, sizeof(header));
 
     #ifdef MEASURE
-        std::string measuremsg = "Product #" + std::to_string(prodIndex);
+        std::string measuremsg = "Product #" + std::to_string(tmpidx);
         measuremsg += ": Transmission end time (EOP)";
         std::cout << measuremsg << std::endl;
         /* set txdone to true in EOPHandler */
@@ -911,7 +947,7 @@ void vcmtpSendv3::sendEOPMessage()
     #endif
 
     #ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(prodIndex);
+        std::string debugmsg = "Product #" + std::to_string(tmpidx);
         debugmsg += ": EOP has been sent.";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -944,11 +980,11 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
         header.seqnum     = htonl(seqNum);
         header.payloadlen = htons(payloadlen);
 
-#ifdef TEST_DATA_MISS
-        if (seqNum == DROPSEQ)
-        {}
-        else {
-#endif
+        #ifdef TEST_DATA_MISS
+            if (seqNum == DROPSEQ)
+            {}
+            else {
+        #endif
 
         /**
          * linkspeed is initialized to 0. If SetSendRate() is never called,
@@ -968,18 +1004,25 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
             rateshaper.Sleep();
         }
 
-#ifdef DEBUG2
-        std::string debugmsg = "Product #" + std::to_string(prodIndex);
-        debugmsg += ": Data block (SeqNum = ";
-        debugmsg += std::to_string(seqNum);
-        debugmsg += ") has been sent.";
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-#endif
+        #ifdef MODBASE
+            uint32_t tmpidx = prodIndex % MODBASE;
+        #else
+            uint32_t tmpidx = prodIndex;
+        #endif
 
-#ifdef TEST_DATA_MISS
-        }
-#endif
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" + std::to_string(tmpidx);
+            debugmsg += ": Data block (SeqNum = ";
+            debugmsg += std::to_string(seqNum);
+            debugmsg += ") has been sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
+
+        #ifdef TEST_DATA_MISS
+            }
+        #endif
+
         dataSize -= payloadlen;
         data      = (char*)data + payloadlen;
         seqNum   += payloadlen;
@@ -1129,13 +1172,21 @@ void vcmtpSendv3::timerThread()
             // Product-index delay-queue, `timerDelayQ`, was externally disabled
             return;
         }
+
+        #ifdef MODBASE
+            uint32_t tmpidx = prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = prodindex;
+        #endif
+
         #ifdef DEBUG2
             std::string debugmsg = "Timer: Product #" +
-                std::to_string(prodindex);
+                std::to_string(tmpidx);
             debugmsg += " has waken up";
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
         #endif
+
         const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
          * Only if the product is removed by this remove call, notify the

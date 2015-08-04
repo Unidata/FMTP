@@ -276,9 +276,15 @@ bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
  */
 void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
 {
+    #ifdef MODBASE
+        uint32_t tmpidx = header.prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = header.prodindex;
+    #endif
+
     #ifdef DEBUG2
         std::string debugmsg = "[MCAST BOP] Product #" +
-            std::to_string(header.prodindex);
+            std::to_string(tmpidx);
         debugmsg += ": BOP received from multicast.";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -311,9 +317,15 @@ void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
 void vcmtpRecvv3::retxBOPHandler(const VcmtpHeader& header,
                                  const char* const  VcmtpPacketData)
 {
+    #ifdef MODBASE
+        uint32_t tmpidx = header.prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = header.prodindex;
+    #endif
+
     #ifdef DEBUG2
         std::string debugmsg = "[RETX BOP] Product #" +
-            std::to_string(header.prodindex);
+            std::to_string(tmpidx);
         debugmsg += ": BOP received from unicast.";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -410,6 +422,12 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         timerQfilled.notify_all();
     }
 
+    #ifdef MODBASE
+        uint32_t tmpidx = header.prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = header.prodindex;
+    #endif
+
     #ifdef MEASURE
         {
             std::unique_lock<std::mutex> lock(trackermtx);
@@ -423,7 +441,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
             }
         }
         std::string measuremsg = "[MEASURE] Product #" +
-            std::to_string(header.prodindex);
+            std::to_string(tmpidx);
         measuremsg += ": BOP is received. Product size = ";
         measuremsg += std::to_string(BOPmsg.prodsize);
         measuremsg += ", Metadata size = ";
@@ -550,15 +568,21 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
             trackermap.erase(header.prodindex);
         }
 
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
+
         #ifdef DEBUG2
             std::string debugmsg = "[MSG] Product #" +
-                std::to_string(header.prodindex);
+                std::to_string(tmpidx);
             debugmsg += " has been completely received";
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
         #elif DEBUG1
             std::string debugmsg = "[MSG] Product #" +
-                std::to_string(header.prodindex);
+                std::to_string(tmpidx);
             debugmsg += " has been completely received";
             std::cout << debugmsg << std::endl;
         #endif
@@ -566,7 +590,7 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
         #ifdef MEASURE
             uint32_t bytes = measure->getsize(header.prodindex);
             std::string measuremsg = "[SUCCESS] Product #" +
-                std::to_string(header.prodindex);
+                std::to_string(tmpidx);
             measuremsg += ": product received, size = ";
             measuremsg += std::to_string(bytes);
             measuremsg += " bytes, elapsed time = ";
@@ -768,9 +792,15 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         requestMissingBops(header.prodindex);
     }
     else {
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
+
         #ifdef DEBUG2
             std::string debugmsg = "[MCAST EOP] Product #" +
-                std::to_string(header.prodindex);
+                std::to_string(tmpidx);
             debugmsg += ": EOP is received";
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
@@ -948,9 +978,15 @@ void vcmtpRecvv3::retxHandler()
                 measure->setRetxClock(header.prodindex);
             #endif
 
+            #ifdef MODBASE
+                uint32_t tmpidx = header.prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = header.prodindex;
+            #endif
+
             #ifdef DEBUG2
                 std::string debugmsg = "[RETX DATA] Product #" +
-                    std::to_string(header.prodindex);
+                    std::to_string(tmpidx);
                 debugmsg += ": Data block received on unicast, SeqNum = ";
                 debugmsg += std::to_string(header.seqnum);
                 debugmsg += ", Paylen = ";
@@ -1058,13 +1094,13 @@ void vcmtpRecvv3::retxHandler()
 
                 #ifdef DEBUG2
                     std::string debugmsg = "[MSG] Product #" +
-                        std::to_string(header.prodindex);
+                        std::to_string(tmpidx);
                     debugmsg += " has been completely received";
                     std::cout << debugmsg << std::endl;
                     WriteToLog(debugmsg);
                 #elif DEBUG1
                     std::string debugmsg = "[MSG] Product #" +
-                        std::to_string(header.prodindex);
+                        std::to_string(tmpidx);
                     debugmsg += " has been completely received";
                     std::cout << debugmsg << std::endl;
                 #endif
@@ -1072,7 +1108,7 @@ void vcmtpRecvv3::retxHandler()
                 #ifdef MEASURE
                     uint32_t bytes = measure->getsize(header.prodindex);
                     std::string measuremsg = "[SUCCESS] Product #" +
-                        std::to_string(header.prodindex);
+                        std::to_string(tmpidx);
                     measuremsg += ": product received, size = ";
                     measuremsg += std::to_string(bytes);
                     measuremsg += " bytes, elapsed time = ";
@@ -1104,9 +1140,15 @@ void vcmtpRecvv3::retxHandler()
              */
             if (!pBlockMNG->isComplete(header.prodindex) &&
                 pBlockMNG->rmProd(header.prodindex)) {
+                #ifdef MODBASE
+                    uint32_t tmpidx = header.prodindex % MODBASE;
+                #else
+                    uint32_t tmpidx = header.prodindex;
+                #endif
+
                 #ifdef DEBUG2
                     std::string debugmsg = "[FAILURE] Product #" +
-                        std::to_string(header.prodindex);
+                        std::to_string(tmpidx);
                     debugmsg += " is not completely received";
                     std::cout << debugmsg << std::endl;
                     WriteToLog(debugmsg);
@@ -1218,9 +1260,15 @@ bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
  */
 void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
 {
+    #ifdef MODBASE
+        uint32_t tmpidx = header.prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = header.prodindex;
+    #endif
+
     #ifdef DEBUG2
         std::string debugmsg = "[RETX EOP] Product #" +
-            std::to_string(header.prodindex);
+            std::to_string(tmpidx);
         debugmsg += ": EOP is received";
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
@@ -1276,9 +1324,15 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
     else {
         checkPayloadLen(header, nbytes);
 
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
+
         #ifdef DEBUG2
             std::string debugmsg = "[MCAST DATA] Product #" +
-                std::to_string(header.prodindex);
+                std::to_string(tmpidx);
             debugmsg += ": Data block received from multicast. SeqNum = ";
             debugmsg += std::to_string(header.seqnum);
             debugmsg += ", Paylen = ";
@@ -1328,9 +1382,15 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
         for (; seqnum < mostRecent; seqnum += VCMTP_DATA_LEN) {
             pushMissingDataReq(prodindex, seqnum, VCMTP_DATA_LEN);
 
+            #ifdef MODBASE
+                uint32_t tmpidx = prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = prodindex;
+            #endif
+
             #ifdef DEBUG2
                 std::string debugmsg = "[RETX REQ] Product #" +
-                    std::to_string(prodindex);
+                    std::to_string(tmpidx);
                 debugmsg += ": Data block is missing. SeqNum = ";
                 debugmsg += std::to_string(seqnum);
                 debugmsg += ". Request retx.";
@@ -1799,9 +1859,15 @@ void vcmtpRecvv3::timerThread()
 
         /** if EOP has not been received yet, issue a request for retx */
         if (reqEOPifMiss(timerparam.prodindex)) {
+            #ifdef MODBASE
+                uint32_t tmpidx = timerparam.prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = timerparam.prodindex;
+            #endif
+
             #ifdef DEBUG2
             std::string debugmsg = "[TIMER] Timer has waken up. Product #" +
-                    std::to_string(timerparam.prodindex);
+                    std::to_string(tmpidx);
                 debugmsg += " is still missing EOP. Request retx.";
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
