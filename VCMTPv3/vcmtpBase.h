@@ -37,6 +37,7 @@
 
 #define PRODNUM 207684
 #define MODBASE 207684
+#define EXPTRUN 10
 //#define PRODNUM 500
 //#define MODBASE 500
 

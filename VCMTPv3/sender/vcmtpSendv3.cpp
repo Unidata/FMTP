@@ -286,7 +286,7 @@ void vcmtpSendv3::Start()
     udpsend->Init();
 
     /** initializes a new SilenceSuppressor instance. */
-    suppressor = new SilenceSuppressor(PRODNUM);
+    suppressor = new SilenceSuppressor(PRODNUM * EXPTRUN);
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
     if(retval != 0)
