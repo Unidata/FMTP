@@ -69,7 +69,14 @@ void SilenceSuppressor(void* ptr)
      */
     while (1) {
         notified_prod = send->getNotify();
-        std::cout << "Earliest product = " << notified_prod << std::endl;
+
+        #ifdef MODBASE
+            uint32_t tmpidx = notified_prod % MODBASE;
+        #else
+            uint32_t tmpidx = notified_prod;
+        #endif
+
+        std::cout << "Earliest product = " << tmpidx << std::endl;
         sup.notify_one();
     }
 }
