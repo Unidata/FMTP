@@ -232,7 +232,7 @@ int main(int argc, char const* argv[])
     std::thread t(SilenceSuppressor, sender);
     t.detach();
 
-    for(int run=0; run < 10; ++run) {
+    for(int run=0; run < EXPTRUN; ++run) {
         for(int i=0; i < prodnum; ++i) {
             /* generate pareto distributed data */
             char * data = contentGen(sizevec[i]);
