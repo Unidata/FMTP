@@ -44,6 +44,7 @@
 #include <queue>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Measure.h"
 #include "ProdBlockMNG.h"
@@ -89,7 +90,7 @@ public:
     void Stop();
 
 private:
-    bool addUnrqBOPinList(uint32_t prodindex);
+    bool addUnrqBOPinSet(uint32_t prodindex);
     /**
      * Parse BOP message and call notifier to notify receiving application.
      *
@@ -159,7 +160,7 @@ private:
     void pushMissingEopReq(const uint32_t prodindex);
     void retxHandler();
     void retxRequester();
-    bool rmMisBOPinList(uint32_t prodindex);
+    bool rmMisBOPinSet(uint32_t prodindex);
     /**
      * Handles a retransmitted BOP message.
      *
@@ -265,8 +266,8 @@ private:
     std::condition_variable msgQfilled;
     std::mutex              msgQmutex;
     /* track all the missing BOP until received */
-    std::list<uint32_t>     misBOPlist;
-    std::mutex              BOPListMutex;
+    std::unordered_set<uint32_t> misBOPset;
+    std::mutex              BOPSetMtx;
     /* Retransmission request thread */
     pthread_t               retx_rq;
     /* Retransmission receive thread */

@@ -42,6 +42,7 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <utility>
 #include <fstream>
 #include <iostream>
 #include <system_error>
@@ -83,7 +84,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     pBlockMNG(new ProdBlockMNG()),
     msgQfilled(),
     msgQmutex(),
-    BOPListMutex(),
+    BOPSetMtx(),
     exitMutex(),
     exitCond(),
     stopRequested(false),
@@ -110,7 +111,10 @@ vcmtpRecvv3::~vcmtpRecvv3()
     Stop();
     close(mcastSock);
     (void)close(retxSock); // failure is irrelevant
-    misBOPlist.clear();
+    {
+        std::unique_lock<std::mutex> lock(BOPSetMtx);
+        misBOPset.clear();
+    }
     {
         std::unique_lock<std::mutex> lock(trackermtx);
         trackermap.clear();
@@ -236,20 +240,14 @@ void vcmtpRecvv3::Stop()
  *
  * @param[in] prodindex        Product index of the missing BOP
  */
-bool vcmtpRecvv3::addUnrqBOPinList(uint32_t prodindex)
+bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
 {
-    bool addsuccess;
-    std::list<uint32_t>::iterator it;
-    std::unique_lock<std::mutex>  lock(BOPListMutex);
-    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it) {
-        if (*it == prodindex) {
-            addsuccess = false;
-            return addsuccess;
-        }
+    std::pair<std::unordered_set<uint32_t>::iterator, bool> retval;
+    {
+        std::unique_lock<std::mutex> lock(BOPSetMtx);
+        retval = misBOPset.insert(prodindex);
     }
-    misBOPlist.push_back(prodindex);
-    addsuccess = true;
-    return addsuccess;
+    return retval.second;
 }
 
 
@@ -905,7 +903,7 @@ void vcmtpRecvv3::retxHandler()
             retxBOPHandler(header, paytmp);
 
             /** remove the BOP from missing list */
-            (void)rmMisBOPinList(header.prodindex);
+            (void)rmMisBOPinSet(header.prodindex);
 
             uint32_t prodsize    = 0;
             uint32_t seqnum      = 0;
@@ -1194,21 +1192,10 @@ void vcmtpRecvv3::retxRequester()
  *
  * @param[in] prodindex        Product index of the missing BOP
  */
-bool vcmtpRecvv3::rmMisBOPinList(uint32_t prodindex)
+bool vcmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
 {
-    bool rmsuccess;
-    std::list<uint32_t>::iterator it;
-    std::unique_lock<std::mutex>  lock(BOPListMutex);
-
-    for(it=misBOPlist.begin(); it!=misBOPlist.end(); ++it) {
-        if (*it == prodindex) {
-            misBOPlist.erase(it);
-            rmsuccess = true;
-            break;
-        }
-        else
-            rmsuccess = false;
-    }
+    std::unique_lock<std::mutex> lock(BOPSetMtx);
+    bool rmsuccess = misBOPset.erase(prodindex);
     return rmsuccess;
 }
 
@@ -1382,7 +1369,7 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
     }
 
     for (uint32_t i = lastprodidx; i++ != prodindex;) {
-        if (addUnrqBOPinList(i)) {
+        if (addUnrqBOPinSet(i)) {
             pushMissingBopReq(i);
         }
     }
