@@ -1804,6 +1804,13 @@ void vcmtpRecvv3::timerThread()
             std::unique_lock<std::mutex> lock(timerQmtx);
             timerParamQ.pop();
         }
+        /**
+         * needs to consider whether it is necessary to rm the BOP request
+         * record from the set. If keep it until retx BOP is received, then
+         * there is chance the record exists forever. If remove when waking
+         * up, there could be duplicate BOP sent.
+         */
+        //rmMisBOPinSet(timerparam.prodindex);
 
         /** if EOP has not been received yet, issue a request for retx */
         if (reqEOPifMiss(timerparam.prodindex)) {
