@@ -243,10 +243,18 @@ void vcmtpRecvv3::Stop()
 bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
 {
     std::pair<std::unordered_set<uint32_t>::iterator, bool> retval;
+    int size = 0;
     {
         std::unique_lock<std::mutex> lock(BOPSetMtx);
         retval = misBOPset.insert(prodindex);
+        size = misBOPset.size();
     }
+    #ifdef DEBUG2
+        std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
+            std::to_string(size);
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
     return retval.second;
 }
 
@@ -1197,6 +1205,13 @@ bool vcmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(BOPSetMtx);
     bool rmsuccess = misBOPset.erase(prodindex);
+    int size = misBOPset.size();
+    #ifdef DEBUG2
+        std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
+            std::to_string(size);
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
     return rmsuccess;
 }
 
