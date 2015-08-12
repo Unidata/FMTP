@@ -508,9 +508,9 @@ void vcmtpSendv3::handleBopReq(VcmtpHeader* const  recvheader,
         #endif
 
         #ifdef DEBUG1
-            std::string debugmsg = "Product #" +
+            std::string debugmsg = "[BOP REQ] Product #" +
                 std::to_string(tmpidx);
-            debugmsg += ": RETX_BOP_REQ is rejected";
+            debugmsg += ": RETX_BOP request is rejected";
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
         #endif
@@ -761,7 +761,7 @@ void vcmtpSendv3::retransBOP(
     #endif
 
     #ifdef DEBUG1
-        std::string debugmsg = "Product #" +
+        std::string debugmsg = "[BOP REQ] Product #" +
             std::to_string(tmpidx);
         debugmsg += ": BOP has been retransmitted";
         std::cout << debugmsg << std::endl;
