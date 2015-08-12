@@ -252,6 +252,14 @@ bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
     #ifdef DEBUG2
         std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
             std::to_string(size);
+        if (retval.second) {
+            debugmsg += ", inserting: ";
+            debugmsg += std::to_string(prodindex);
+        }
+        else {
+            debugmsg += ", fake inserting: ";
+            debugmsg += std::to_string(prodindex);
+        }
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
     #endif
@@ -1209,6 +1217,14 @@ bool vcmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
     #ifdef DEBUG2
         std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
             std::to_string(size);
+        if (rmsuccess) {
+            debugmsg += ", erasing: ";
+            debugmsg += std::to_string(prodindex);
+        }
+        else {
+            debugmsg += ", fake erasing: ";
+            debugmsg += std::to_string(prodindex);
+        }
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
     #endif
