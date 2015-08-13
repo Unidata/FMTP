@@ -1408,7 +1408,7 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
     #ifdef DEBUG2
         std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
             "requestMissingBops() is called, current lastprodidx = " +
-            std::to_string(i);
+            std::to_string(lastprodidx);
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
     #endif
