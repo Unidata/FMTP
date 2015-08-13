@@ -250,18 +250,14 @@ bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
         size = misBOPset.size();
     }
     #ifdef DEBUG2
-        std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
-            std::to_string(size);
         if (retval.second) {
+            std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
+                std::to_string(size);
             debugmsg += ", inserting: ";
             debugmsg += std::to_string(prodindex);
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
         }
-        else {
-            debugmsg += ", fake inserting: ";
-            debugmsg += std::to_string(prodindex);
-        }
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
     #endif
     return retval.second;
 }
@@ -782,12 +778,6 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
      * EOPHandler shouldn't do anything until BOP arrives.
      */
     if (lastprodidx != header.prodindex) {
-        #ifdef DEBUG2
-            std::string debugmsg = "[DEBUG misBOPset] calling requestMissingBops"
-                " from mcastEOPHandler()";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
         requestMissingBops(header.prodindex);
     }
     else {
@@ -1036,7 +1026,6 @@ void vcmtpRecvv3::retxHandler()
                  * and thus removed or there is out-of-order arrival on
                  * TCP.
                  */
-                //requestMissingBops(header.prodindex);
                 continue;
             }
 
@@ -1221,18 +1210,14 @@ bool vcmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
     bool rmsuccess = misBOPset.erase(prodindex);
     int size = misBOPset.size();
     #ifdef DEBUG2
-        std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
-            std::to_string(size);
         if (rmsuccess) {
+            std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
+                std::to_string(size);
             debugmsg += ", erasing: ";
             debugmsg += std::to_string(prodindex);
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
         }
-        else {
-            debugmsg += ", fake erasing: ";
-            debugmsg += std::to_string(prodindex);
-        }
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
     #endif
     return rmsuccess;
 }
@@ -1413,24 +1398,25 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         debugmsg += std::to_string(prodindex);
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
+        if (prodindex < lastprodidx) {
+            debugmsg = "Something is wrong, prodindex < lastprodidx. "
+                "lastprodidx = " + std::to_string(lastprodidx) + ", passed-in prodindex = "
+                + std::to_string(prodindex);
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+            while(1);
+        }
     #endif
 
     for (uint32_t i = lastprodidx; i++ != prodindex;) {
-    //for (uint32_t i = (lastprodidx + 1); i != prodindex; ++i) {
         #ifdef DEBUG2
             std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
                 "requestMissingBops() index iterator i = " +
-                std::to_string(i) + ", last prodindex = " +
-                std::to_string(lastprodidx) + ", recent prodindex = " +
+                std::to_string(i) + ", lastprodidx = " +
+                std::to_string(lastprodidx) + ", passed-in prodindex = " +
                 std::to_string(prodindex);
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
-            if (prodindex < lastprodidx) {
-                std::cout << "Something is wrong, received out-of-order packet. "
-                    "prodindex = " << prodindex << ", lastprodidx = "
-                    << lastprodidx << std::endl;
-                while(1);
-            }
         #endif
         if (addUnrqBOPinSet(i)) {
             pushMissingBopReq(i);
@@ -1493,12 +1479,6 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     else {
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
-        #ifdef DEBUG2
-            std::string debugmsg = "[DEBUG misBOPset] calling requestMissingBops"
-                " from recvMemData()";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
         requestMissingBops(header.prodindex);
     }
 
