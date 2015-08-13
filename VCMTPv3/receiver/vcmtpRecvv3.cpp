@@ -779,6 +779,26 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
      */
     if (lastprodidx != header.prodindex) {
         requestMissingBops(header.prodindex);
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
+        #ifdef DEBUG2
+            std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
+                "returned to mcastEOPHandler()";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+            debugmsg = "[DEBUG misBOPset] Product #" +
+                std::to_string(tmpidx) + ": raw prodindex = " +
+                std::to_string(header.prodindex) + ", seqnum = " +
+                std::to_string(header.seqnum) + ", paylen = " +
+                std::to_string(header.payloadlen) + ", flag = " +
+                std::to_string(header.flags);
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
+        while(1);
     }
     else {
         #ifdef MODBASE
@@ -1404,7 +1424,7 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
                 + std::to_string(prodindex);
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
-            while(1);
+            return;
         }
     #endif
 
@@ -1480,6 +1500,26 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
         requestMissingBops(header.prodindex);
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
+        #ifdef DEBUG2
+            std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
+                "returned to recvMemData()";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+            debugmsg = "[DEBUG misBOPset] Product #" +
+                std::to_string(tmpidx) + ": raw prodindex = " +
+                std::to_string(header.prodindex) + ", seqnum = " +
+                std::to_string(header.seqnum) + ", paylen = " +
+                std::to_string(header.payloadlen) + ", flag = " +
+                std::to_string(header.flags);
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
+        while(1);
     }
 
     /* records the most recent product index */
