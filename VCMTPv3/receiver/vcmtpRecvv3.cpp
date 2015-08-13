@@ -1415,8 +1415,8 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         WriteToLog(debugmsg);
     #endif
 
-    //for (uint32_t i = lastprodidx; i++ != prodindex;) {
-    for (uint32_t i = (lastprodidx + 1); i != prodindex; ++i) {
+    for (uint32_t i = lastprodidx; i++ != prodindex;) {
+    //for (uint32_t i = (lastprodidx + 1); i != prodindex; ++i) {
         #ifdef DEBUG2
             std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
                 "requestMissingBops() index iterator i = " +
