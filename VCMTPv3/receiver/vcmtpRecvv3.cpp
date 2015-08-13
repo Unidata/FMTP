@@ -782,6 +782,12 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
      * EOPHandler shouldn't do anything until BOP arrives.
      */
     if (lastprodidx != header.prodindex) {
+        #ifdef DEBUG2
+            std::string debugmsg = "[DEBUG misBOPset] calling requestMissingBops"
+                " from mcastEOPHandler()";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
         requestMissingBops(header.prodindex);
     }
     else {
@@ -1478,6 +1484,12 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     else {
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
+        #ifdef DEBUG2
+            std::string debugmsg = "[DEBUG misBOPset] calling requestMissingBops"
+                " from recvMemData()";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
         requestMissingBops(header.prodindex);
     }
 
