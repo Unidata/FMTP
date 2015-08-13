@@ -778,27 +778,29 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
      * EOPHandler shouldn't do anything until BOP arrives.
      */
     if (lastprodidx != header.prodindex) {
-        requestMissingBops(header.prodindex);
-        #ifdef MODBASE
-            uint32_t tmpidx = header.prodindex % MODBASE;
-        #else
-            uint32_t tmpidx = header.prodindex;
-        #endif
-        #ifdef DEBUG2
-            std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
-                "returned to mcastEOPHandler()";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-            debugmsg = "[DEBUG misBOPset] Product #" +
-                std::to_string(tmpidx) + ": raw prodindex = " +
-                std::to_string(header.prodindex) + ", seqnum = " +
-                std::to_string(header.seqnum) + ", paylen = " +
-                std::to_string(header.payloadlen) + ", flag = " +
-                std::to_string(header.flags);
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
-        while(1);
+        int state = requestMissingBops(header.prodindex);
+        if (state == 2) {
+            #ifdef MODBASE
+                uint32_t tmpidx = header.prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = header.prodindex;
+            #endif
+            #ifdef DEBUG2
+                std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
+                    "returned to mcastEOPHandler()";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+                debugmsg = "[DEBUG misBOPset] Product #" +
+                    std::to_string(tmpidx) + ": raw prodindex = " +
+                    std::to_string(header.prodindex) + ", seqnum = " +
+                    std::to_string(header.seqnum) + ", paylen = " +
+                    std::to_string(header.payloadlen) + ", flag = " +
+                    std::to_string(header.flags);
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+            #endif
+            while(1);
+        }
     }
     else {
         #ifdef MODBASE
@@ -1402,7 +1404,8 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
  * @param[in] prodindex  Index of the last data-product whose BOP packet was
  *                       missed.
  */
-void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
+//void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
+int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
     uint32_t lastprodidx = 0xFFFFFFFF;
     /* fetches the most recent product index */
@@ -1424,7 +1427,7 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
                 + std::to_string(prodindex);
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
-            return;
+            return 2;
         }
     #endif
 
@@ -1442,6 +1445,7 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
             pushMissingBopReq(i);
         }
     }
+    return 1;
 }
 
 
@@ -1499,27 +1503,29 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     else {
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
-        requestMissingBops(header.prodindex);
-        #ifdef MODBASE
-            uint32_t tmpidx = header.prodindex % MODBASE;
-        #else
-            uint32_t tmpidx = header.prodindex;
-        #endif
-        #ifdef DEBUG2
-            std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
-                "returned to recvMemData()";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-            debugmsg = "[DEBUG misBOPset] Product #" +
-                std::to_string(tmpidx) + ": raw prodindex = " +
-                std::to_string(header.prodindex) + ", seqnum = " +
-                std::to_string(header.seqnum) + ", paylen = " +
-                std::to_string(header.payloadlen) + ", flag = " +
-                std::to_string(header.flags);
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
-        while(1);
+        int state = requestMissingBops(header.prodindex);
+        if (state == 2) {
+            #ifdef MODBASE
+                uint32_t tmpidx = header.prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = header.prodindex;
+            #endif
+            #ifdef DEBUG2
+                std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
+                    "returned to recvMemData()";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+                debugmsg = "[DEBUG misBOPset] Product #" +
+                    std::to_string(tmpidx) + ": raw prodindex = " +
+                    std::to_string(header.prodindex) + ", seqnum = " +
+                    std::to_string(header.seqnum) + ", paylen = " +
+                    std::to_string(header.payloadlen) + ", flag = " +
+                    std::to_string(header.flags);
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+            #endif
+            while(1);
+        }
     }
 
     /* records the most recent product index */
