@@ -1405,6 +1405,13 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         std::unique_lock<std::mutex> lock(pidxmtx);
         lastprodidx = prodidx_mcast;
     }
+    #ifdef DEBUG2
+        std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
+            "requestMissingBops() is called, current lastprodidx = " +
+            std::to_string(i);
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
 
     //for (uint32_t i = lastprodidx; i++ != prodindex;) {
     for (uint32_t i = (lastprodidx + 1); i != prodindex; ++i) {
