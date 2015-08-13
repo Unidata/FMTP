@@ -764,20 +764,33 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         throw std::system_error(errno, std::system_category(),
                 "vcmtpRecvv3::EOPHandler() recv() error.");
 
+    #ifdef MODBASE
+        uint32_t tmpidx = header.prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = header.prodindex;
+    #endif
+
+    #ifdef DEBUG2
+        std::string debugmsg = "[MCAST EOP] Product #" +
+            std::to_string(tmpidx);
+        debugmsg += ": EOP is received";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
+    bool hasBOP = false;
     {
-        std::unique_lock<std::mutex> lock(pidxmtx);
-        lastprodidx = prodidx_mcast;
+        std::unique_lock<std::mutex> lock(trackermtx);
+        if (trackermap.count(header.prodindex)) {
+            hasBOP = true;
+        }
     }
-    /**
-     * the application should take care to prevent prodindex from reaching
-     * 0xFFFFFFFF (maximum).
-     * If the two indices don't equal, the only possibility is that this
-     * EOP is the first packet of the product it belongs to. Thus, at least
-     * one BOP needs to be requested. Otherwise, a data block of this product
-     * can be received earlier but BOP can be missing. In which case,
-     * EOPHandler shouldn't do anything until BOP arrives.
-     */
-    if (lastprodidx != header.prodindex) {
+    if (hasBOP) {
+        setEOPStatus(header.prodindex);
+        timerWake.notify_all();
+        EOPHandler(header);
+    }
+    else {
         int state = requestMissingBops(header.prodindex);
         if (state == 2) {
             #ifdef MODBASE
@@ -786,8 +799,8 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
                 uint32_t tmpidx = header.prodindex;
             #endif
             #ifdef DEBUG2
-                std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
-                    "returned to mcastEOPHandler()";
+                std::string debugmsg = "[DEBUG misBOPset]"
+                    " requestMissingBops() returned to mcastEOPHandler()";
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
                 debugmsg = "[DEBUG misBOPset] Product #" +
@@ -801,40 +814,21 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
             #endif
             while(1);
         }
-    }
-    else {
-        #ifdef MODBASE
-            uint32_t tmpidx = header.prodindex % MODBASE;
-        #else
-            uint32_t tmpidx = header.prodindex;
-        #endif
-
-        #ifdef DEBUG2
-            std::string debugmsg = "[MCAST EOP] Product #" +
-                std::to_string(tmpidx);
-            debugmsg += ": EOP is received";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
-
-        bool hasBOP = false;
+        /**
+         * prodidx_mcast is only updated if no corresponding BOP is found.
+         * Because if we assume packets arriving in sequence, then the index
+         * would not change upon EOP arrival. On the other hand, if there do
+         * exist out-of-sequence packets, updating the prodidx_mcast could
+         * decrease the value. When following packets arrive, the receiver
+         * may think a BOP is missed. But if no BOP is found, this EOP is the
+         * first packet received with the index, the prodidx_mcast has to be
+         * updated to avoid duplicate BOP request since retxBOPHandler does
+         * not update prodidx_mcast.
+         */
         {
-            std::unique_lock<std::mutex> lock(trackermtx);
-            if (trackermap.count(header.prodindex)) {
-                hasBOP = true;
-            }
+            std::unique_lock<std::mutex> lock(pidxmtx);
+            prodidx_mcast = header.prodindex;
         }
-        if (hasBOP) {
-            setEOPStatus(header.prodindex);
-            timerWake.notify_all();
-            EOPHandler(header);
-        }
-    }
-
-    /* records the most recent product index */
-    {
-        std::unique_lock<std::mutex> lock(pidxmtx);
-        prodidx_mcast = header.prodindex;
     }
 }
 
@@ -1423,15 +1417,15 @@ int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         WriteToLog(debugmsg);
         if (prodindex < lastprodidx) {
             debugmsg = "Something is wrong, prodindex < lastprodidx. "
-                "lastprodidx = " + std::to_string(lastprodidx) + ", passed-in prodindex = "
-                + std::to_string(prodindex);
+                "lastprodidx = " + std::to_string(lastprodidx) +
+                ", passed-in prodindex = " + std::to_string(prodindex);
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
             return 2;
         }
     #endif
 
-    for (uint32_t i = lastprodidx; i++ != prodindex;) {
+    for (uint32_t i = (lastprodidx + 1); i != (prodindex + 1); i++) {
         #ifdef DEBUG2
             std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
                 "requestMissingBops() index iterator i = " +
