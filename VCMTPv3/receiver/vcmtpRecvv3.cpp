@@ -1400,7 +1400,8 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         lastprodidx = prodidx_mcast;
     }
 
-    for (uint32_t i = lastprodidx; i++ != prodindex;) {
+    //for (uint32_t i = lastprodidx; i++ != prodindex;) {
+    for (uint32_t i = (lastprodidx + 1); i != prodindex; ++i) {
         #ifdef DEBUG2
             std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
                 "requestMissingBops() index iterator i = " +
@@ -1409,6 +1410,12 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
                 std::to_string(prodindex);
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
+            if (prodindex < lastprodidx) {
+                std::cout << "Something is wrong, received out-of-order packet. "
+                    "prodindex = " << prodindex << ", lastprodidx = "
+                    << lastprodidx << std::endl;
+                while(1);
+            }
         #endif
         if (addUnrqBOPinSet(i)) {
             pushMissingBopReq(i);
