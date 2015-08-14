@@ -249,16 +249,6 @@ bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
         retval = misBOPset.insert(prodindex);
         size = misBOPset.size();
     }
-    #ifdef DEBUG2
-        if (retval.second) {
-            std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
-                std::to_string(size);
-            debugmsg += ", inserting: ";
-            debugmsg += std::to_string(prodindex);
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        }
-    #endif
     return retval.second;
 }
 
@@ -791,29 +781,7 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         EOPHandler(header);
     }
     else {
-        int state = requestMissingBops(header.prodindex);
-        if (state == 2) {
-            #ifdef MODBASE
-                uint32_t tmpidx = header.prodindex % MODBASE;
-            #else
-                uint32_t tmpidx = header.prodindex;
-            #endif
-            #ifdef DEBUG2
-                std::string debugmsg = "[DEBUG misBOPset]"
-                    " requestMissingBops() returned to mcastEOPHandler()";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-                debugmsg = "[DEBUG misBOPset] Product #" +
-                    std::to_string(tmpidx) + ": raw prodindex = " +
-                    std::to_string(header.prodindex) + ", seqnum = " +
-                    std::to_string(header.seqnum) + ", paylen = " +
-                    std::to_string(header.payloadlen) + ", flag = " +
-                    std::to_string(header.flags);
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-            while(1);
-        }
+        requestMissingBops(header.prodindex);
         /**
          * prodidx_mcast is only updated if no corresponding BOP is found.
          * Because if we assume packets arriving in sequence, then the index
@@ -1225,16 +1193,6 @@ bool vcmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
     std::unique_lock<std::mutex> lock(BOPSetMtx);
     bool rmsuccess = misBOPset.erase(prodindex);
     int size = misBOPset.size();
-    #ifdef DEBUG2
-        if (rmsuccess) {
-            std::string debugmsg = "[DEBUG misBOPset] misBOPset size: " +
-                std::to_string(size);
-            debugmsg += ", erasing: ";
-            debugmsg += std::to_string(prodindex);
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        }
-    #endif
     return rmsuccess;
 }
 
@@ -1398,8 +1356,7 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
  * @param[in] prodindex  Index of the last data-product whose BOP packet was
  *                       missed.
  */
-//void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
-int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
+void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
     uint32_t lastprodidx = 0xFFFFFFFF;
     /* fetches the most recent product index */
@@ -1407,39 +1364,12 @@ int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         std::unique_lock<std::mutex> lock(pidxmtx);
         lastprodidx = prodidx_mcast;
     }
-    #ifdef DEBUG2
-        std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
-            "requestMissingBops() is called, current lastprodidx = " +
-            std::to_string(lastprodidx);
-        debugmsg += ", passed in prodindex = ";
-        debugmsg += std::to_string(prodindex);
-        std::cout << debugmsg << std::endl;
-        WriteToLog(debugmsg);
-        if (prodindex < lastprodidx) {
-            debugmsg = "Something is wrong, prodindex < lastprodidx. "
-                "lastprodidx = " + std::to_string(lastprodidx) +
-                ", passed-in prodindex = " + std::to_string(prodindex);
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-            return 2;
-        }
-    #endif
 
     for (uint32_t i = (lastprodidx + 1); i != (prodindex + 1); i++) {
-        #ifdef DEBUG2
-            std::string debugmsg = "[DEBUG misBOPset] vcmtpRecvv3::"
-                "requestMissingBops() index iterator i = " +
-                std::to_string(i) + ", lastprodidx = " +
-                std::to_string(lastprodidx) + ", passed-in prodindex = " +
-                std::to_string(prodindex);
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
         if (addUnrqBOPinSet(i)) {
             pushMissingBopReq(i);
         }
     }
-    return 1;
 }
 
 
@@ -1497,29 +1427,7 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     else {
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
-        int state = requestMissingBops(header.prodindex);
-        if (state == 2) {
-            #ifdef MODBASE
-                uint32_t tmpidx = header.prodindex % MODBASE;
-            #else
-                uint32_t tmpidx = header.prodindex;
-            #endif
-            #ifdef DEBUG2
-                std::string debugmsg = "[DEBUG misBOPset] requestMissingBops() "
-                    "returned to recvMemData()";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-                debugmsg = "[DEBUG misBOPset] Product #" +
-                    std::to_string(tmpidx) + ": raw prodindex = " +
-                    std::to_string(header.prodindex) + ", seqnum = " +
-                    std::to_string(header.seqnum) + ", paylen = " +
-                    std::to_string(header.payloadlen) + ", flag = " +
-                    std::to_string(header.flags);
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-            while(1);
-        }
+        requestMissingBops(header.prodindex);
     }
 
     /* records the most recent product index */

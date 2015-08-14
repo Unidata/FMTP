@@ -500,20 +500,6 @@ void vcmtpSendv3::handleBopReq(VcmtpHeader* const  recvheader,
          * the per-product timer thread.
          */
         rejRetxReq(recvheader->prodindex, sock);
-
-        #ifdef MODBASE
-            uint32_t tmpidx = recvheader->prodindex % MODBASE;
-        #else
-            uint32_t tmpidx = recvheader->prodindex;
-        #endif
-
-        #ifdef DEBUG1
-            std::string debugmsg = "[BOP REQ] Product #" +
-                std::to_string(tmpidx);
-            debugmsg += ": RETX_BOP request is rejected";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
     }
 }
 
@@ -760,8 +746,8 @@ void vcmtpSendv3::retransBOP(
         uint32_t tmpidx = recvheader->prodindex;
     #endif
 
-    #ifdef DEBUG1
-        std::string debugmsg = "[BOP REQ] Product #" +
+    #ifdef DEBUG2
+        std::string debugmsg = "Product #" +
             std::to_string(tmpidx);
         debugmsg += ": BOP has been retransmitted";
         std::cout << debugmsg << std::endl;

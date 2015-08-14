@@ -199,8 +199,7 @@ private:
      * @param[in] prodindex  Index of the last data-product whose BOP packet was
      *                       missed.
      */
-    //void requestMissingBops(const uint32_t prodindex);
-    int requestMissingBops(const uint32_t prodindex);
+    void requestMissingBops(const uint32_t prodindex);
     /**
      * Handles a multicast VCMTP data-packet given the associated peeked-at and
      * decoded VCMTP header. Directly store and check for missing blocks.
