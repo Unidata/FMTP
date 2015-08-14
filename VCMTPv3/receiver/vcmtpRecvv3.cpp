@@ -781,7 +781,7 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         EOPHandler(header);
     }
     else {
-        requestMissingBops(header.prodindex);
+        int state = requestMissingBops(header.prodindex);
         /**
          * prodidx_mcast is only updated if no corresponding BOP is found.
          * Because if we assume packets arriving in sequence, then the index
@@ -791,9 +791,11 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
          * may think a BOP is missed. But if no BOP is found, this EOP is the
          * first packet received with the index, the prodidx_mcast has to be
          * updated to avoid duplicate BOP request since retxBOPHandler does
-         * not update prodidx_mcast.
+         * not update prodidx_mcast. Whether to update lastprodidx after
+         * requestMissingBops() returns depends on the return value. A return
+         * value of 2 suggests discarding the out-of-sequence packet.
          */
-        {
+        if (state == 1) {
             std::unique_lock<std::mutex> lock(pidxmtx);
             prodidx_mcast = header.prodindex;
         }
@@ -1355,8 +1357,10 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
  *
  * @param[in] prodindex  Index of the last data-product whose BOP packet was
  *                       missed.
+ * @return               1 means everything is okay. 2 means out-of-sequence
+ *                       packet is received.
  */
-void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
+int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
     uint32_t lastprodidx = 0xFFFFFFFF;
     /* fetches the most recent product index */
@@ -1365,11 +1369,39 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
         lastprodidx = prodidx_mcast;
     }
 
+    /**
+     * When out-of-sequence packet is detected, there could be several possible
+     * cases. (1) DATA1-DATA2-EOP1. Here EOP1 goes out of sequence somehow. If
+     * BOP1 is received, then it does not matter since mcastEOPHandler() will
+     * handle it. But if BOP1 is also missing, then both 1 and 2 do not have
+     * BOPs. This causes requestMissingBops() to be called but with lastprodidx
+     * already updated to 2. Because lastprodidx is only updated by mcastHandler
+     * thread, its value should increase in sequence, identical to the order
+     * that mcastHandler is seeing packets. Also, lastprodidx is only updated
+     * after corresponding operation. Then this prodindex < lastprodidx case
+     * implies whatever needs to be done is done. Thus, upon detecting this
+     * case, it directly returns but not to throw any exception in order to
+     * the thread running.
+     */
+    if (prodindex < lastprodidx) {
+        #ifdef DEBUG2
+            std::string debugmsg = "[ERR PKT SEQ] vcmtpRecvv3::"
+                "requestMissingBops() out of sequence packet received, current"
+                " lastprodidx = " + std::to_string(lastprodidx) +
+                ", passed in prodindex = " + std::to_string(prodindex);
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+        #endif
+        return 2;
+    }
+
     for (uint32_t i = (lastprodidx + 1); i != (prodindex + 1); i++) {
         if (addUnrqBOPinSet(i)) {
             pushMissingBopReq(i);
         }
     }
+
+    return 1;
 }
 
 
@@ -1385,6 +1417,7 @@ void vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
+    int state = 0;
     uint32_t prodsize = 0;
     {
         std::unique_lock<std::mutex> lock(trackermtx);
@@ -1427,11 +1460,11 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     else {
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
-        requestMissingBops(header.prodindex);
+        state = requestMissingBops(header.prodindex);
     }
 
     /* records the most recent product index */
-    {
+    if (state == 1) {
         std::unique_lock<std::mutex> lock(pidxmtx);
         prodidx_mcast = header.prodindex;
     }
