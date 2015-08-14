@@ -286,10 +286,7 @@ void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
                 "vcmtpRecvv3::BOPHandler() recv() error.");
 
     /* records the most recent product index */
-    {
-        std::unique_lock<std::mutex> lock(pidxmtx);
-        prodidx_mcast = header.prodindex;
-    }
+    prodidx_mcast = header.prodindex;
 
     checkPayloadLen(header, nbytes);
     BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
@@ -796,7 +793,6 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
          * value of 2 suggests discarding the out-of-sequence packet.
          */
         if (state == 1) {
-            std::unique_lock<std::mutex> lock(pidxmtx);
             prodidx_mcast = header.prodindex;
         }
     }
@@ -914,10 +910,8 @@ void vcmtpRecvv3::retxHandler()
                         ProdTracker tracker  = trackermap[header.prodindex];
                         prodsize             = tracker.prodsize;
                         seqnum               = tracker.seqnum;
-                        {
-                            std::unique_lock<std::mutex> lock(pidxmtx);
-                            lastprodidx = prodidx_mcast;
-                        }
+
+                        lastprodidx = prodidx_mcast;
                     }
                 }
                 if (prodsize > 0) {
@@ -1364,10 +1358,7 @@ int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
     uint32_t lastprodidx = 0xFFFFFFFF;
     /* fetches the most recent product index */
-    {
-        std::unique_lock<std::mutex> lock(pidxmtx);
-        lastprodidx = prodidx_mcast;
-    }
+    lastprodidx = prodidx_mcast;
 
     /**
      * When out-of-sequence packet is detected, there could be several possible
@@ -1465,7 +1456,6 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 
     /* records the most recent product index */
     if (state == 1) {
-        std::unique_lock<std::mutex> lock(pidxmtx);
         prodidx_mcast = header.prodindex;
     }
 }

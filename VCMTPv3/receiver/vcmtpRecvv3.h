@@ -248,10 +248,7 @@ private:
     struct sockaddr_in      mcastgroup;
     /* struct of multicast object */
     struct ip_mreq          mreq;
-    /* the most recently received product index on multicast */
-    uint32_t                prodidx_mcast;
-    /* mutex for updating multicast product index */
-    std::mutex              pidxmtx;
+    std::atomic<uint32_t>   prodidx_mcast;
     /* callback function of the receiving application */
     RecvAppNotifier*        notifier;
     TcpRecv*                tcprecv;
