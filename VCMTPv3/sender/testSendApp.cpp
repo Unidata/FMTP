@@ -253,10 +253,12 @@ int main(int argc, char const* argv[])
                         []() {return (curr_prod < notified_prod);} );
             }
         }
-        sleep(30);
+        sleep(60);
+        /* clear the prodset for current run */
+        sender->clearRuninProdSet(run + 1);
     }
 
-    std::cout << "10 runs finished" << std::endl;
+    std::cout << EXPTRUN << " runs finished" << std::endl;
     while(1);
 
     delete[] sizevec;

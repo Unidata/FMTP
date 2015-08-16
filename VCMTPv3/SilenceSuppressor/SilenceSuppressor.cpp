@@ -52,6 +52,19 @@ SilenceSuppressor::~SilenceSuppressor()
 
 
 /**
+ * Clears a range of products in the prodset.
+ *
+ * @param[in] end    Prodnum of the end of the range
+ */
+void SilenceSuppressor::clearrange(uint32_t end)
+{
+    std::unique_lock<std::mutex> lock(mtx);
+    std::set<uint32_t>::iterator it = prodset->find(end);
+    prodset->erase(prodset->begin(), it);
+}
+
+
+/**
  * Removes the given product from the prodset.
  *
  * @param[in] prodindex    Product index to be removed.

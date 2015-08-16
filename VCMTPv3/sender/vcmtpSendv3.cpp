@@ -111,6 +111,17 @@ vcmtpSendv3::~vcmtpSendv3()
 
 
 /**
+ * Clears the prodset by a given range after each run is finished.
+ *
+ * @param[in] run    Run number just finished.
+ */
+void vcmtpSendv3::clearRuninProdSet(int run)
+{
+    suppressor->clearrange((uint32_t(run * PRODNUM)));
+}
+
+
+/**
  * Blocks until a product is acknowledged by all receivers, returns the product
  * index.
  *

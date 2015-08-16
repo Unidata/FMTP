@@ -34,6 +34,7 @@ class SilenceSuppressor {
 public:
     SilenceSuppressor(int prodnum);
     ~SilenceSuppressor();
+    void     clearrange(uint32_t end);
     uint32_t query();
     bool     remove(uint32_t prodindex);
 

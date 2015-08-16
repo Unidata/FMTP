@@ -98,6 +98,7 @@ public:
                  const float           timeoutRatio = 50.0);
     ~vcmtpSendv3();
 
+    void           clearRuninProdSet(int run);
     uint32_t       getNotify();
     unsigned short getTcpPortNum();
     uint32_t       sendProduct(void* data, size_t dataSize);
