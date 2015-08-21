@@ -41,7 +41,7 @@
 #include <set>
 
 #include "ProdIndexDelayQueue.h"
-#include "../RateShaper/RateShaper.h"
+//#include "../RateShaper/RateShaper.h"
 #include "RetxThreads.h"
 #include "SendAppNotifier.h"
 #include "senderMetadata.h"
@@ -104,7 +104,7 @@ public:
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
                                unsigned metaSize);
-    void           SetSendRate(uint64_t speed);
+    //void           SetSendRate(uint64_t speed);
     /** RTT passed in milliseconds */
     void           SetMaxRTT(double rtt);
     /** Sender side start point, the first function to be called */
@@ -248,7 +248,7 @@ private:
     std::mutex          exitMutex;
     std::exception      except;
     bool                exceptIsSet;
-    RateShaper          rateshaper;
+    //RateShaper          rateshaper;
     std::mutex          notifyprodmtx;
     uint32_t            notifyprodidx;
     std::condition_variable notify_cv;

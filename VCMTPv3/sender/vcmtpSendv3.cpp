@@ -254,15 +254,17 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
  * Sets sending rate. The timer thread needs this link speed to calculate
  * the sleep time.
  *
- * @param[in] speed         Given link speed, which supports up to 18000 Pbps
+ * @param[in] speed         Given link speed, which supports up to 18000 Pbps,
+ *                          speed should be in the form of bits per second.
  */
+/*
 void vcmtpSendv3::SetSendRate(uint64_t speed)
 {
-    /* speed should be in the form of bits per second */
     rateshaper.SetRate(speed);
     std::unique_lock<std::mutex> lock(linkmtx);
     linkspeed = speed;
 }
+*/
 
 
 /**
@@ -975,15 +977,19 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
          * linkspeed will be a non-zero value. By checking linkspeed, app
          * can decide whether to do rate shaping.
          */
+        /*
         if (linkspeed) {
             rateshaper.CalPeriod(sizeof(header) + payloadlen);
         }
+        */
         if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
             throw std::runtime_error(
                     "vcmtpSendv3::sendProduct::SendData() error");
+        /*
         if (linkspeed) {
             rateshaper.Sleep();
         }
+        */
 
         #ifdef MODBASE
             uint32_t tmpidx = prodIndex % MODBASE;

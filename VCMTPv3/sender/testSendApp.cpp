@@ -212,8 +212,6 @@ int main(int argc, char const* argv[])
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 1, ifAddr.c_str());
 
-    // disable application layer shaper
-    //sender->SetSendRate(5000000);
     sender->SetMaxRTT(1);
     sender->Start();
     sleep(5);
