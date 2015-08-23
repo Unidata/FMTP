@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 
     vcmtpRecvv3* recv = new vcmtpRecvv3(tcpAddr, tcpPort, mcastAddr,
                                         mcastPort, NULL, ifAddr);
-    recv->SetLinkSpeed(50000000);
+    recv->SetLinkSpeed(40000000);
     std::thread t(runVCMTP, recv);
     t.detach();
 
