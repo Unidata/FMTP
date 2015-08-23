@@ -1,9 +1,3 @@
 #!/bin/bash
 
-TCPADDR="10.10.1.1"
-TCPPORT="1234"
-MCASTADR="224.0.0.1"
-MCASTPORT="5173"
-INTERFACE="10.10.1.1"
-
-./testSendApp 10.10.1.1 1234 224.0.0.1 5173 10.10.1.1 day1NGRID.csv
+nohup ./testSendApp 10.10.1.1 1234 224.0.0.1 5173 10.10.1.1 day1NGRID.csv &> /dev/null &
