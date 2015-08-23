@@ -214,7 +214,7 @@ int main(int argc, char const* argv[])
 
     sender->SetMaxRTT(1);
     sender->Start();
-    sleep(5);
+    sleep(120);
 
     /**
      * specify how many data products to send, this is the amount of lines
