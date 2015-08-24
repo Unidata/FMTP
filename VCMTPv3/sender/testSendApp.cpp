@@ -212,7 +212,7 @@ int main(int argc, char const* argv[])
         new vcmtpSendv3(tcpAddr.c_str(), tcpPort, mcastAddr.c_str(), mcastPort,
                         0, 1, ifAddr.c_str());
 
-    sender->SetMaxRTT(1);
+    sender->SetMaxRTT(78);
     sender->Start();
     sleep(120);
 
