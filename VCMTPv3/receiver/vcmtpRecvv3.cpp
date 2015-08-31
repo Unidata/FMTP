@@ -194,11 +194,11 @@ void vcmtpRecvv3::Start()
         std::unique_lock<std::mutex> lock(exitMutex);
         while (!stopRequested && !except)
             exitCond.wait(lock);
-        stopJoinRetxRequester();
-        stopJoinRetxHandler();
-        stopJoinTimerThread();
-        stopJoinMcastHandler();
     }
+    stopJoinRetxRequester();
+    stopJoinRetxHandler();
+    stopJoinTimerThread();
+    stopJoinMcastHandler();
 
     {
         std::unique_lock<std::mutex> lock(exitMutex);
