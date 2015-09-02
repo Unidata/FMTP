@@ -44,13 +44,40 @@
 #include <string>
 #include <sstream>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 
 std::atomic<uint32_t> notified_prod{0xFFFFFFFF};
+std::atomic<uint32_t> expired_prod{0xFFFFFFFF};
 std::atomic<uint32_t> curr_prod{0xFFFFFFFF};
 std::condition_variable sup;
 std::mutex supmtx;
+std::unordered_map<uint32_t, char*> pqmap;
+
+
+/**
+ * Allocates a memory region initialized to 0.
+ *
+ * @param[in] size    Size to dynamically generate.
+ */
+char* contentGen(unsigned int size)
+{
+    char* data = new char[size]();
+    return data;
+}
+
+
+/**
+ * Delete dynamically allocated heap pointer.
+ *
+ * @param[in] *data    Pointer to the heap.
+ */
+void contentDestroy(char* data)
+{
+    delete[] data;
+    data = NULL;
+}
 
 
 /**
@@ -78,6 +105,32 @@ void SilenceSuppressor(void* ptr)
 
         std::cout << "Earliest product = " << tmpidx << std::endl;
         sup.notify_one();
+    }
+}
+
+
+/**
+ * Frees the acknowledged memory.
+ *
+ * @param[in] *ptr    A pointer to a vcmtpSendv3 object.
+ */
+void pqMgr(void* ptr)
+{
+    vcmtpSendv3* send = static_cast<vcmtpSendv3*>(ptr);
+    while (1) {
+        expired_prod = send->releaseMem();
+        if (pqmap.count(expired_prod)) {
+            char* data = pqmap[expired_prod];
+            if (data) {
+                contentDestroy(data);
+            }
+            else {
+                std::cout << "Null pointer retrieved." << std::endl;
+            }
+        }
+        else {
+            std::cout << "No valid product found in pqmap." << std::endl;
+        }
     }
 }
 
@@ -154,30 +207,6 @@ void metaParse(unsigned int* sizevec, unsigned int* timevec,
 
 
 /**
- * Allocates a memory region initialized to 0.
- *
- * @param[in] size    Size to dynamically generate.
- */
-char* contentGen(unsigned int size)
-{
-    char* data = new char[size]();
-    return data;
-}
-
-
-/**
- * Delete dynamically allocated heap pointer.
- *
- * @param[in] *data    Pointer to the heap.
- */
-void contentDestroy(char* data)
-{
-    delete[] data;
-    data = NULL;
-}
-
-
-/**
  * Since the LDM could be too heavy to use for testing purposes only. This main
  * function is a light weight replacement of the LDM sending application. It
  * sets up the whole environment and call sendProduct() to send data. All the
@@ -228,7 +257,9 @@ int main(int argc, char const* argv[])
     metaParse(sizevec, timevec, prodnum, filename);
 
     std::thread t(SilenceSuppressor, sender);
+    std::thread pqm(pqMgr, sender);
     t.detach();
+    pqm.detach();
 
     for(int run=0; run < EXPTRUN; ++run) {
         for(int i=0; i < prodnum; ++i) {
@@ -236,7 +267,8 @@ int main(int argc, char const* argv[])
             char * data = contentGen(sizevec[i]);
             curr_prod = sender->sendProduct(data, sizevec[i], metadata,
                                             metaSize);
-            contentDestroy(data);
+            /* put dynamic product pointer into a mocked pq */
+            pqmap[curr_prod] = data;
 
             /**
              * Condition variable blocks the thread, either sleeping for the

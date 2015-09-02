@@ -129,7 +129,7 @@ void vcmtpSendv3::clearRuninProdSet(int run)
  */
 uint32_t vcmtpSendv3::getNotify()
 {
-    std::unique_lock<std::mutex> lock(notifyprodmtx);
+    std::unique_lock<std::mutex> lock(notifycvmtx);
     notify_cv.wait(lock);
     return suppressor->query();
 }
@@ -144,6 +144,19 @@ uint32_t vcmtpSendv3::getNotify()
 unsigned short vcmtpSendv3::getTcpPortNum()
 {
     return tcpsend->getPortNum();
+}
+
+
+/**
+ * Blocks until a product is confirmed to be removed by the time.
+ *
+ * @return   Product index of the most recent ACKed product.
+ */
+uint32_t vcmtpSendv3::releaseMem()
+{
+    std::unique_lock<std::mutex> lock(notifyprodmtx);
+    memrelease_cv.wait(lock);
+    return notifyprodidx;
 }
 
 
@@ -485,6 +498,7 @@ void vcmtpSendv3::handleRetxEnd(VcmtpHeader* const  recvheader,
                     notifyprodidx = recvheader->prodindex;
                 }
                 notify_cv.notify_one();
+                memrelease_cv.notify_one();
             }
         }
     }
@@ -1193,6 +1207,7 @@ void vcmtpSendv3::timerThread()
                 notifyprodidx = prodindex;
             }
             notify_cv.notify_one();
+            memrelease_cv.notify_one();
         }
     }
 }

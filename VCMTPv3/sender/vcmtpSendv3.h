@@ -101,6 +101,7 @@ public:
     void           clearRuninProdSet(int run);
     uint32_t       getNotify();
     unsigned short getTcpPortNum();
+    uint32_t       releaseMem();
     uint32_t       sendProduct(void* data, size_t dataSize);
     uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
                                unsigned metaSize);
@@ -250,8 +251,10 @@ private:
     bool                exceptIsSet;
     //RateShaper          rateshaper;
     std::mutex          notifyprodmtx;
+    std::mutex          notifycvmtx;
     uint32_t            notifyprodidx;
     std::condition_variable notify_cv;
+    std::condition_variable memrelease_cv;
     SilenceSuppressor*  suppressor;
 
 
