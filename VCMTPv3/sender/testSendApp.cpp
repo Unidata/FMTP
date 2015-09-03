@@ -122,8 +122,6 @@ void pqMgr(void* ptr)
         if (pqmap.count(expired_prod)) {
             char* p = pqmap[expired_prod];
             if (p) {
-                std::cout << "Product #" << expired_prod << " to be released."
-                    << std::endl;
                 contentDestroy(p);
             }
             else {
