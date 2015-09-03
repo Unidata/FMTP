@@ -45,7 +45,7 @@
 #ifndef NULL
     #define NULL 0
 #endif
-#define MAX_CONNECTION 50
+#define MAX_CONNECTION 100
 
 
 /**
