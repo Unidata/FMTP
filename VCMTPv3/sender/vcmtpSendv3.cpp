@@ -696,7 +696,6 @@ void vcmtpSendv3::retransmit(
             sendheader.seqnum     = htonl(start);
             sendheader.payloadlen = htons(payLen);
 
-            /*
             #if defined(DEBUG1) || defined(DEBUG2)
                 char tmp[1460] = {0};
                 int retval = tcpsend->sendData(sock, &sendheader, tmp, payLen);
@@ -704,9 +703,6 @@ void vcmtpSendv3::retransmit(
                 int retval = tcpsend->sendData(sock, &sendheader,
                                 (char*)retxMeta->dataprod_p + start, payLen);
             #endif
-            */
-            int retval = tcpsend->sendData(sock, &sendheader,
-                            (char*)retxMeta->dataprod_p + start, payLen);
 
             if (retval < 0)
                 throw std::runtime_error(
