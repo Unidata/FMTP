@@ -8,4 +8,5 @@ TCPPORT="1234"
 MCASTADDR="224.0.0.1"
 MCASTPORT="5173"
 
-nohup ./testRecvApp $TCPADDR $TCPPORT $MCASTADDR $MCASTPORT $bindip &> /dev/null &
+#nohup ./testRecvApp $TCPADDR $TCPPORT $MCASTADDR $MCASTPORT $bindip &> /dev/null &
+nohup ./testRecvApp $TCPADDR $TCPPORT $MCASTADDR $MCASTPORT $bindip &> /root/stdout &
