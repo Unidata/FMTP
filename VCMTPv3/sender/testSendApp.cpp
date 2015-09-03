@@ -120,9 +120,11 @@ void pqMgr(void* ptr)
     while (1) {
         expired_prod = send->releaseMem();
         if (pqmap.count(expired_prod)) {
-            char* data = pqmap[expired_prod];
-            if (data) {
-                contentDestroy(data);
+            char* p = pqmap[expired_prod];
+            if (p) {
+                std::cout << "Product #" << expired_prod << " to be released."
+                    << std::endl;
+                contentDestroy(p);
             }
             else {
                 std::cout << "Null pointer retrieved." << std::endl;
