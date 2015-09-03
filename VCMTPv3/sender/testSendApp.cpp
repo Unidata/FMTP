@@ -129,6 +129,7 @@ void pqMgr(void* ptr)
             else {
                 std::cout << "Null pointer retrieved." << std::endl;
             }
+            pqmap.erase(expired_prod);
         }
         else {
             std::cout << "No valid product found in pqmap." << std::endl;
