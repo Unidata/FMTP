@@ -47,7 +47,7 @@
 #include <iostream>
 #include <system_error>
 
-#define Frcv 5
+#define Frcv 10
 
 
 /**
