@@ -482,23 +482,16 @@ void vcmtpRecvv3::decodeHeader(VcmtpHeader& header)
 
 /**
  * Decodes a VCMTP packet header. It does the network order to host order
- * translation as well as parsing the payload into a given buffer. Besides,
- * it also does a header size check.
+ * translation as well as parsing the payload into a given buffer.
  *
  * @param[in]  packet         The raw packet.
  * @param[in]  nbytes         The size of the raw packet in bytes.
  * @param[out] header         The decoded packet header.
  * @param[out] payload        Payload of the packet.
- * @throw std::runtime_error  if the packet is too small.
  */
 void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
                                VcmtpHeader& header, char** const payload)
 {
-    if (nbytes != 0 && nbytes < VCMTP_HEADER_LEN)
-        throw std::runtime_error(
-                std::string("vcmtpRecvv3::decodeHeader(): Packet is too small: ")
-                + std::to_string(static_cast<long long>(nbytes)) + " bytes");
-
     header.prodindex  = ntohl(*(uint32_t*)packet);
     header.seqnum     = ntohl(*(uint32_t*)(packet+4));
     header.payloadlen = ntohs(*(uint16_t*)(packet+8));
@@ -881,13 +874,18 @@ void vcmtpRecvv3::retxHandler()
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
         /*
          * recvData returning 0 indicates an unexpected socket close, thus
-         * VCMTP receiver should stop right away and return
+         * VCMTP receiver should stop right away and return.
+         * Since TcpRecv::recvData() either returns 0 or VCMTP_HEADER_LEN here,
+         * decodeHeader() should only be called if nbytes is not 0. Besides,
+         * decodeHeader() itself does not do any header size check, because
+         * nbytes should always equal VCMTP_HEADER_LEN when successful.
          */
         if (nbytes == 0) {
             Stop();
         }
-
-        decodeHeader(pktHead, nbytes, header, &pholder);
+        else {
+            decodeHeader(pktHead, nbytes, header, &pholder);
+        }
 
         if (header.flags == VCMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
