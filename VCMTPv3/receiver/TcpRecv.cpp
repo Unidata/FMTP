@@ -100,7 +100,7 @@ void TcpRecv::Init()
  *                            socket.
  */
 size_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
-                          size_t payLen)
+                         size_t payLen)
 {
     size_t nread;
 
