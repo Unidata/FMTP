@@ -877,7 +877,7 @@ void vcmtpRecvv3::retxHandler()
         char* pholder;
 
         (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
-        ssize_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
+        size_t nbytes = tcprecv->recvData(pktHead, VCMTP_HEADER_LEN, NULL, 0);
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
         /*
          * recvData returning 0 indicates an unexpected socket close, thus
