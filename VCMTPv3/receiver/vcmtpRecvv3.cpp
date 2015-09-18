@@ -203,6 +203,13 @@ void vcmtpRecvv3::Start()
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (except) {
+            /**
+             * The actual exception object that exception_ptr is pointing to
+             * gets rethrown. There is no copying here, which means the
+             * exception message will not be sliced by rethrow_exception().
+             * Also, exception_ptr points to the actual exception by reference,
+             * so there will be no copying caused by assigning exception_ptr.
+             */
             std::rethrow_exception(except);
         }
     }
@@ -1630,7 +1637,7 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
         recvr->retxHandler();
     }
     catch (const std::exception& e) {
-        std::cerr << "StartRetxHandler(): Exception thrown" << std::endl;
+        //std::cerr << "StartRetxHandler(): Exception thrown" << std::endl;
         recvr->taskExit(e);
     }
     return NULL;
