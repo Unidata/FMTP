@@ -109,6 +109,7 @@ AC_CONFIG_FILES([
     VCMTPv3/receiver/Makefile
     VCMTPv3/sender/Makefile
     VCMTPv3/SilenceSuppressor/Makefile
+    VCMTPv3/RateShaper/Makefile
 ])
 
 AC_OUTPUT
