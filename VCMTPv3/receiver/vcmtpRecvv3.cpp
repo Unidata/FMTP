@@ -1496,8 +1496,9 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
     try {
         recvr->timerThread();
     }
-    catch (std::exception& e) {
-        recvr->taskExit(e);
+    catch (...) {
+        std::exception_ptr eptr = std::current_exception();
+        recvr->taskExit(eptr);
     }
     return NULL;
 }
@@ -1593,8 +1594,9 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
     try {
         recvr->retxRequester();
     }
-    catch (const std::exception& e) {
-        recvr->taskExit(e);
+    catch (...) {
+        std::exception_ptr eptr = std::current_exception();
+        recvr->taskExit(eptr);
     }
     return NULL;
 }
@@ -1636,9 +1638,9 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
     try {
         recvr->retxHandler();
     }
-    catch (const std::exception& e) {
-        //std::cerr << "StartRetxHandler(): Exception thrown" << std::endl;
-        recvr->taskExit(e);
+    catch (...) {
+        std::exception_ptr eptr = std::current_exception();
+        recvr->taskExit(eptr);
     }
     return NULL;
 }
@@ -1682,8 +1684,9 @@ void* vcmtpRecvv3::StartMcastHandler(
     try {
         recvr->mcastHandler();
     }
-    catch (const std::exception& e) {
-        recvr->taskExit(e);
+    catch (...) {
+        std::exception_ptr eptr = std::current_exception();
+        recvr->taskExit(eptr);
     }
     return NULL;
 }
@@ -1862,16 +1865,25 @@ void vcmtpRecvv3::timerThread()
  * terminates all the other tasks. Blocks on the exit mutex; otherwise, returns
  * immediately.
  *
- * @param[in] e                     Exception status
+ * @param[in] eptr                  Exception pointer
  */
-void vcmtpRecvv3::taskExit(const std::exception& e)
+void vcmtpRecvv3::taskExit(const std::exception_ptr eptr)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (!except) {
+            /*
             std::cerr << "vcmtpRecvv3::taskExit(): Setting exception: " <<
                     e.what() << std::endl;
-            except = std::make_exception_ptr(e);
+            */
+            /**
+             * make_exception_ptr() will make a copy of the exception of the
+             * declared type, which is std::exception, instead of what it is
+             * actually. Since the passed-in exception can be any derived
+             * exception type, this would cause slicing and losing information.
+             */
+            //except = std::make_exception_ptr(e);
+            except = eptr;
         }
         exitCond.notify_one();
     }
