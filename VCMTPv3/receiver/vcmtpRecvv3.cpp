@@ -1883,7 +1883,14 @@ void vcmtpRecvv3::taskExit(const std::exception_ptr eptr)
              * exception type, this would cause slicing and losing information.
              */
             //except = std::make_exception_ptr(e);
-            except = eptr;
+            try {
+                if (eptr) {
+                    std::rethrow_exception(eptr);
+                }
+            }
+            catch (...) {
+                except = std::current_exception();
+            }
         }
         exitCond.notify_one();
     }
