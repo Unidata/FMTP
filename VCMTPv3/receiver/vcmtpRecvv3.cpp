@@ -163,14 +163,14 @@ void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
  * is thrown. Exceptions will be caught and all the threads will be terminated
  * by the exception handling code.
  *
- * @throw std::runtime_error  if a retransmission-reception thread can't be
- *                           started.
- * @throw std::runtime_error  if a retransmission-request thread can't be
- *                           started.
- * @throw std::runtime_error  if a multicast-receiving thread couldn't be
- *                           created.
- * @throw std::runtime_error  if the multicast group couldn't be joined.
- * @throw std::runtime_error  if an I/O error occurs.
+ * @throw std::runtime_error  If a retransmission-reception thread can't be
+ *                            started.
+ * @throw std::runtime_error  If a retransmission-request thread can't be
+ *                            started.
+ * @throw std::runtime_error  If a multicast-receiving thread couldn't be
+ *                            created.
+ * @throw std::runtime_error  If the multicast group couldn't be joined.
+ * @throw std::runtime_error  If an I/O error occurs.
  */
 void vcmtpRecvv3::Start()
 {
@@ -359,9 +359,10 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     }
     (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
 
-    if(notifier)
+    if(notifier) {
         notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                 BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+    }
 
     /* Atomic insertion for BOP of new product */
     {
