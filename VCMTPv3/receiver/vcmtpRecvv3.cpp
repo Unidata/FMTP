@@ -163,14 +163,14 @@ void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
  * is thrown. Exceptions will be caught and all the threads will be terminated
  * by the exception handling code.
  *
- * @throw std::system_error  if a retransmission-reception thread can't be
+ * @throw std::runtime_error  if a retransmission-reception thread can't be
  *                           started.
- * @throw std::system_error  if a retransmission-request thread can't be
+ * @throw std::runtime_error  if a retransmission-request thread can't be
  *                           started.
- * @throw std::system_error  if a multicast-receiving thread couldn't be
+ * @throw std::runtime_error  if a multicast-receiving thread couldn't be
  *                           created.
- * @throw std::system_error  if the multicast group couldn't be joined.
- * @throw std::system_error  if an I/O error occurs.
+ * @throw std::runtime_error  if the multicast group couldn't be joined.
+ * @throw std::runtime_error  if an I/O error occurs.
  */
 void vcmtpRecvv3::Start()
 {
@@ -186,8 +186,9 @@ void vcmtpRecvv3::Start()
                                 this);
     if (status) {
         Stop();
-        throw std::system_error(status, std::system_category(),
-            "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
+        throw std::runtime_error("vcmtpRecvv3::Start(): Couldn't start "
+                "multicast-receiving thread, failed with status = "
+                + std::to_string(status));
     }
 
     {
@@ -266,7 +267,7 @@ bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  * @pre                       The multicast socket contains a VCMTP BOP packet.
  * @param[in] header          The associated, peeked-at and already-decoded
  *                            VCMTP header.
- * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  if an error occurs while reading the socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
 void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
@@ -649,9 +650,9 @@ void vcmtpRecvv3::initEOPStatus(const uint32_t prodindex)
  *
  * @param[in] mcastAddr      Udp multicast address for receiving data products.
  * @param[in] mcastPort      Udp multicast port for receiving data products.
- * @throw std::system_error  if the socket couldn't be created.
- * @throw std::system_error  if the socket couldn't be bound.
- * @throw std::system_error  if the socket couldn't join the multicast group.
+ * @throw std::runtime_error if the socket couldn't be created.
+ * @throw std::runtime_error if the socket couldn't be bound.
+ * @throw std::runtime_error if the socket couldn't join the multicast group.
  */
 void vcmtpRecvv3::joinGroup(
         std::string          mcastAddr,
@@ -686,7 +687,7 @@ void vcmtpRecvv3::joinGroup(
  * it out (which would cause the buffer to be wiped). And the recv() call
  * will block if there is no data coming to the mcastSock.
  *
- * @throw std::system_error   if an I/O error occurs.
+ * @throw std::runtime_error   if an I/O error occurs.
  * @throw std::runtime_error  if a packet is invalid.
  */
 void vcmtpRecvv3::mcastHandler()
@@ -1239,7 +1240,7 @@ void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
  *
  * @pre                       The socket contains a VCMTP data-packet.
  * @param[in] header          The associated, peeked-at, and decoded header.
- * @throw std::system_error   if an error occurs while reading the multicast
+ * @throw std::runtime_error  if an error occurs while reading the multicast
  *                            socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
@@ -1416,7 +1417,7 @@ int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  * @param[in] header          The associated, peeked-at and decoded header.
  * @throw std::runtime_error  if `seqnum + payloadlen` is out of boundary.
  * @throw std::runtime_error  if the packet is invalid.
- * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error   if an error occurs while reading the socket.
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
@@ -1611,8 +1612,8 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
  * Stops the retransmission-request task by adding a "shutdown" request to the
  * associated queue and joins with its thread.
  *
- * @throws std::system_error if the retransmission-request thread can't be
- *                           joined.
+ * @throws std::runtime_error If the retransmission-request thread can't be
+ *                            joined.
  */
 void vcmtpRecvv3::stopJoinRetxRequester()
 {
@@ -1655,10 +1656,10 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
  * Stops the retransmission-reception task by canceling its thread and joining
  * it.
  *
- * @throws std::system_error if the retransmission-reception thread can't be
- *                           canceled.
- * @throws std::system_error if the retransmission-reception thread can't be
- *                           joined.
+ * @throws std::runtime_error If the retransmission-reception thread can't be
+ *                            canceled.
+ * @throws std::runtime_error If the retransmission-reception thread can't be
+ *                            joined.
  */
 void vcmtpRecvv3::stopJoinRetxHandler()
 {
@@ -1701,8 +1702,8 @@ void* vcmtpRecvv3::StartMcastHandler(
 /**
  * Stops the muticast task by canceling its thread and joining it.
  *
- * @throws std::system_error if the multicast thread can't be canceled.
- * @throws std::system_error if the multicast thread can't be joined.
+ * @throws std::runtime_error if the multicast thread can't be canceled.
+ * @throws std::runtime_error if the multicast thread can't be joined.
  */
 void vcmtpRecvv3::stopJoinMcastHandler()
 {
@@ -1726,10 +1727,10 @@ void vcmtpRecvv3::stopJoinMcastHandler()
  * thread. These two threads will be started independently and after the
  * procedure returns, it continues to run the mcastHandler thread.
  *
- * @throws    std::system_error if a retransmission-reception thread can't be
- *                              started.
- * @throws    std::system_error if a retransmission-request thread can't be
- *                              started.
+ * @throws    std::runtime_error If a retransmission-reception thread can't be
+ *                               started.
+ * @throws    std::runtime_error If a retransmission-request thread can't be
+ *                               started.
  */
 void vcmtpRecvv3::StartRetxProcedure()
 {
@@ -1775,7 +1776,7 @@ void vcmtpRecvv3::startTimerThread()
  * Stops the timer task by adding a "shutdown" entry to the associated queue and
  * joins with its thread.
  *
- * @throws std::system_error if the timer thread can't be joined.
+ * @throws std::runtime_error if the timer thread can't be joined.
  */
 void vcmtpRecvv3::stopJoinTimerThread()
 {
