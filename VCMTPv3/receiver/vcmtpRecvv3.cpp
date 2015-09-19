@@ -288,9 +288,10 @@ void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
     char          pktBuf[MAX_VCMTP_PACKET_LEN];
     const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
 
-    if (nbytes < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::BOPHandler() recv() error.");
+    if (nbytes < 0) {
+        throw std::runtime_error("vcmtpRecvv3::mcastBOPHandler() recv() got less"
+                "than 0 bytes returned.");
+    }
 
     /* records the most recent product index */
     prodidx_mcast = header.prodindex;
@@ -345,14 +346,16 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    if (header.payloadlen < 6)
+    if (header.payloadlen < 6) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
+    }
     BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
     BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
     BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
                       ? AVAIL_BOP_LEN : BOPmsg.metasize;
-    if (header.payloadlen - 6 < BOPmsg.metasize)
+    if (header.payloadlen - 6 < BOPmsg.metasize) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
+    }
     (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
 
     if(notifier)
@@ -403,7 +406,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         }
         else {
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
-                    "Error accessing newly added BOP");
+                    "Error accessing newly added BOP in trackermap.");
         }
     }
     /** add the new product into timer queue */
@@ -454,9 +457,10 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
  */
 void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes)
 {
-    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
+    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN) {
         throw std::runtime_error("vcmtpRecvv3::checkPayloadLen(): "
                 "Invalid payload length");
+    }
 }
 
 
@@ -658,21 +662,21 @@ void vcmtpRecvv3::joinGroup(
     // mcastgroup.sin_addr.s_addr = htonl(INADDR_ANY);
     mcastgroup.sin_port = htons(mcastPort);
     mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
-    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() creating socket failed");
+    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        throw std::runtime_error("vcmtpRecvv3::joinGroup() creating socket failed");
+    }
     if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
-            < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
-                std::to_string(static_cast<long long>(mcastSock)) +
-                               " to multicast group " + mcastgroup);
+            < 0) {
+        throw std::runtime_error("vcmtprecvv3::joingroup(): couldn't bind socket "
+                " to multicast group " + mcastgroup);
+    }
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = inet_addr(ifAddr.c_str());
     if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
-                   sizeof(mreq)) < 0 )
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() setsockopt() failed");
+                   sizeof(mreq)) < 0 ) {
+        throw std::runtime_error("vcmtpRecvv3::joinGroup() setsockopt() add "
+                "membership failed.");
+    }
 }
 
 
@@ -701,11 +705,14 @@ void vcmtpRecvv3::mcastHandler()
         int initState;
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
 
-        if (nbytes < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "vcmtpRecvv3::mcastHandler() recv() error.");
-        if (nbytes != sizeof(header))
-            throw std::runtime_error("Invalid packet length");
+        if (nbytes < 0) {
+            throw std::runtime_error("vcmtpRecvv3::mcastHandler() recv() less "
+                    "than zero bytes.");
+        }
+        if (nbytes != sizeof(header)) {
+            throw std::runtime_error("vcmtpRecvv3::mcastHandler() Invalid packet "
+                    "length.");
+        }
 
         decodeHeader(header);
 
@@ -747,9 +754,10 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
     /** read the EOP packet out in order to remove it from buffer */
     const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
 
-    if (nbytes < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::EOPHandler() recv() error.");
+    if (nbytes < 0) {
+        throw std::runtime_error("vcmtpRecvv3::mcastEOPHandler() recv() less than "
+                "zero bytes.");
+    }
 
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
@@ -1264,8 +1272,7 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
     }
 
     if (nbytes == -1) {
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::readMcastData(): read() failure.");
+        throw std::runtime_error("vcmtpRecvv3::readMcastData(): read() EOF.");
     }
     else {
         checkPayloadLen(header, nbytes);
@@ -1496,9 +1503,8 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
     try {
         recvr->timerThread();
     }
-    catch (...) {
-        std::exception_ptr eptr = std::current_exception();
-        recvr->taskExit(eptr);
+    catch (std::runtime_error& e) {
+        recvr->taskExit(e);
     }
     return NULL;
 }
@@ -1594,9 +1600,8 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
     try {
         recvr->retxRequester();
     }
-    catch (...) {
-        std::exception_ptr eptr = std::current_exception();
-        recvr->taskExit(eptr);
+    catch (std::runtime_error& e) {
+        recvr->taskExit(e);
     }
     return NULL;
 }
@@ -1619,9 +1624,10 @@ void vcmtpRecvv3::stopJoinRetxRequester()
     }
 
     int status = pthread_join(retx_rq, NULL);
-    if (status)
-        throw std::system_error(status, std::system_category(),
-                "Couldn't join retransmission-request thread");
+    if (status) {
+        throw std::runtime_error("vcmtpRecvv3::stopJoinRetxRequester() Couldn't "
+                "join retransmission-request thread");
+    }
 }
 
 
@@ -1638,9 +1644,8 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
     try {
         recvr->retxHandler();
     }
-    catch (...) {
-        std::exception_ptr eptr = std::current_exception();
-        recvr->taskExit(eptr);
+    catch (std::runtime_error& e) {
+        recvr->taskExit(e);
     }
     return NULL;
 }
@@ -1659,13 +1664,15 @@ void vcmtpRecvv3::stopJoinRetxHandler()
 {
     if (!retxHandlerCanceled.test_and_set()) {
         int status = pthread_cancel(retx_t);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't cancel retransmission-reception thread");
+        }
         status = pthread_join(retx_t, NULL);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinRetxHandler() "
                     "Couldn't join retransmission-reception thread");
+        }
     }
 }
 
@@ -1684,9 +1691,8 @@ void* vcmtpRecvv3::StartMcastHandler(
     try {
         recvr->mcastHandler();
     }
-    catch (...) {
-        std::exception_ptr eptr = std::current_exception();
-        recvr->taskExit(eptr);
+    catch (std::runtime_error& e) {
+        recvr->taskExit(e);
     }
     return NULL;
 }
@@ -1702,13 +1708,15 @@ void vcmtpRecvv3::stopJoinMcastHandler()
 {
     if (!mcastHandlerCanceled.test_and_set()) {
         int status = pthread_cancel(mcast_t);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't cancel multicast thread");
+        }
         status = pthread_join(mcast_t, NULL);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't join multicast thread");
+        }
     }
 }
 
@@ -1728,7 +1736,7 @@ void vcmtpRecvv3::StartRetxProcedure()
     int retval = pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler,
                                 this);
     if(retval != 0) {
-        throw std::system_error(retval, std::system_category(),
+        throw std::runtime_error(
             "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
     }
 
@@ -1739,8 +1747,9 @@ void vcmtpRecvv3::StartRetxProcedure()
             stopJoinRetxHandler();
         }
         catch (...) {}
-        throw std::system_error(retval, std::system_category(),
-            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
+        throw std::runtime_error("vcmtpRecvv3::StartRetxProcedure() "
+                "pthread_create() failed with retval = "
+                + std::to_string(retval));
     }
 }
 
@@ -1756,8 +1765,8 @@ void vcmtpRecvv3::startTimerThread()
             this);
 
     if(retval != 0) {
-        throw std::system_error(retval, std::system_category(),
-            "vcmtpRecvv3::startTimerThread() pthread_create() error");
+        throw std::runtime_error("vcmtpRecvv3::startTimerThread() "
+                "pthread_create() failed with retval = " + std::to_string(retval));
     }
 }
 
@@ -1779,9 +1788,10 @@ void vcmtpRecvv3::stopJoinTimerThread()
     }
 
     int status = pthread_join(timer_t, NULL);
-    if (status)
-        throw std::system_error(status, std::system_category(),
+    if (status) {
+        throw std::runtime_error("vcmtpRecvv3::stopJoinTimerThread() "
                 "Couldn't join timer thread");
+    }
 }
 
 
@@ -1867,30 +1877,18 @@ void vcmtpRecvv3::timerThread()
  *
  * @param[in] eptr                  Exception pointer
  */
-void vcmtpRecvv3::taskExit(const std::exception_ptr eptr)
+void vcmtpRecvv3::taskExit(const std::runtime_error& e)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (!except) {
-            /*
-            std::cerr << "vcmtpRecvv3::taskExit(): Setting exception: " <<
-                    e.what() << std::endl;
-            */
             /**
              * make_exception_ptr() will make a copy of the exception of the
-             * declared type, which is std::exception, instead of what it is
+             * declared type, which is std::runtime_error, instead of what it is
              * actually. Since the passed-in exception can be any derived
              * exception type, this would cause slicing and losing information.
              */
-            //except = std::make_exception_ptr(e);
-            try {
-                if (eptr) {
-                    std::rethrow_exception(eptr);
-                }
-            }
-            catch (...) {
-                except = std::current_exception();
-            }
+            except = std::make_exception_ptr(e);
         }
         exitCond.notify_one();
     }

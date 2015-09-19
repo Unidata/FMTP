@@ -230,7 +230,7 @@ private:
     void startTimerThread();
     void setEOPStatus(const uint32_t prodindex);
     void timerThread();
-    void taskExit(const std::exception_ptr eptr);
+    void taskExit(const std::runtime_error& e);
     void WriteToLog(const std::string& content);
     void stopJoinRetxRequester();
     void stopJoinRetxHandler();
