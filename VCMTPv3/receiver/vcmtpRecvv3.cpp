@@ -361,6 +361,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
     }
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
+    /* check if the metadata is all zeros */
     char testarray[BOPmsg.metasize];
     memset(testarray, 0, sizeof(testarray));
     if (memcmp(testarray, BOPmsg.metadata, BOPmsg.metasize) == 0) {
@@ -1283,7 +1284,7 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
     }
 
     if (nbytes == -1) {
-        throw std::runtime_error("vcmtpRecvv3::readMcastData(): read() EOF.");
+        throw std::runtime_error("vcmtpRecvv3::readMcastData(): readv() EOF.");
     }
     else {
         checkPayloadLen(header, nbytes);
