@@ -92,10 +92,11 @@ int TcpSend::acceptConn()
 {
     struct sockaddr_in addr;
     unsigned           addrLen = sizeof(addr);
-    if (getsockname(sockfd, (struct sockaddr*)&addr, &addrLen))
-        throw std::system_error(errno, std::system_category(),
-                std::string("Couldn't get address of socket ") +
+    if (getsockname(sockfd, (struct sockaddr*)&addr, &addrLen)) {
+        throw std::runtime_error(
+                "TcpSend::acceptConn() couldn't get address of socket " +
                 std::to_string(static_cast<long long>(sockfd)));
+    }
 #if 0
     cerr << std::string("TcpSend::acceptConn(): Accept()ing on socket ").
             append(std::to_string(sockfd)).append(" (").
@@ -103,8 +104,9 @@ int TcpSend::acceptConn()
             append(std::to_string(ntohs(addr.sin_port))).append(")\n");
 #endif
     int newsockfd = accept(sockfd, NULL, NULL);
-    if(newsockfd < 0)
+    if(newsockfd < 0) {
         throw std::runtime_error("TcpSend::acceptConn() error reading from socket");
+    }
 
 #if 0
     cerr << std::string("TcpSend::acceptConn(): Accepted new socket ").
@@ -136,16 +138,17 @@ const std::list<int>& TcpSend::getConnSockList()
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
- * @throw std::system_error  The port number cannot be obtained.
+ * @throw std::runtime_error  The port number cannot be obtained.
  */
 unsigned short TcpSend::getPortNum()
 {
     struct sockaddr_in tmpAddr;
     socklen_t          tmpAddrLen = sizeof(tmpAddr);
 
-    if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0)
-        throw std::system_error(errno, std::system_category(),
+    if (getsockname(sockfd, (struct sockaddr*)&tmpAddr, &tmpAddrLen) < 0) {
+        throw std::runtime_error(
                 "TcpSend::getPortNum() error getting port number");
+    }
 
     return ntohs(tmpAddr.sin_port);
 }
@@ -159,7 +162,7 @@ unsigned short TcpSend::getPortNum()
  *
  * @param[in] none
  *
- * @throw  std::invalid_argument if `tcpAddr` is invalid.
+ * @throw  std::runtime_error    if `tcpAddr` is invalid.
  * @throw  std::runtime_error    if socket creation fails.
  * @throw  std::runtime_error    if enabling keepalive fails.
  * @throw  std::runtime_error    if setting keepalive time fails.
@@ -173,15 +176,16 @@ void TcpSend::Init()
     int aliveintvl = 30; /* keep alive interval = 30 sec */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-        throw std::runtime_error("TcpSend::TcpSend() error creating socket");
+    if (sockfd < 0) {
+        throw std::runtime_error("TcpSend::Init() error creating socket");
+    }
 
     try {
         /* set keep alive flag */
         if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &alive,
                        sizeof(int)) < 0) {
             throw std::runtime_error(
-                    "TcpSend::TcpSend() error setting SO_KEEPALIVE");
+                    "TcpSend::Init() error setting SO_KEEPALIVE");
         }
         /* set TCP keep alive time, default is 2 hours */
         // TODO: determine a proper alive time value if mixed feedtypes are sent.
@@ -194,7 +198,7 @@ void TcpSend::Init()
                            sizeof(int)) < 0) {
         #endif
             throw std::runtime_error(
-                    "TcpSend::TcpSend() error setting keep alive time");
+                    "TcpSend::Init() error setting keep alive time");
         }
         */
         /* set TCP keep alive interval, default 1 sec */
@@ -207,15 +211,16 @@ void TcpSend::Init()
                            sizeof(int)) < 0) {
         #endif
             throw std::runtime_error(
-                    "TcpSend::TcpSend() error setting keep alive interval");
+                    "TcpSend::Init() error setting keep alive interval");
         }
 
         (void) memset((char *) &servAddr, 0, sizeof(servAddr));
         servAddr.sin_family = AF_INET;
         in_addr_t inAddr = inet_addr(tcpAddr.c_str());
-        if ((in_addr_t)(-1) == inAddr)
-            throw std::invalid_argument(std::string("Invalid interface: ") +
+        if ((in_addr_t)(-1) == inAddr) {
+            throw std::runtime_error("TcpSend::Init() Invalid interface: " +
                     tcpAddr);
+        }
         servAddr.sin_addr.s_addr = inAddr;
         /* If tcpPort = 0, OS will automatically choose an available port number. */
         servAddr.sin_port = htons(tcpPort);
@@ -224,11 +229,12 @@ void TcpSend::Init()
                 append(tcpAddr).append(":").append(std::to_string(tcpPort)).
                 append("\n");
 #endif
-        if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "TcpSend::TcpSend(): Couldn't bind \"" + tcpAddr + ":" +
-                    std::to_string(static_cast<long long unsigned int>(tcpPort)) +
-                    "\"");
+        if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
+            throw std::runtime_error(
+                    "TcpSend::TcpSend(): Couldn't bind "
+                    + tcpAddr + ":"
+                    + std::to_string(static_cast<unsigned int>(tcpPort)));
+        }
     }
     catch (std::exception& e) {
         close(sockfd);

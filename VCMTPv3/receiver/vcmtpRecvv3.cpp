@@ -163,14 +163,14 @@ void vcmtpRecvv3::SetLinkSpeed(uint64_t speed)
  * is thrown. Exceptions will be caught and all the threads will be terminated
  * by the exception handling code.
  *
- * @throw std::system_error  if a retransmission-reception thread can't be
- *                           started.
- * @throw std::system_error  if a retransmission-request thread can't be
- *                           started.
- * @throw std::system_error  if a multicast-receiving thread couldn't be
- *                           created.
- * @throw std::system_error  if the multicast group couldn't be joined.
- * @throw std::system_error  if an I/O error occurs.
+ * @throw std::runtime_error  If a retransmission-reception thread can't be
+ *                            started.
+ * @throw std::runtime_error  If a retransmission-request thread can't be
+ *                            started.
+ * @throw std::runtime_error  If a multicast-receiving thread couldn't be
+ *                            created.
+ * @throw std::runtime_error  If the multicast group couldn't be joined.
+ * @throw std::runtime_error  If an I/O error occurs.
  */
 void vcmtpRecvv3::Start()
 {
@@ -186,8 +186,9 @@ void vcmtpRecvv3::Start()
                                 this);
     if (status) {
         Stop();
-        throw std::system_error(status, std::system_category(),
-            "vcmtpRecvv3::Start(): Couldn't start multicast-receiving thread");
+        throw std::runtime_error("vcmtpRecvv3::Start(): Couldn't start "
+                "multicast-receiving thread, failed with status = "
+                + std::to_string(status));
     }
 
     {
@@ -203,6 +204,13 @@ void vcmtpRecvv3::Start()
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (except) {
+            /**
+             * The actual exception object that exception_ptr is pointing to
+             * gets rethrown. There is no copying here, which means the
+             * exception message will not be sliced by rethrow_exception().
+             * Also, exception_ptr points to the actual exception by reference,
+             * so there will be no copying caused by assigning exception_ptr.
+             */
             std::rethrow_exception(except);
         }
     }
@@ -259,7 +267,7 @@ bool vcmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  * @pre                       The multicast socket contains a VCMTP BOP packet.
  * @param[in] header          The associated, peeked-at and already-decoded
  *                            VCMTP header.
- * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  if an error occurs while reading the socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
 void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
@@ -281,9 +289,10 @@ void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
     char          pktBuf[MAX_VCMTP_PACKET_LEN];
     const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_VCMTP_PACKET_LEN, 0);
 
-    if (nbytes < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::BOPHandler() recv() error.");
+    if (nbytes < 0) {
+        throw std::runtime_error("vcmtpRecvv3::mcastBOPHandler() recv() got less"
+                "than 0 bytes returned.");
+    }
 
     /* records the most recent product index */
     prodidx_mcast = header.prodindex;
@@ -338,20 +347,32 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    if (header.payloadlen < 6)
+    if (header.payloadlen < 6) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
-    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
-    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
+    }
+    const unsigned char* wire = (unsigned char*)VcmtpPacketData;
+    BOPmsg.prodsize = ntohl(*(uint32_t*)wire);
+    wire += sizeof(uint32_t);
+    BOPmsg.metasize = ntohs(*(uint16_t*)wire);
+    wire += sizeof(uint16_t);
     BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
                       ? AVAIL_BOP_LEN : BOPmsg.metasize;
-    if (header.payloadlen - 6 < BOPmsg.metasize)
+    if (header.payloadlen - 6 < BOPmsg.metasize) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
-    (void)memcpy(BOPmsg.metadata, ((VcmtpBOPMessage*)VcmtpPacketData)->metadata,
-            BOPmsg.metasize);
+    }
+    (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
+    /* check if the metadata is all zeros */
+    char testarray[BOPmsg.metasize];
+    memset(testarray, 0, sizeof(testarray));
+    if (memcmp(testarray, BOPmsg.metadata, BOPmsg.metasize) == 0) {
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): detected "
+                "all-zero metadata");
+    }
 
-    if(notifier)
+    if(notifier) {
         notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                 BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+    }
 
     /* Atomic insertion for BOP of new product */
     {
@@ -397,7 +418,7 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
         }
         else {
             throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
-                    "Error accessing newly added BOP");
+                    "Error accessing newly added BOP in trackermap.");
         }
     }
     /** add the new product into timer queue */
@@ -448,9 +469,10 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
  */
 void vcmtpRecvv3::checkPayloadLen(const VcmtpHeader& header, const size_t nbytes)
 {
-    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN)
+    if (header.payloadlen != nbytes - VCMTP_HEADER_LEN) {
         throw std::runtime_error("vcmtpRecvv3::checkPayloadLen(): "
                 "Invalid payload length");
+    }
 }
 
 
@@ -639,9 +661,9 @@ void vcmtpRecvv3::initEOPStatus(const uint32_t prodindex)
  *
  * @param[in] mcastAddr      Udp multicast address for receiving data products.
  * @param[in] mcastPort      Udp multicast port for receiving data products.
- * @throw std::system_error  if the socket couldn't be created.
- * @throw std::system_error  if the socket couldn't be bound.
- * @throw std::system_error  if the socket couldn't join the multicast group.
+ * @throw std::runtime_error if the socket couldn't be created.
+ * @throw std::runtime_error if the socket couldn't be bound.
+ * @throw std::runtime_error if the socket couldn't join the multicast group.
  */
 void vcmtpRecvv3::joinGroup(
         std::string          mcastAddr,
@@ -652,21 +674,21 @@ void vcmtpRecvv3::joinGroup(
     // mcastgroup.sin_addr.s_addr = htonl(INADDR_ANY);
     mcastgroup.sin_port = htons(mcastPort);
     mcastgroup.sin_addr.s_addr = inet_addr(mcastAddr.c_str());
-    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() creating socket failed");
+    if((mcastSock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        throw std::runtime_error("vcmtpRecvv3::joinGroup() creating socket failed");
+    }
     if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
-            < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup(): Couldn't bind socket " +
-                std::to_string(static_cast<long long>(mcastSock)) +
-                               " to multicast group " + mcastgroup);
+            < 0) {
+        throw std::runtime_error("vcmtprecvv3::joingroup(): couldn't bind socket "
+                " to multicast group " + mcastgroup);
+    }
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = inet_addr(ifAddr.c_str());
     if( setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
-                   sizeof(mreq)) < 0 )
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::joinGroup() setsockopt() failed");
+                   sizeof(mreq)) < 0 ) {
+        throw std::runtime_error("vcmtpRecvv3::joinGroup() setsockopt() add "
+                "membership failed.");
+    }
 }
 
 
@@ -676,7 +698,7 @@ void vcmtpRecvv3::joinGroup(
  * it out (which would cause the buffer to be wiped). And the recv() call
  * will block if there is no data coming to the mcastSock.
  *
- * @throw std::system_error   if an I/O error occurs.
+ * @throw std::runtime_error   if an I/O error occurs.
  * @throw std::runtime_error  if a packet is invalid.
  */
 void vcmtpRecvv3::mcastHandler()
@@ -695,11 +717,14 @@ void vcmtpRecvv3::mcastHandler()
         int initState;
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
 
-        if (nbytes < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "vcmtpRecvv3::mcastHandler() recv() error.");
-        if (nbytes != sizeof(header))
-            throw std::runtime_error("Invalid packet length");
+        if (nbytes < 0) {
+            throw std::runtime_error("vcmtpRecvv3::mcastHandler() recv() less "
+                    "than zero bytes.");
+        }
+        if (nbytes != sizeof(header)) {
+            throw std::runtime_error("vcmtpRecvv3::mcastHandler() Invalid packet "
+                    "length.");
+        }
 
         decodeHeader(header);
 
@@ -741,9 +766,10 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
     /** read the EOP packet out in order to remove it from buffer */
     const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
 
-    if (nbytes < 0)
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::EOPHandler() recv() error.");
+    if (nbytes < 0) {
+        throw std::runtime_error("vcmtpRecvv3::mcastEOPHandler() recv() less than "
+                "zero bytes.");
+    }
 
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
@@ -1225,7 +1251,7 @@ void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
  *
  * @pre                       The socket contains a VCMTP data-packet.
  * @param[in] header          The associated, peeked-at, and decoded header.
- * @throw std::system_error   if an error occurs while reading the multicast
+ * @throw std::runtime_error  if an error occurs while reading the multicast
  *                            socket.
  * @throw std::runtime_error  if the packet is invalid.
  */
@@ -1258,8 +1284,7 @@ void vcmtpRecvv3::readMcastData(const VcmtpHeader& header)
     }
 
     if (nbytes == -1) {
-        throw std::system_error(errno, std::system_category(),
-                "vcmtpRecvv3::readMcastData(): read() failure.");
+        throw std::runtime_error("vcmtpRecvv3::readMcastData(): readv() EOF.");
     }
     else {
         checkPayloadLen(header, nbytes);
@@ -1403,7 +1428,7 @@ int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
  * @param[in] header          The associated, peeked-at and decoded header.
  * @throw std::runtime_error  if `seqnum + payloadlen` is out of boundary.
  * @throw std::runtime_error  if the packet is invalid.
- * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error   if an error occurs while reading the socket.
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
@@ -1490,7 +1515,7 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
     try {
         recvr->timerThread();
     }
-    catch (std::exception& e) {
+    catch (std::runtime_error& e) {
         recvr->taskExit(e);
     }
     return NULL;
@@ -1587,7 +1612,7 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
     try {
         recvr->retxRequester();
     }
-    catch (const std::exception& e) {
+    catch (std::runtime_error& e) {
         recvr->taskExit(e);
     }
     return NULL;
@@ -1598,8 +1623,8 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
  * Stops the retransmission-request task by adding a "shutdown" request to the
  * associated queue and joins with its thread.
  *
- * @throws std::system_error if the retransmission-request thread can't be
- *                           joined.
+ * @throws std::runtime_error If the retransmission-request thread can't be
+ *                            joined.
  */
 void vcmtpRecvv3::stopJoinRetxRequester()
 {
@@ -1611,9 +1636,10 @@ void vcmtpRecvv3::stopJoinRetxRequester()
     }
 
     int status = pthread_join(retx_rq, NULL);
-    if (status)
-        throw std::system_error(status, std::system_category(),
-                "Couldn't join retransmission-request thread");
+    if (status) {
+        throw std::runtime_error("vcmtpRecvv3::stopJoinRetxRequester() Couldn't "
+                "join retransmission-request thread");
+    }
 }
 
 
@@ -1630,8 +1656,7 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
     try {
         recvr->retxHandler();
     }
-    catch (const std::exception& e) {
-        std::cerr << "StartRetxHandler(): Exception thrown" << std::endl;
+    catch (std::runtime_error& e) {
         recvr->taskExit(e);
     }
     return NULL;
@@ -1642,22 +1667,24 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
  * Stops the retransmission-reception task by canceling its thread and joining
  * it.
  *
- * @throws std::system_error if the retransmission-reception thread can't be
- *                           canceled.
- * @throws std::system_error if the retransmission-reception thread can't be
- *                           joined.
+ * @throws std::runtime_error If the retransmission-reception thread can't be
+ *                            canceled.
+ * @throws std::runtime_error If the retransmission-reception thread can't be
+ *                            joined.
  */
 void vcmtpRecvv3::stopJoinRetxHandler()
 {
     if (!retxHandlerCanceled.test_and_set()) {
         int status = pthread_cancel(retx_t);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't cancel retransmission-reception thread");
+        }
         status = pthread_join(retx_t, NULL);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinRetxHandler() "
                     "Couldn't join retransmission-reception thread");
+        }
     }
 }
 
@@ -1676,7 +1703,7 @@ void* vcmtpRecvv3::StartMcastHandler(
     try {
         recvr->mcastHandler();
     }
-    catch (const std::exception& e) {
+    catch (std::runtime_error& e) {
         recvr->taskExit(e);
     }
     return NULL;
@@ -1686,20 +1713,22 @@ void* vcmtpRecvv3::StartMcastHandler(
 /**
  * Stops the muticast task by canceling its thread and joining it.
  *
- * @throws std::system_error if the multicast thread can't be canceled.
- * @throws std::system_error if the multicast thread can't be joined.
+ * @throws std::runtime_error if the multicast thread can't be canceled.
+ * @throws std::runtime_error if the multicast thread can't be joined.
  */
 void vcmtpRecvv3::stopJoinMcastHandler()
 {
     if (!mcastHandlerCanceled.test_and_set()) {
         int status = pthread_cancel(mcast_t);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't cancel multicast thread");
+        }
         status = pthread_join(mcast_t, NULL);
-        if (status && status != ESRCH)
-            throw std::system_error(status, std::system_category(),
+        if (status && status != ESRCH) {
+            throw std::runtime_error("vcmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't join multicast thread");
+        }
     }
 }
 
@@ -1709,17 +1738,17 @@ void vcmtpRecvv3::stopJoinMcastHandler()
  * thread. These two threads will be started independently and after the
  * procedure returns, it continues to run the mcastHandler thread.
  *
- * @throws    std::system_error if a retransmission-reception thread can't be
- *                              started.
- * @throws    std::system_error if a retransmission-request thread can't be
- *                              started.
+ * @throws    std::runtime_error If a retransmission-reception thread can't be
+ *                               started.
+ * @throws    std::runtime_error If a retransmission-request thread can't be
+ *                               started.
  */
 void vcmtpRecvv3::StartRetxProcedure()
 {
     int retval = pthread_create(&retx_t, NULL, &vcmtpRecvv3::StartRetxHandler,
                                 this);
     if(retval != 0) {
-        throw std::system_error(retval, std::system_category(),
+        throw std::runtime_error(
             "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
     }
 
@@ -1730,8 +1759,9 @@ void vcmtpRecvv3::StartRetxProcedure()
             stopJoinRetxHandler();
         }
         catch (...) {}
-        throw std::system_error(retval, std::system_category(),
-            "vcmtpRecvv3::StartRetxProcedure() pthread_create() error");
+        throw std::runtime_error("vcmtpRecvv3::StartRetxProcedure() "
+                "pthread_create() failed with retval = "
+                + std::to_string(retval));
     }
 }
 
@@ -1747,8 +1777,8 @@ void vcmtpRecvv3::startTimerThread()
             this);
 
     if(retval != 0) {
-        throw std::system_error(retval, std::system_category(),
-            "vcmtpRecvv3::startTimerThread() pthread_create() error");
+        throw std::runtime_error("vcmtpRecvv3::startTimerThread() "
+                "pthread_create() failed with retval = " + std::to_string(retval));
     }
 }
 
@@ -1757,7 +1787,7 @@ void vcmtpRecvv3::startTimerThread()
  * Stops the timer task by adding a "shutdown" entry to the associated queue and
  * joins with its thread.
  *
- * @throws std::system_error if the timer thread can't be joined.
+ * @throws std::runtime_error if the timer thread can't be joined.
  */
 void vcmtpRecvv3::stopJoinTimerThread()
 {
@@ -1770,9 +1800,10 @@ void vcmtpRecvv3::stopJoinTimerThread()
     }
 
     int status = pthread_join(timer_t, NULL);
-    if (status)
-        throw std::system_error(status, std::system_category(),
+    if (status) {
+        throw std::runtime_error("vcmtpRecvv3::stopJoinTimerThread() "
                 "Couldn't join timer thread");
+    }
 }
 
 
@@ -1856,15 +1887,19 @@ void vcmtpRecvv3::timerThread()
  * terminates all the other tasks. Blocks on the exit mutex; otherwise, returns
  * immediately.
  *
- * @param[in] e                     Exception status
+ * @param[in] eptr                  Exception pointer
  */
-void vcmtpRecvv3::taskExit(const std::exception& e)
+void vcmtpRecvv3::taskExit(const std::runtime_error& e)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (!except) {
-            std::cerr << "vcmtpRecvv3::taskExit(): Setting exception: " <<
-                    e.what() << std::endl;
+            /**
+             * make_exception_ptr() will make a copy of the exception of the
+             * declared type, which is std::runtime_error, instead of what it is
+             * actually. Since the passed-in exception can be any derived
+             * exception type, this would cause slicing and losing information.
+             */
             except = std::make_exception_ptr(e);
         }
         exitCond.notify_one();

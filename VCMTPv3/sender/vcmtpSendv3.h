@@ -102,9 +102,9 @@ public:
     uint32_t       getNotify();
     unsigned short getTcpPortNum();
     uint32_t       releaseMem();
-    uint32_t       sendProduct(void* data, size_t dataSize);
-    uint32_t       sendProduct(void* data, size_t dataSize, void* metadata,
-                               unsigned metaSize);
+    uint32_t       sendProduct(void* data, uint32_t dataSize);
+    uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
+                               uint16_t metaSize);
     //void           SetSendRate(uint64_t speed);
     /** RTT passed in milliseconds */
     void           SetMaxRTT(double rtt);
@@ -122,8 +122,8 @@ private:
      * @return              The corresponding retransmission entry.
      * @throw std::runtime_error  if a retransmission entry couldn't be created.
      */
-    RetxMetadata* addRetxMetadata(void* const data, const size_t dataSize,
-                                  void* const metadata, const size_t metaSize);
+    RetxMetadata* addRetxMetadata(void* const data, const uint32_t dataSize,
+                                  void* const metadata, const uint16_t metaSize);
     static uint32_t blockIndex(uint32_t start) {return start/VCMTP_DATA_LEN;}
     /** new coordinator thread */
     static void* coordinator(void* ptr);
@@ -197,7 +197,8 @@ private:
      * @param[in] sock        The receiver's socket.
      */
     void retransEOP(const VcmtpHeader* const  recvheader, const int sock);
-    void SendBOPMessage(uint32_t prodSize, void* metadata, unsigned metaSize);
+    void SendBOPMessage(uint32_t prodSize, void* metadata,
+                        const uint16_t metaSize);
     /**
      * Multicasts the data of a data-product.
      *
@@ -206,7 +207,7 @@ private:
      * @throw std::runtime_error  if an I/O error occurs.
      */
     void sendEOPMessage();
-    void sendData(void* const data, const size_t dataSize);
+    void sendData(void* data, uint32_t dataSize);
     /**
      * Sets the retransmission timeout parameters in a retransmission entry.
      *
@@ -216,7 +217,7 @@ private:
     void StartNewRetxThread(int newtcpsockfd);
     /** new retranmission thread */
     static void* StartRetxThread(void* ptr);
-    void taskExit(const std::exception&);
+    void taskExit(const std::runtime_error&);
     void timerThread();
     /** a wrapper to call the actual vcmtpSendv3::timerThread() */
     static void* timerWrapper(void* ptr);
@@ -247,7 +248,8 @@ private:
     /** maximum RTT in milliseconds */
     double              maxrtt;
     std::mutex          exitMutex;
-    std::exception      except;
+    //std::exception      except;
+    std::exception_ptr  except;
     bool                exceptIsSet;
     //RateShaper          rateshaper;
     std::mutex          notifyprodmtx;

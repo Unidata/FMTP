@@ -139,7 +139,7 @@ uint32_t vcmtpSendv3::getNotify()
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
- * @throw std::system_error  The port number cannot be obtained.
+ * @throw std::runtime_error  The port number cannot be obtained.
  */
 unsigned short vcmtpSendv3::getTcpPortNum()
 {
@@ -166,13 +166,13 @@ uint32_t vcmtpSendv3::releaseMem()
  * @param[in] data      Memory data to be sent.
  * @param[in] dataSize  Size of the memory data in bytes.
  * @return              Index of the product.
- * @throws std::invalid_argument  if `data == 0`.
- * @throws std::invalid_argument  if `dataSize` exceeds the maximum allowed
+ * @throws std::runtime_error  if `data == 0`.
+ * @throws std::runtime_error  if `dataSize` exceeds the maximum allowed
  *                                value.
  * @throws std::runtime_error     if retrieving sender side RetxMetadata fails.
  * @throws std::runtime_error     if UdpSend::SendData() fails.
  */
-uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
+uint32_t vcmtpSendv3::sendProduct(void* data, uint32_t dataSize)
 {
     return sendProduct(data, dataSize, 0, 0);
 }
@@ -199,31 +199,31 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize)
  *                         the per-product timeout ratio to balance performance
  *                         and robustness (reliability).
  * @return                 Index of the product.
- * @throws std::invalid_argument  if `data == 0`.
- * @throws std::invalid_argument  if `dataSize` exceeds the maximum allowed
+ * @throws std::runtime_error  if `data == 0`.
+ * @throws std::runtime_error  if `dataSize` exceeds the maximum allowed
  *                                value.
- * @throws std::invalid_argument  if `metadata` != 0 and metaSize is too large
- * @throws std::invalid_argument  if `metadata` == 0 and metaSize != 0
+ * @throws std::runtime_error  if `metadata` != 0 and metaSize is too large
+ * @throws std::runtime_error  if `metadata` == 0 and metaSize != 0
  * @throws std::runtime_error     if a runtime error occurs.
  */
-uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
-                                  unsigned metaSize)
+uint32_t vcmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
+                                  uint16_t metaSize)
 {
     try {
         if (data == NULL)
-            throw std::invalid_argument(
+            throw std::runtime_error(
                     "vcmtpSendv3::sendProduct() data pointer is NULL");
         if (dataSize > 0xFFFFFFFFu)
-            throw std::invalid_argument(
+            throw std::runtime_error(
                     "vcmtpSendv3::sendProduct() dataSize out of range");
         if (metadata) {
             if (AVAIL_BOP_LEN < metaSize)
-                throw std::invalid_argument(
+                throw std::runtime_error(
                         "vcmtpSendv3::SendBOPMessage(): metaSize too large");
         }
         else {
             if (metaSize)
-                throw std::invalid_argument(
+                throw std::runtime_error(
                         "vcmtpSendv3::SendBOPMessage(): Non-zero metaSize");
         }
 
@@ -242,9 +242,9 @@ uint32_t vcmtpSendv3::sendProduct(void* data, size_t dataSize, void* metadata,
         /* start a new timer for this product in a separate thread */
         timerDelayQ.push(prodIndex, senderProdMeta->retxTimeoutPeriod);
     }
-    catch (std::exception& e) {
+    catch (std::runtime_error& e) {
         taskExit(e);
-        throw e;
+        std::rethrow_exception(except);
     }
 
 #ifdef MODBASE
@@ -302,7 +302,7 @@ void vcmtpSendv3::SetMaxRTT(double rtt)
  * **Exception Safety:** No guarantee
  *
  * @throw  std::runtime_error if a runtime error occurs.
- * @throw  std::system_error  if a system error occurs.
+ * @throw  std::runtime_error  if a system error occurs.
  */
 void vcmtpSendv3::Start()
 {
@@ -315,15 +315,18 @@ void vcmtpSendv3::Start()
     suppressor = new SilenceSuppressor(PRODNUM * EXPTRUN);
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
-    if(retval != 0)
-        throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::Start() pthread_create() timerWrapper error");
+    if(retval != 0) {
+        throw std::runtime_error(
+                "vcmtpSendv3::Start() pthread_create() timerWrapper error with"
+                " retval = " + std::to_string(retval));
+    }
 
     retval = pthread_create(&coor_t, NULL, &vcmtpSendv3::coordinator, this);
     if(retval != 0) {
         (void)pthread_cancel(timer_t);
-        throw std::system_error(retval, std::system_category(),
-                "vcmtpSendv3::Start() pthread_create() coordinator error");
+        throw std::runtime_error(
+                "vcmtpSendv3::Start() pthread_create() coordinator error with"
+                " retval = " + std::to_string(retval));
     }
 }
 
@@ -346,8 +349,9 @@ void vcmtpSendv3::Stop()
 
     {
         std::unique_lock<std::mutex> lock(exitMutex);
-        if (exceptIsSet)
-            throw except;
+        if (exceptIsSet) {
+            std::rethrow_exception(except);
+        }
     }
 }
 
@@ -361,15 +365,16 @@ void vcmtpSendv3::Stop()
  * @throw std::runtime_error  if a retransmission entry couldn't be created.
  */
 RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
-                                           const size_t dataSize,
+                                           const uint32_t dataSize,
                                            void* const metadata,
-                                           const size_t metaSize)
+                                           const uint16_t metaSize)
 {
     /* Create a new RetxMetadata struct for this product */
     RetxMetadata* senderProdMeta = new RetxMetadata();
-    if (senderProdMeta == NULL)
+    if (senderProdMeta == NULL) {
         throw std::runtime_error(
                 "vcmtpSendv3::addRetxMetadata(): create RetxMetadata error");
+    }
 
     /* Update current prodindex in RetxMetadata */
     senderProdMeta->prodindex        = prodIndex;
@@ -427,7 +432,7 @@ void* vcmtpSendv3::coordinator(void* ptr)
             pthread_setcancelstate(initState, &ignoredState);
         }
     }
-    catch (std::exception& e) {
+    catch (std::runtime_error& e) {
         sendptr->taskExit(e);
     }
     return NULL;
@@ -582,9 +587,10 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
 
     while(1) {
         /** Receive the message from tcp connection and parse the header */
-        if (tcpsend->parseHeader(retxsockfd, &recvheader) < 0)
+        if (tcpsend->parseHeader(retxsockfd, &recvheader) < 0) {
             throw std::runtime_error("vcmtpSendv3::RunRetxThread() receive "
                                      "header error");
+        }
 
         /** Retrieve the retransmission entry of the requested product */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
@@ -704,9 +710,10 @@ void vcmtpSendv3::retransmit(
                                 (char*)retxMeta->dataprod_p + start, payLen);
             #endif
 
-            if (retval < 0)
+            if (retval < 0) {
                 throw std::runtime_error(
                         "vcmtpSendv3::retransmit() TcpSend::send() error");
+            }
 
             #ifdef MODBASE
                 uint32_t tmpidx = recvheader->prodindex % MODBASE;
@@ -763,9 +770,10 @@ void vcmtpSendv3::retransBOP(
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is corret */
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
                                ntohs(sendheader.payloadlen));
-    if (retval < 0)
+    if (retval < 0) {
         throw std::runtime_error(
                 "vcmtpSendv3::retransBOP() TcpSend::send() error");
+    }
 
     #ifdef MODBASE
         uint32_t tmpidx = recvheader->prodindex % MODBASE;
@@ -805,9 +813,10 @@ void vcmtpSendv3::retransEOP(
     sendheader.flags      = htons(VCMTP_RETX_EOP);
 
     int retval = tcpsend->sendData(sock, &sendheader, NULL, 0);
-    if (retval < 0)
+    if (retval < 0) {
         throw std::runtime_error(
                 "vcmtpSendv3::retransEOP() TcpSend::send() error");
+    }
 
     #ifdef MODBASE
         uint32_t tmpidx = recvheader->prodindex % MODBASE;
@@ -835,33 +844,35 @@ void vcmtpSendv3::retransEOP(
  *                           data. May be 0, in which case no metadata is sent.
  * @param[in] metaSize       Size of the metadata in bytes. May be 0, in which
  *                           case no metadata is sent.
- * @throw std::system_error  if the UdpSend::SendTo() fails.
+ * @throw std::runtime_error  if the UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
-                                 const unsigned metaSize)
+                                 const uint16_t metaSize)
 {
     VcmtpHeader   header;
     BOPMsg        bopMsg;
-    struct iovec  ioVec[3];
+    struct iovec  ioVec[4];
 
     /* Set the VCMTP packet header. */
     header.prodindex  = htonl(prodIndex);
     header.seqnum     = 0;
-    header.payloadlen = htons(metaSize + (VCMTP_DATA_LEN - AVAIL_BOP_LEN));
+    header.payloadlen = htons(metaSize + (uint16_t)(VCMTP_DATA_LEN -
+                                                    AVAIL_BOP_LEN));
     header.flags      = htons(VCMTP_BOP);
+
     ioVec[0].iov_base = &header;
     ioVec[0].iov_len  = sizeof(VcmtpHeader);
 
-    /* Set the VCMTP BOP message. */
     bopMsg.prodsize = htonl(prodSize);
-    bopMsg.metasize = htons(metaSize);
-    ioVec[1].iov_base = &bopMsg;
-    /* The metadata is referenced in a separate I/O vector. */
-    ioVec[1].iov_len  = sizeof(bopMsg) - sizeof(bopMsg.metadata);
+    ioVec[1].iov_base = &bopMsg.prodsize;
+    ioVec[1].iov_len  = sizeof(bopMsg.prodsize);
 
-    /* Reference the metadata for the gather send. */
-    ioVec[2].iov_base = metadata;
-    ioVec[2].iov_len  = metaSize;
+    bopMsg.metasize = htons(metaSize);
+    ioVec[2].iov_base = &bopMsg.metasize;
+    ioVec[2].iov_len  = sizeof(bopMsg.metasize);
+
+    ioVec[3].iov_base = metadata;
+    ioVec[3].iov_len  = metaSize;
 
     #ifdef MODBASE
         uint32_t tmpidx = prodIndex % MODBASE;
@@ -890,7 +901,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     #endif
 
     /* Send the BOP message on multicast socket */
-    udpsend->SendTo(ioVec, 3);
+    udpsend->SendTo(ioVec, 4);
 
     #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(tmpidx);
@@ -906,7 +917,7 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
  * Sends the EOP message to the receiver to indicate the end of a product
  * transmission.
  *
- * @throws std::system_error  if UdpSend::SendTo() fails.
+ * @throws std::runtime_error  if UdpSend::SendTo() fails.
  */
 void vcmtpSendv3::sendEOPMessage()
 {
@@ -962,17 +973,18 @@ void vcmtpSendv3::sendEOPMessage()
  * @param[in] dataSize  The size of the data-product in bytes.
  * @throw std::runtime_error  if an I/O error occurs.
  */
-void vcmtpSendv3::sendData(void* data, size_t dataSize)
+void vcmtpSendv3::sendData(void* data, uint32_t dataSize)
 {
     VcmtpHeader header;
-    uint32_t  seqNum = 0;
+    uint32_t datasize = dataSize;
+    uint32_t seqNum = 0;
     header.prodindex = htonl(prodIndex);
     header.flags     = htons(VCMTP_MEM_DATA);
 
     /* check if there is more data to send */
-    while (dataSize > 0) {
-        unsigned int payloadlen = dataSize < VCMTP_DATA_LEN ?
-                                  dataSize : VCMTP_DATA_LEN;
+    while (datasize > 0) {
+        uint16_t payloadlen = datasize < VCMTP_DATA_LEN ?
+                              datasize : VCMTP_DATA_LEN;
 
         header.seqnum     = htonl(seqNum);
         header.payloadlen = htons(payloadlen);
@@ -996,9 +1008,11 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
             rateshaper.CalPeriod(sizeof(header) + payloadlen);
         }
         */
-        if(udpsend->SendData(&header, sizeof(header), data, payloadlen) < 0)
+        if(udpsend->SendData(&header, sizeof(header), data,
+                             (size_t)payloadlen) < 0) {
             throw std::runtime_error(
                     "vcmtpSendv3::sendProduct::SendData() error");
+        }
         /*
         if (linkspeed) {
             rateshaper.Sleep();
@@ -1024,7 +1038,7 @@ void vcmtpSendv3::sendData(void* data, size_t dataSize)
             }
         #endif
 
-        dataSize -= payloadlen;
+        datasize -= payloadlen;
         data      = (char*)data + payloadlen;
         seqNum   += payloadlen;
     }
@@ -1065,7 +1079,7 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
  * circumstances.
  *
  * @param[in] newtcpsockfd
- * @throw     std::system_error  if pthread_create() fails.
+ * @throw     std::runtime_error  if pthread_create() fails.
  */
 void vcmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
@@ -1116,7 +1130,7 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
     try {
         newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
     }
-    catch (std::exception& e) {
+    catch (std::runtime_error& e) {
         int exitStatus;
         pthread_t t = pthread_self();
 
@@ -1136,12 +1150,12 @@ void* vcmtpSendv3::StartRetxThread(void* ptr)
  *
  * @param[in] e                     Exception status
  */
-void vcmtpSendv3::taskExit(const std::exception& e)
+void vcmtpSendv3::taskExit(const std::runtime_error& e)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
         if (!exceptIsSet) {
-            except = e;
+            except = std::make_exception_ptr(e);
             exceptIsSet = true;
         }
     }
@@ -1227,7 +1241,7 @@ void* vcmtpSendv3::timerWrapper(void* ptr)
     try {
         sender->timerThread();
     }
-    catch (std::exception& e) {
+    catch (std::runtime_error& e) {
         sender->taskExit(e);
     }
     return NULL;

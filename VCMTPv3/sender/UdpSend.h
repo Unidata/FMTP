@@ -52,8 +52,8 @@ public:
      * locations, which is put together into a io vector structure, to the
      * destination identified by a socket file descriptor.
      */
-    ssize_t SendData(void* header, const size_t headerLen, void* data,
-                     const size_t dataLen);
+    ssize_t SendData(void* header, size_t headerLen, void* data,
+                     size_t dataLen);
     /**
      * SendTo() sends a piece of message to a destination identified by a
      * socket file descriptor.
