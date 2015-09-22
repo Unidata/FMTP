@@ -63,7 +63,9 @@ typedef struct VcmtpRetxReqMessage {
 const int MAX_VCMTP_PACKET_LEN = 1460;
 const int VCMTP_HEADER_LEN     = sizeof(VcmtpHeader);
 const int VCMTP_DATA_LEN       = MAX_VCMTP_PACKET_LEN - VCMTP_HEADER_LEN;
-const int AVAIL_BOP_LEN        = VCMTP_DATA_LEN - 4 - 2;
+/* sizeof(uint32_t) for BOPMsg.prodsize, sizeof(uint16_t) for BOPMsg.metasize */
+const int AVAIL_BOP_LEN        = VCMTP_DATA_LEN - sizeof(uint32_t)
+                                 - sizeof(uint16_t);
 const int RETX_REQ_LEN         = sizeof(RetxReqMsg);
 
 
