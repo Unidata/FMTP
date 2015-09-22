@@ -350,14 +350,23 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     if (header.payloadlen < 6) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
     }
-    BOPmsg.prodsize = ntohl(*(uint32_t*)VcmtpPacketData);
-    BOPmsg.metasize = ntohs(*(uint16_t*)(VcmtpPacketData+4));
+    const unsigned char* wire = (unsigned char*)VcmtpPacketData;
+    BOPmsg.prodsize = ntohl(*(uint32_t*)wire);
+    wire += sizeof(uint32_t);
+    BOPmsg.metasize = ntohs(*(uint16_t*)wire);
+    wire += sizeof(uint16_t);
     BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
                       ? AVAIL_BOP_LEN : BOPmsg.metasize;
     if (header.payloadlen - 6 < BOPmsg.metasize) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
     }
-    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
+    (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
+    char testarray[BOPmsg.metasize];
+    memset(testarray, 0, sizeof(testarray));
+    if (memcmp(testarray, BOPmsg.metadata, BOPmsg.metasize) == 0) {
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): detected "
+                "all-zero metadata");
+    }
 
     if(notifier) {
         notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
