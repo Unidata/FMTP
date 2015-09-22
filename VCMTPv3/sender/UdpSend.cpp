@@ -140,8 +140,8 @@ void UdpSend::Init()
  *                          the piece of memory data to be sent lies.
  * @param[in] datalen       length of that piece of memory data.
  */
-ssize_t UdpSend::SendData(void* header, const size_t headerLen, void* data,
-                          const size_t dataLen)
+ssize_t UdpSend::SendData(void* header, size_t headerLen, void* data,
+                          size_t dataLen)
 {
     struct msghdr msg;
     /** vector including the two memory locations */
