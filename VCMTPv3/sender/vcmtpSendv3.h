@@ -217,7 +217,7 @@ private:
     void StartNewRetxThread(int newtcpsockfd);
     /** new retranmission thread */
     static void* StartRetxThread(void* ptr);
-    void taskExit(const std::exception&);
+    void taskExit(const std::runtime_error&);
     void timerThread();
     /** a wrapper to call the actual vcmtpSendv3::timerThread() */
     static void* timerWrapper(void* ptr);
@@ -248,7 +248,8 @@ private:
     /** maximum RTT in milliseconds */
     double              maxrtt;
     std::mutex          exitMutex;
-    std::exception      except;
+    //std::exception      except;
+    std::exception_ptr  except;
     bool                exceptIsSet;
     //RateShaper          rateshaper;
     std::mutex          notifyprodmtx;
