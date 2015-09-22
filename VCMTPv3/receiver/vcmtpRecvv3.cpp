@@ -346,7 +346,8 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
                       ? AVAIL_BOP_LEN : BOPmsg.metasize;
     if (header.payloadlen - 6 < BOPmsg.metasize)
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
-    (void)memcpy(BOPmsg.metadata, VcmtpPacketData+6, BOPmsg.metasize);
+    (void)memcpy(BOPmsg.metadata, ((VcmtpBOPMessage*)VcmtpPacketData)->metadata,
+            BOPmsg.metasize);
 
     if(notifier)
         notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
