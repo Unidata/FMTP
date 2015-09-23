@@ -347,18 +347,20 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    if (header.payloadlen < 6) {
+    size_t BOPCONST = sizeof(BOPmsg.prodsize) + sizeof(BOPmsg.metasize);
+    if (header.payloadlen < BOPCONST) {
         throw std::runtime_error("vcmtpRecvv3::BOPHandler(): packet too small");
     }
     const unsigned char* wire = (unsigned char*)VcmtpPacketData;
     BOPmsg.prodsize = ntohl(*(uint32_t*)wire);
-    wire += sizeof(uint32_t);
+    wire += sizeof(BOPmsg.prodsize);
     BOPmsg.metasize = ntohs(*(uint16_t*)wire);
-    wire += sizeof(uint16_t);
+    wire += sizeof(BOPmsg.metasize);
     BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
                       ? AVAIL_BOP_LEN : BOPmsg.metasize;
-    if (header.payloadlen - 6 < BOPmsg.metasize) {
-        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): Metasize too big");
+    if ((header.payloadlen - BOPCONST) != BOPmsg.metasize) {
+        throw std::runtime_error("vcmtpRecvv3::BOPHandler(): metasize "
+                "mismatched payload indicated by header");
     }
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
@@ -498,22 +500,21 @@ void vcmtpRecvv3::decodeHeader(VcmtpHeader& header)
 
 /**
  * Decodes a VCMTP packet header. It does the network order to host order
- * translation as well as parsing the payload into a given buffer.
+ * translation.
  *
  * @param[in]  packet         The raw packet.
- * @param[in]  nbytes         The size of the raw packet in bytes.
  * @param[out] header         The decoded packet header.
- * @param[out] payload        Payload of the packet.
  */
-void vcmtpRecvv3::decodeHeader(char* const  packet, const size_t nbytes,
-                               VcmtpHeader& header, char** const payload)
+void vcmtpRecvv3::decodeHeader(char* const  packet, VcmtpHeader& header)
 {
-    header.prodindex  = ntohl(*(uint32_t*)packet);
-    header.seqnum     = ntohl(*(uint32_t*)(packet+4));
-    header.payloadlen = ntohs(*(uint16_t*)(packet+8));
-    header.flags      = ntohs(*(uint16_t*)(packet+10));
-
-    *payload = packet + VCMTP_HEADER_LEN;
+    unsigned char* wire = (unsigned char*)packet;
+    header.prodindex  = ntohl(*(uint32_t*)wire);
+    wire += sizeof(header.prodindex);
+    header.seqnum     = ntohl(*(uint32_t*)wire);
+    wire += sizeof(header.seqnum);
+    header.payloadlen = ntohs(*(uint16_t*)wire);
+    wire += sizeof(header.payloadlen);
+    header.flags      = ntohs(*(uint16_t*)wire);
 }
 
 
@@ -904,15 +905,21 @@ void vcmtpRecvv3::retxHandler()
             Stop();
         }
         else {
-            decodeHeader(pktHead, nbytes, header, &pholder);
+            /* TcpRecv::recvData() will return requested number of bytes */
+            decodeHeader(pktHead, header);
         }
 
         if (header.flags == VCMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
-            tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
+            nbytes = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
-            retxBOPHandler(header, paytmp);
+            if (nbytes == 0) {
+                Stop();
+            }
+            else {
+                retxBOPHandler(header, paytmp);
+            }
 
             /** remove the BOP from missing list */
             (void)rmMisBOPinSet(header.prodindex);
