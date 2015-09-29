@@ -118,8 +118,7 @@ private:
      * @throw std::runtime_error  if the packet is too small.
      * @throw std::runtime_error  if the packet has in invalid payload length.
      */
-    void decodeHeader(char* const packet, const size_t nbytes,
-                      VcmtpHeader& header, char** const payload);
+    void decodeHeader(char* const packet, VcmtpHeader& header);
     void EOPHandler(const VcmtpHeader& header);
     bool getEOPStatus(const uint32_t prodindex);
     bool hasLastBlock(const uint32_t prodindex);
