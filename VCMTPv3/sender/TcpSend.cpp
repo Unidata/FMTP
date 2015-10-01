@@ -203,11 +203,14 @@ void TcpSend::Init()
         */
         /* set TCP keep alive interval, default 1 sec */
         // TODO: determine a proper alive interval value
-        #ifdef __linux__
+        #if __APPLE__
+            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &aliveintvl,
+                           sizeof(int)) < 0) {
+        #elif defined(TCP_KEEPINTVL)
             if (setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, &aliveintvl,
                            sizeof(int)) < 0) {
-        #elif __APPLE__
-            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &aliveintvl,
+        #else
+            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveintvl,
                            sizeof(int)) < 0) {
         #endif
             throw std::runtime_error(
