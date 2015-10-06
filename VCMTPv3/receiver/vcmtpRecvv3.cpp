@@ -523,7 +523,10 @@ void vcmtpRecvv3::decodeHeader(char* const  packet, VcmtpHeader& header)
  * all the data blocks are received. If true, notify the RecvApp. If false,
  * request for retransmission if it has to be so.
  *
- * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
+ * @param[in] header           Reference to the received VCMTP packet header.
+ * @throws std::out_of_range   The notifier doesn't know about
+ *                             `header.prodindex`.
+ * @throws std::runtime_error  Receiving application error.
  */
 void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
 {
@@ -866,6 +869,9 @@ void vcmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
  * remaining payload next.
  *
  * @param[in] none
+ * @throws std::out_of_range   The notifier doesn't know about
+ *                             `header.prodindex`.
+ * @throws std::runtime_error  Receiving application error.
  */
 void vcmtpRecvv3::retxHandler()
 {
