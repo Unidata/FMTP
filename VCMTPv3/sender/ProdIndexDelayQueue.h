@@ -125,11 +125,13 @@ private:
     };
 
     /**
-     * Constructs an instance.
+     * Indicates if the priority of an element is lower than the priority of
+     * another element.
      *
-     * @param[in] index    The product-index.
-     * @param[in] seconds  The duration, in seconds, from the current time until
-     *                     the reveal-time of the element. May be negative.
+     * @param[in] a     The first element.
+     * @param[in] b     The second element.
+     * @retval    true  If and only if the priority of the first element is less
+     *                  than the priority of the second element.
      */
     static bool
             isLowerPriority(const ProdIndexDelayQueue::Element& a,
