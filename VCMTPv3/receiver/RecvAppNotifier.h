@@ -34,7 +34,9 @@ public:
      * @param[in]  prodSize  Size of the product in bytes.
      * @param[in]  metadata  Application-level product metadata.
      * @param[in]  metaSize  Size of the metadata in bytes.
-     * @param[out] data      Pointer to where VCMTP should write subsequent data.
+     * @param[out] data      Pointer to where VCMTP should write subsequent
+     *                       data. If `*data == nullptr`, then the data-product
+     *                       should be ignored.
      */
     virtual void notify_of_bop(const uint32_t iProd, size_t prodSize,
             void* metadata, unsigned metaSize, void** data) = 0;

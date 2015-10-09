@@ -329,6 +329,8 @@ void vcmtpRecvv3::retxBOPHandler(const VcmtpHeader& header,
 }
 
 
+extern "C" int sprint_signaturet(char*, size_t, char*);
+
 /**
  * Parse BOP message and call notifier to notify receiving application.
  *
@@ -365,6 +367,12 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
     if(notifier) {
+        char sigStr[33];
+        (void)sprint_signaturet(sigStr, sizeof(sigStr), BOPmsg.metadata);
+        std::cerr << "vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
+                "prodindex=" << header.prodindex <<
+                ", prodSize=" << BOPmsg.prodsize << ", metasize=" <<
+                BOPmsg.metasize << ", sig=" << sigStr << std::endl;
         notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                 BOPmsg.metadata, BOPmsg.metasize, &prodptr);
     }
@@ -697,6 +705,8 @@ void vcmtpRecvv3::joinGroup(
  *
  * @throw std::runtime_error   if an I/O error occurs.
  * @throw std::runtime_error  if a packet is invalid.
+ * @throw std::runtime_error  Receiving application error.
+ * @throw std::out_of_range   The notifier doesn't know about the product-index.
  */
 void vcmtpRecvv3::mcastHandler()
 {
@@ -754,7 +764,10 @@ void vcmtpRecvv3::mcastHandler()
  * fetched with a MSG_PEEK flag, it's necessary to remove the data by calling
  * recv() again without MSG_PEEK.
  *
- * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
+ * @param[in] VcmtpHeader      Reference to the received VCMTP packet header
+ * @throws std::out_of_range   The notifier doesn't know about
+ *                             `header.prodindex`.
+ * @throws std::runtime_error  Receiving application error.
  */
 void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
 {
@@ -869,9 +882,8 @@ void vcmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
  * remaining payload next.
  *
  * @param[in] none
- * @throws std::out_of_range   The notifier doesn't know about
- *                             `header.prodindex`.
- * @throws std::runtime_error  Receiving application error.
+ * @throw std::out_of_range   The notifier doesn't know about the product-index.
+ * @throw std::runtime_error  Receiving application error.
  */
 void vcmtpRecvv3::retxHandler()
 {
@@ -1229,6 +1241,9 @@ bool vcmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
  * just call the handling process directly.
  *
  * @param[in] VcmtpHeader    Reference to the received VCMTP packet header
+ * @throw std::out_of_range   The notifier doesn't know about
+ *                            `header.prodindex`.
+ * @throw std::runtime_error  Receiving application error.
  */
 void vcmtpRecvv3::retxEOPHandler(const VcmtpHeader& header)
 {
@@ -1522,7 +1537,7 @@ void* vcmtpRecvv3::runTimerThread(void* ptr)
         recvr->timerThread();
     }
     catch (std::runtime_error& e) {
-        recvr->taskExit(e);
+        recvr->taskExit(std::current_exception());
     }
     return NULL;
 }
@@ -1619,7 +1634,7 @@ void* vcmtpRecvv3::StartRetxRequester(void* ptr)
         recvr->retxRequester();
     }
     catch (std::runtime_error& e) {
-        recvr->taskExit(e);
+        recvr->taskExit(std::current_exception());
     }
     return NULL;
 }
@@ -1662,8 +1677,8 @@ void* vcmtpRecvv3::StartRetxHandler(void* ptr)
     try {
         recvr->retxHandler();
     }
-    catch (std::runtime_error& e) {
-        recvr->taskExit(e);
+    catch (std::exception& e) {
+        recvr->taskExit(std::current_exception());
     }
     return NULL;
 }
@@ -1709,8 +1724,8 @@ void* vcmtpRecvv3::StartMcastHandler(
     try {
         recvr->mcastHandler();
     }
-    catch (std::runtime_error& e) {
-        recvr->taskExit(e);
+    catch (const std::exception& e) {
+        recvr->taskExit(std::current_exception());
     }
     return NULL;
 }
@@ -1893,9 +1908,9 @@ void vcmtpRecvv3::timerThread()
  * terminates all the other tasks. Blocks on the exit mutex; otherwise, returns
  * immediately.
  *
- * @param[in] eptr                  Exception pointer
+ * @param[in] e                  Exception pointer
  */
-void vcmtpRecvv3::taskExit(const std::runtime_error& e)
+void vcmtpRecvv3::taskExit(const std::exception_ptr& e)
 {
     {
         std::unique_lock<std::mutex> lock(exitMutex);
@@ -1906,7 +1921,7 @@ void vcmtpRecvv3::taskExit(const std::runtime_error& e)
              * actually. Since the passed-in exception can be any derived
              * exception type, this would cause slicing and losing information.
              */
-            except = std::make_exception_ptr(e);
+            except = e;
         }
         exitCond.notify_one();
     }

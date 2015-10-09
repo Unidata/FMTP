@@ -834,6 +834,7 @@ void vcmtpSendv3::retransEOP(
 }
 
 
+extern "C" int sprint_signaturet(char*, size_t, const void*);
 /**
  * Sends the BOP message to the receiver. metadata and metaSize must always be
  * a valid value. These two parameters will be checked by the calling function
@@ -852,6 +853,12 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     VcmtpHeader   header;
     BOPMsg        bopMsg;
     struct iovec  ioVec[4];
+
+    char sigStr[33];
+    (void)sprint_signaturet(sigStr, sizeof(sigStr), metadata);
+    std::cerr << "vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=" <<
+            prodIndex << ", prodSize=" << prodSize << ", metaSize=" << metaSize
+            << ", sig=" << sigStr << std::endl;
 
     /* Set the VCMTP packet header. */
     header.prodindex  = htonl(prodIndex);
