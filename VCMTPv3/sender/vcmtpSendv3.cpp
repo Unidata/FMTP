@@ -39,6 +39,10 @@
 #include <system_error>
 
 
+extern "C" int sprint_signaturet(char*, size_t, void*);
+extern "C" void udebug(const char* fmt ...);
+
+
 #ifndef NULL
     #define NULL 0
 #endif
@@ -401,6 +405,13 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
         senderProdMeta->unfinReceivers.insert(*it);
 
     /* Add current RetxMetadata into sendMetadata::indexMetaMap */
+    char sigStr[33];
+    (void)sprint_signaturet(sigStr, sizeof(sigStr), senderProdMeta->metadata);
+    udebug("vcmtpRecvv3::addRetxMetadata(): Adding entry: "
+            "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
+            (unsigned long)senderProdMeta->prodindex,
+            (unsigned long)senderProdMeta->prodLength,
+            (unsigned)senderProdMeta->metaSize, sigStr);
     sendMeta->addRetxMetadata(senderProdMeta);
 
     /* Update multicast start time in RetxMetadata */
@@ -623,6 +634,13 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
             #endif
+            char sigStr[33];
+            (void)sprint_signaturet(sigStr, sizeof(sigStr), retxMeta->metadata);
+            udebug("vcmtpSendv3::runRetxThread(): Entered: "
+                    "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
+                    (unsigned long)recvheader.prodindex,
+                    (unsigned long)retxMeta->prodLength,
+                    (unsigned)retxMeta->metaSize, sigStr);
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
@@ -734,7 +752,6 @@ void vcmtpSendv3::retransmit(
     }
 }
 
-
 /**
  * Retransmits BOP to a receiver. All necessary metadata will be retrieved
  * from the RetxMetadata map. This implies the addRetxMetadata() operation
@@ -766,6 +783,16 @@ void vcmtpSendv3::retransBOP(
     bopMsg.prodsize = htonl(retxMeta->prodLength);
     bopMsg.metasize = htons(retxMeta->metaSize);
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
+
+#if 0
+    char sigStr[33];
+    (void)sprint_signaturet(sigStr, sizeof(sigStr), retxMeta->metadata);
+    udebug("vcmtpRecvv3::retransBOP(): Entered: "
+            "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
+            (unsigned long)recvheader->prodindex,
+            (unsigned long)retxMeta->prodLength,
+            (unsigned)retxMeta->metaSize, sigStr);
+#endif
 
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is corret */
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
@@ -834,7 +861,6 @@ void vcmtpSendv3::retransEOP(
 }
 
 
-extern "C" int sprint_signaturet(char*, size_t, const void*);
 /**
  * Sends the BOP message to the receiver. metadata and metaSize must always be
  * a valid value. These two parameters will be checked by the calling function

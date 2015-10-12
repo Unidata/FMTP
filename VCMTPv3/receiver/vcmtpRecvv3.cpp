@@ -330,6 +330,7 @@ void vcmtpRecvv3::retxBOPHandler(const VcmtpHeader& header,
 
 
 extern "C" int sprint_signaturet(char*, size_t, char*);
+extern "C" void udebug(const char* fmt ...);
 
 /**
  * Parse BOP message and call notifier to notify receiving application.
@@ -369,10 +370,17 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     if(notifier) {
         char sigStr[33];
         (void)sprint_signaturet(sigStr, sizeof(sigStr), BOPmsg.metadata);
+#if 1
+        udebug("vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
+                "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
+                (unsigned long)header.prodindex, (unsigned long)BOPmsg.prodsize,
+                (unsigned)BOPmsg.metasize, sigStr);
+#else
         std::cerr << "vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
                 "prodindex=" << header.prodindex <<
                 ", prodSize=" << BOPmsg.prodsize << ", metasize=" <<
                 BOPmsg.metasize << ", sig=" << sigStr << std::endl;
+#endif
         notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                 BOPmsg.metadata, BOPmsg.metasize, &prodptr);
     }
@@ -1556,6 +1564,9 @@ bool vcmtpRecvv3::sendBOPRetxReq(uint32_t prodindex)
     header.seqnum     = 0;
     header.payloadlen = 0;
     header.flags      = htons(VCMTP_BOP_REQ);
+
+    udebug("vcmtpRecvv3::sendBOPRetxReq(): Entered: prodindex=%lu",
+                (unsigned long)prodindex);
 
     return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
 }
