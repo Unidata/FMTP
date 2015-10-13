@@ -119,14 +119,22 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
  */
 RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 {
-    RetxMetadata* temp = NULL;
+    RetxMetadata* temp     = NULL;
+    RetxMetadata* retxMeta = NULL;
     std::map<uint32_t, RetxMetadata*>::iterator it;
     {
         std::unique_lock<std::mutex> lock(indexMetaMapLock);
-        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end())
+        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
             temp = it->second;
+            /**
+             * creates a deep-copied RetxMetadata object in case the
+             * retrieved entry is removed under non-locking state.
+             * In the new instance, metadata is deep-copied into another array.
+             */
+            retxMeta = new RetxMetadata(*temp);
+        }
     }
-    return temp;
+    return retxMeta;
 }
 
 
@@ -157,7 +165,7 @@ bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
     bool rmSuccess;
     std::map<uint32_t, RetxMetadata*>::iterator it;
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
-        delete it->second;
+        it->second->~RetxMetadata();
         indexMetaMap.erase(it);
         rmSuccess = true;
     }

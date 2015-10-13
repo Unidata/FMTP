@@ -62,7 +62,36 @@ struct RetxMetadata {
                     metadata(NULL), mcastStartTime(HRclock::now()),
                     mcastEndTime(mcastStartTime), retxTimeoutRatio(20.0),
                     retxTimeoutPeriod(99999999999.0), dataprod_p(NULL) {}
-    virtual ~RetxMetadata() {}
+    ~RetxMetadata() {
+        delete[] metadata;
+        metadata = NULL;
+        /**
+         * TODO: put a callback here to notify the application to
+         * release the dataprod_p.
+         */
+        dataprod_p = NULL;
+    }
+
+    /* copy constructor of RetxMetadata */
+    RetxMetadata(const RetxMetadata& meta)
+    :
+        prodindex(meta.prodindex),
+        prodLength(meta.prodLength),
+        metaSize(meta.metaSize),
+        mcastStartTime(meta.mcastStartTime),
+        mcastEndTime(meta.mcastEndTime),
+        retxTimeoutRatio(meta.retxTimeoutRatio),
+        retxTimeoutPeriod(meta.retxTimeoutPeriod),
+        unfinReceivers(meta.unfinReceivers)
+    {
+        /**
+         * creates a copy of the metadata on heap,
+         * points the metadata pointer to the copy.
+         */
+        char* metadata_ptr = new char[metaSize];
+        (void*)memcpy(metadata_ptr, &meta.metadata, metaSize);
+        metadata = metadata_ptr;
+    }
 };
 
 

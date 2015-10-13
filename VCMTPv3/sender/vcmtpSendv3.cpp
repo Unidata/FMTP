@@ -380,6 +380,14 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
                 "vcmtpSendv3::addRetxMetadata(): create RetxMetadata error");
     }
 
+    /**
+     * Since the metadata pointer is not guaranteed to be consistent,
+     * the content of metadata is copied to a dynamically allocated array
+     * and saved in senderProdMeta.
+     */
+    char* metadata_ptr = new char[metaSize];
+    (void*)memcpy(metadata_ptr, metadata, metaSize);
+
     /* Update current prodindex in RetxMetadata */
     senderProdMeta->prodindex        = prodIndex;
 
@@ -390,10 +398,10 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
     senderProdMeta->metaSize         = metaSize;
 
     /* Update current metadata pointer in RetxMetadata */
-    senderProdMeta->metadata         = (void*) metadata;
+    senderProdMeta->metadata         = (void*)metadata_ptr;
 
     /* Update current product pointer in RetxMetadata */
-    senderProdMeta->dataprod_p       = (void*) data;
+    senderProdMeta->dataprod_p       = (void*)data;
 
     /* Update the per-product timeout ratio */
     senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
@@ -603,7 +611,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                                      "header error");
         }
 
-        /** Retrieve the retransmission entry of the requested product */
+        /* Retrieves a deep copy of the product metadata */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
         if (recvheader.flags == VCMTP_RETX_REQ) {
@@ -653,6 +661,9 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             #endif
             handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
+
+        /* upon deleting, the destructor of RetxMetadata will be called. */
+        delete retxMeta;
     }
 }
 
