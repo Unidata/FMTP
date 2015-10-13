@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <chrono>
+#include <cstring>
 #include <map>
 #include <mutex>
 #include <set>
@@ -89,7 +90,7 @@ struct RetxMetadata {
          * points the metadata pointer to the copy.
          */
         char* metadata_ptr = new char[metaSize];
-        (void*)memcpy(metadata_ptr, &meta.metadata, metaSize);
+        std::memcpy(metadata_ptr, &meta.metadata, metaSize);
         metadata = metadata_ptr;
     }
 };
