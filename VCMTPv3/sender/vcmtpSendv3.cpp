@@ -415,7 +415,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
     /* Add current RetxMetadata into sendMetadata::indexMetaMap */
     char sigStr[33];
     (void)sprint_signaturet(sigStr, sizeof(sigStr), senderProdMeta->metadata);
-    udebug("vcmtpRecvv3::addRetxMetadata(): Adding entry: "
+    udebug("vcmtpSendv3::addRetxMetadata(): Adding entry: "
             "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
             (unsigned long)senderProdMeta->prodindex,
             (unsigned long)senderProdMeta->prodLength,
@@ -893,9 +893,15 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
 
     char sigStr[33];
     (void)sprint_signaturet(sigStr, sizeof(sigStr), metadata);
+#if 1
+    udebug("vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=%lu, "
+            "prodSize=%lu, metaSize=%u, sig=%s", (unsigned long)prodIndex,
+            (unsigned long)prodSize, (unsigned)metaSize, sigStr);
+#else
     std::cerr << "vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=" <<
             prodIndex << ", prodSize=" << prodSize << ", metaSize=" << metaSize
             << ", sig=" << sigStr << std::endl;
+#endif
 
     /* Set the VCMTP packet header. */
     header.prodindex  = htonl(prodIndex);
