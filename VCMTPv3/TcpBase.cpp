@@ -64,7 +64,7 @@ TcpBase::~TcpBase()
  * @param[in] nbytes   Number of bytes to attempt to read.
  * @return             Number of bytes read. If less than `nbytes` and
  *                     `nbytes > 0`, then EOF was encountered.
- * @throws std::runtime_error  if an error is encountered reading from the
+ * @throws std::system_error  if an error is encountered reading from the
  *                            socket.
  */
 size_t TcpBase::recvall(const int sock, void* const buf, const size_t nbytes)
@@ -75,8 +75,8 @@ size_t TcpBase::recvall(const int sock, void* const buf, const size_t nbytes)
     while (nleft > 0) {
         int nread = recv(sock, ptr, nleft, 0);
         if (nread < 0) {
-            throw std::runtime_error(
-                    "TcpRecv::recvall() error receiving from socket");
+            throw std::system_error(errno, std::system_category(),
+                    "TcpBase::recvall() error receiving from socket");
         }
         if (nread == 0)
             break; // EOF encountered
@@ -111,7 +111,7 @@ size_t TcpBase::recvall(void* const buf, const size_t nbytes)
  * @param[in] sock    The streaming socket.
  * @param[in] buf     Pointer to a buffer.
  * @param[in] nbytes  Number of bytes to write.
- * @throws std::runtime_error  if an error is encountered writing to the
+ * @throws std::system_error  if an error is encountered writing to the
  *                            socket.
  */
 void TcpBase::sendall(const int sock, void* const buf, size_t nbytes)
@@ -121,8 +121,8 @@ void TcpBase::sendall(const int sock, void* const buf, size_t nbytes)
     while (nbytes > 0) {
         int nwritten = send(sock, ptr, nbytes, 0);
         if (nwritten <= 0) {
-            throw std::runtime_error(
-                    "TcpRecv::sendall() error sending to socket");
+            throw std::system_error(errno, std::system_category(),
+                    "TcpBase::sendall() error sending to socket");
         }
         ptr += nwritten;
         nbytes -= nwritten;
