@@ -49,6 +49,9 @@
 
 #define Frcv 20
 
+extern "C" int sprint_signaturet(char*, size_t, char*);
+extern "C" void udebug(const char* fmt ...);
+
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -328,9 +331,6 @@ void vcmtpRecvv3::retxBOPHandler(const VcmtpHeader& header,
     BOPHandler(header, VcmtpPacketData);
 }
 
-
-extern "C" int sprint_signaturet(char*, size_t, char*);
-extern "C" void udebug(const char* fmt ...);
 
 /**
  * Parse BOP message and call notifier to notify receiving application.
