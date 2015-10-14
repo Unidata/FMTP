@@ -64,7 +64,7 @@ struct RetxMetadata {
                     mcastEndTime(mcastStartTime), retxTimeoutRatio(20.0),
                     retxTimeoutPeriod(99999999999.0), dataprod_p(NULL) {}
     ~RetxMetadata() {
-        delete[] metadata;
+        delete[] (char*)metadata;
         metadata = NULL;
         /**
          * TODO: put a callback here to notify the application to
