@@ -661,9 +661,6 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             #endif
             handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
-
-        /* upon deleting, the destructor of RetxMetadata will be called. */
-        delete retxMeta;
     }
 }
 
