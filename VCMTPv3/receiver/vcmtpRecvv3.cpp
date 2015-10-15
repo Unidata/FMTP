@@ -385,59 +385,61 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
                 BOPmsg.metadata, BOPmsg.metasize, &prodptr);
     }
 
-    /* Atomic insertion for BOP of new product */
-    {
-        ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
-        std::unique_lock<std::mutex> lock(trackermtx);
-        trackermap[header.prodindex] = tracker;
-    }
-
     blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
 
-    /** forcibly terminate the previous timer */
-    timerWake.notify_all();
+    /**
+     * Here a strict check is performed to make sure the information in
+     * trackermap and BlockMNG would not be overwritten by duplicate BOP.
+     * By design, a product should exist in both the trackermap and
+     * BlockMNG or neither, which is the condition of executing all the
+     * initialization.
+     */
+    bool insertion = pBlockMNG->addProd(header.prodindex, blknum);
+    if (insertion && !trackermap.count(header.prodindex)) {
+        /* Atomic insertion for BOP of new product */
+        {
+            ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
+            std::unique_lock<std::mutex> lock(trackermtx);
+            trackermap[header.prodindex] = tracker;
+        }
 
-    /* check if the product is already under tracking */
-    if (!pBlockMNG->addProd(header.prodindex, blknum)) {
+        /* forcibly terminate the previous timer */
+        timerWake.notify_all();
+
+        initEOPStatus(header.prodindex);
+
+        /**
+         * Since the receiver timer starts after BOP is received, the RTT is not
+         * affecting the timer model. Sleeptime here means the estimated reception
+         * time of this product. Thus, the only thing needs to be considered is
+         * the transmission delay, which can be calculated as product size over
+         * link speed. Besides, a little more extra time would be favorable to
+         * tolerate possible fluctuation.
+         */
+        double sleeptime = 0.0;
+        {
+            std::unique_lock<std::mutex> lock(trackermtx);
+            if (trackermap.count(header.prodindex)) {
+                sleeptime =
+                    Frcv * ((double)trackermap[header.prodindex].prodsize /
+                    (double)linkspeed);
+            }
+            else {
+                throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
+                        "Error accessing newly added BOP in trackermap.");
+            }
+        }
+        /* add the new product into timer queue */
+        {
+            std::unique_lock<std::mutex> lock(timerQmtx);
+            timerParam timerparam = {header.prodindex, sleeptime};
+            timerParamQ.push(timerparam);
+            timerQfilled.notify_all();
+        }
+    }
+    else {
         std::cout << "vcmtpRecvv3::BOPHandler(): duplicate BOP for product #"
             << header.prodindex << "received." << std::endl;
-    }
-
-    initEOPStatus(header.prodindex);
-
-    /**
-     * Set the amount of sleeping time. Based on a precise network delay model,
-     * total delay should include transmission delay, propogation delay,
-     * processing delay and queueing delay. From a pragmatic view, the queueing
-     * delay, processing delay of routers and switches, and propogation delay
-     * are all added into RTT. Thus only processing delay of the receiver and
-     * transmission delay need to be considered except for RTT. Processing
-     * delay is usually nanoseconds to microseconds, which can be ignored. And
-     * since the receiver timer starts after BOP is received, the RTT is not
-     * affecting the timer model. Sleeptime here means the estimated remaining
-     * time of the current product. Thus, the only thing needs to be considered
-     * is the transmission delay, which can be calculated as product size over
-     * link speed. Besides, a little more extra time would be favorable to
-     * tolerate possible fluctuation.
-     */
-    double sleeptime = 0.0;
-    {
-        std::unique_lock<std::mutex> lock(trackermtx);
-        if (trackermap.count(header.prodindex)) {
-            sleeptime = Frcv * ((double)trackermap[header.prodindex].prodsize /
-                    (double)linkspeed);
-        }
-        else {
-            throw std::runtime_error("vcmtpRecvv3::BOPHandler(): "
-                    "Error accessing newly added BOP in trackermap.");
-        }
-    }
-    /** add the new product into timer queue */
-    {
-        std::unique_lock<std::mutex> lock(timerQmtx);
-        timerParam timerparam = {header.prodindex, sleeptime};
-        timerParamQ.push(timerparam);
-        timerQfilled.notify_all();
     }
 
     #ifdef MODBASE
