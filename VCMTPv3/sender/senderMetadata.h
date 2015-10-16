@@ -47,7 +47,7 @@ typedef std::chrono::high_resolution_clock HRclock;
 
 struct RetxMetadata {
     uint32_t       prodindex;
-    /** recording the whole product size (for timeout factor use) */
+    /* recording the whole product size (for timeout factor use) */
     uint32_t       prodLength;
     uint16_t       metaSize;          /*!< metadata size               */
     void*          metadata;          /*!< metadata pointer            */
@@ -56,13 +56,18 @@ struct RetxMetadata {
     float          retxTimeoutRatio;  /*!< ratio to scale timeout time */
     double         retxTimeoutPeriod; /*!< timeout time in seconds     */
     void*          dataprod_p;        /*!< pointer to the data product */
-    /** unfinished receiver set indexed by socket id */
+    /* unfinished receiver set indexed by socket id */
     std::set<int>  unfinReceivers;
+    /* indicates the RetxMetadata is in use */
+    bool           inuse;
+    /* indicates the RetxMetadata should be removed */
+    bool           remove;
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
                     metadata(NULL), mcastStartTime(HRclock::now()),
                     mcastEndTime(mcastStartTime), retxTimeoutRatio(20.0),
-                    retxTimeoutPeriod(99999999999.0), dataprod_p(NULL) {}
+                    retxTimeoutPeriod(99999999999.0), dataprod_p(NULL),
+                    inuse(false), remove(false) {}
     ~RetxMetadata() {
         delete[] (char*)metadata;
         metadata = NULL;
@@ -83,7 +88,9 @@ struct RetxMetadata {
         mcastEndTime(meta.mcastEndTime),
         retxTimeoutRatio(meta.retxTimeoutRatio),
         retxTimeoutPeriod(meta.retxTimeoutPeriod),
-        unfinReceivers(meta.unfinReceivers)
+        unfinReceivers(meta.unfinReceivers),
+        inuse(meta.inuse),
+        remove(meta.remove)
     {
         /**
          * creates a copy of the metadata on heap,
@@ -104,6 +111,7 @@ public:
     void addRetxMetadata(RetxMetadata* ptrMeta);
     bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
     RetxMetadata* getMetadata(uint32_t prodindex);
+    bool releaseMetadata(uint32_t prodindex);
     bool rmRetxMetadata(uint32_t prodindex);
 
 private:
