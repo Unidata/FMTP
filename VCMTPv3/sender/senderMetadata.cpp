@@ -151,6 +151,7 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
  */
 bool senderMetadata::releaseMetadata(uint32_t prodindex)
 {
+    bool relstate;
     std::unique_lock<std::mutex> lock(indexMetaMapLock);
     std::map<uint32_t, RetxMetadata*>::iterator it;
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
