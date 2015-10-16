@@ -76,7 +76,8 @@ size_t TcpBase::recvall(const int sock, void* const buf, const size_t nbytes)
         int nread = recv(sock, ptr, nleft, 0);
         if (nread < 0) {
             throw std::system_error(errno, std::system_category(),
-                    "TcpBase::recvall() error receiving from socket");
+                    "TcpBase::recvall() Error receiving from socket " +
+                    std::to_string(sock));
         }
         if (nread == 0)
             break; // EOF encountered
@@ -122,7 +123,8 @@ void TcpBase::sendall(const int sock, void* const buf, size_t nbytes)
         int nwritten = send(sock, ptr, nbytes, 0);
         if (nwritten <= 0) {
             throw std::system_error(errno, std::system_category(),
-                    "TcpBase::sendall() error sending to socket");
+                    "TcpBase::sendall() Error sending to socket " +
+                    std::to_string(sock));
         }
         ptr += nwritten;
         nbytes -= nwritten;
