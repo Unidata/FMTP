@@ -611,7 +611,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                                      "header error");
         }
 
-        /* Retrieves a deep copy of the product metadata */
+        /* Acquires the product metadata as in exclusive use */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
         if (recvheader.flags == VCMTP_RETX_REQ) {
@@ -661,6 +661,9 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             #endif
             handleEopReq(&recvheader, retxMeta, retxsockfd);
         }
+
+        /* Releases the product metadata in exclusive use */
+        sendMeta->releaseMetadata(recvheader.prodindex);
     }
 }
 

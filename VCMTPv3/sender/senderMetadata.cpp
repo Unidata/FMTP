@@ -85,6 +85,7 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
  * @param[in] prodindex         product index of the requested product
  * @param[in] retxsockfd        sock file descriptor of the retransmission tcp
  *                              connection.
+ * @return    True if RetxMetadata is removed, otherwise false.
  */
 bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
 {
@@ -95,7 +96,14 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
         if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
             it->second->unfinReceivers.erase(retxsockfd);
             if (it->second->unfinReceivers.empty()) {
-                prodRemoved = rmRetxMetadataNoLock(prodindex);
+                if (it->second->inuse) {
+                    it->second->remove = true;
+                }
+                else {
+                    it->second->~RetxMetadata();
+                    indexMetaMap.erase(it);
+                }
+                prodRemoved = true;
             }
             else {
                 prodRemoved = false;
@@ -116,6 +124,7 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
  * initialized to NULL.
  *
  * @param[in] prodindex         specific product index
+ * @return    A pointer to the original RetxMetadata in the map.
  */
 RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
 {
@@ -125,9 +134,39 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
         std::unique_lock<std::mutex> lock(indexMetaMapLock);
         if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
             temp = it->second;
+            /* sets up exclusive flag to acquire this RetxMetadata */
+            it->second->inuse = true;
         }
     }
     return temp;
+}
+
+
+/**
+ * Releases the acquired RetxMetadata. If it is marked as in use, reset
+ * the in use flag. If it is marked as remove, remove it correspondingly.
+ *
+ * @param[in] prodindex         product index of the requested product
+ * @return    True if release operation is successful, otherwise false.
+ */
+bool senderMetadata::releaseMetadata(uint32_t prodindex)
+{
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    std::map<uint32_t, RetxMetadata*>::iterator it;
+    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
+        if (it->second->inuse) {
+            it->second->inuse = false;
+        }
+        if (it->second->remove) {
+            it->second->~RetxMetadata();
+            indexMetaMap.erase(it);
+        }
+        relstate = true;
+    }
+    else {
+        relstate = false;
+    }
+    return relstate;
 }
 
 
@@ -136,6 +175,7 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
  * the non-lock remove function and put a mutex lock on the map.
  *
  * @param[in] prodindex         product index of the requested product
+ * @return    True if removal is successful, otherwise false.
  */
 bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 {
@@ -152,14 +192,25 @@ bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
  * is successful or not. If successful, it's a true, otherwise it's a false.
  *
  * @param[in] prodindex         product index of the requested product
+ * @return    True if removal is successful, otherwise false.
  */
 bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
 {
     bool rmSuccess;
     std::map<uint32_t, RetxMetadata*>::iterator it;
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
-        it->second->~RetxMetadata();
-        indexMetaMap.erase(it);
+        /**
+         * The deletion could either be an immediate one or a delayed one.
+         * Either case the removal can be considered successful as long as
+         * next call guarantees to delete it when it sees the remove flag.
+         */
+        if (it->second->inuse) {
+            it->second->remove = true;
+        }
+        else {
+            it->second->~RetxMetadata();
+            indexMetaMap.erase(it);
+        }
         rmSuccess = true;
     }
     else {
