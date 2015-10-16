@@ -102,6 +102,7 @@ public:
     uint32_t       getNotify();
     unsigned short getTcpPortNum();
     uint32_t       releaseMem();
+    uint32_t       getNextProdIndex() const {return prodIndex;}
     uint32_t       sendProduct(void* data, uint32_t dataSize);
     uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
                                uint16_t metaSize);
