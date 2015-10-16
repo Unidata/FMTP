@@ -367,24 +367,6 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     }
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
-    if(notifier) {
-        char sigStr[33];
-        (void)sprint_signaturet(sigStr, sizeof(sigStr), BOPmsg.metadata);
-#if 1
-        udebug("vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
-                "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
-                (unsigned long)header.prodindex, (unsigned long)BOPmsg.prodsize,
-                (unsigned)BOPmsg.metasize, sigStr);
-#else
-        std::cerr << "vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
-                "prodindex=" << header.prodindex <<
-                ", prodSize=" << BOPmsg.prodsize << ", metasize=" <<
-                BOPmsg.metasize << ", sig=" << sigStr << std::endl;
-#endif
-        notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
-                BOPmsg.metadata, BOPmsg.metasize, &prodptr);
-    }
-
     blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / VCMTP_DATA_LEN + 1 : 0;
 
     /**
@@ -392,10 +374,28 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
      * trackermap and BlockMNG would not be overwritten by duplicate BOP.
      * By design, a product should exist in both the trackermap and
      * BlockMNG or neither, which is the condition of executing all the
-     * initialization.
+     * initialization. Also, notify_of_bop() will only be called for a
+     * fresh new BOP. All the duplicate calls will be suppressed.
      */
     bool insertion = pBlockMNG->addProd(header.prodindex, blknum);
-    if (insertion && !trackermap.count(header.prodindex)) {
+    bool inTracker;
+    {
+        std::unique_lock<std::mutex> lock(trackermtx);
+        inTracker = trackermap.count(header.prodindex);
+    }
+    if (insertion && !inTracker) {
+        if(notifier) {
+            char sigStr[33];
+            (void)sprint_signaturet(sigStr, sizeof(sigStr), BOPmsg.metadata);
+            udebug("vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
+                    "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
+                    (unsigned long)header.prodindex, (unsigned long)BOPmsg.prodsize,
+                    (unsigned)BOPmsg.metasize, sigStr);
+
+            notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
+                    BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+        }
+
         /* Atomic insertion for BOP of new product */
         {
             ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0};
@@ -555,10 +555,15 @@ void vcmtpRecvv3::EOPHandler(const VcmtpHeader& header)
      */
     if (pBlockMNG->delIfComplete(header.prodindex)) {
         sendRetxEnd(header.prodindex);
-        if (notifier) {
+        bool inTracker;
+        {
+            std::unique_lock<std::mutex> lock(trackermtx);
+            inTracker = trackermap.count(header.prodindex);
+        }
+        if (notifier && inTracker) {
             notifier->notify_of_eop(header.prodindex);
         }
-        else {
+        else if (inTracker) {
             /**
              * Updates the most recently acknowledged product and notifies
              * a dummy notification handler (getNotify()).
@@ -1084,10 +1089,15 @@ void vcmtpRecvv3::retxHandler()
 
             if (pBlockMNG->delIfComplete(header.prodindex)) {
                 sendRetxEnd(header.prodindex);
-                if (notifier) {
+                bool inTracker;
+                {
+                    std::unique_lock<std::mutex> lock(trackermtx);
+                    inTracker = trackermap.count(header.prodindex);
+                }
+                if (notifier && inTracker) {
                     notifier->notify_of_eop(header.prodindex);
                 }
-                else {
+                else if (inTracker) {
                     /**
                      * Updates the most recently acknowledged product and notifies
                      * a dummy notification handler (getNotify()).
@@ -1150,6 +1160,8 @@ void vcmtpRecvv3::retxHandler()
              * if associated bitmap exists, remove the bitmap. Also avoid
              * duplicated notification if the product's bitmap has
              * already been removed.
+             * Short-circuit evaluation guarantees the block map will not
+             * be removed if it is complete.
              */
             if (!pBlockMNG->isComplete(header.prodindex) &&
                 pBlockMNG->rmProd(header.prodindex)) {
@@ -1167,19 +1179,29 @@ void vcmtpRecvv3::retxHandler()
                     WriteToLog(debugmsg);
                 #endif
 
-                if (notifier) {
+                bool inTracker;
+                {
+                    std::unique_lock<std::mutex> lock(trackermtx);
+                    inTracker = trackermap.count(header.prodindex);
+                }
+                if (notifier && inTracker) {
                     notifier->notify_of_missed_prod(header.prodindex);
                 }
-                else {
+                else if (inTracker) {
                     /**
-                     * Updates the most recently acknowledged product and notifies
-                     * a dummy notification handler (getNotify()).
+                     * Updates the most recently acknowledged product and
+                     * notifies a dummy notification handler (getNotify()).
                      */
                     {
                         std::unique_lock<std::mutex> lock(notifyprodmtx);
                         notifyprodidx = header.prodindex;
                     }
                     notify_cv.notify_one();
+                }
+
+                {
+                    std::unique_lock<std::mutex> lock(trackermtx);
+                    trackermap.erase(header.prodindex);
                 }
             }
         }
