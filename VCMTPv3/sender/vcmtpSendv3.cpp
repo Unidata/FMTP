@@ -102,7 +102,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
 
 
 /**
- * Deconstructs the sender instance and release the initialized resources.
+ * Destructs the sender instance and release the initialized resources.
  *
  * @param[in] none
  */
@@ -116,6 +116,7 @@ vcmtpSendv3::~vcmtpSendv3()
 
 /**
  * Clears the prodset by a given range after each run is finished.
+ * This is for the use of testapp only.
  *
  * @param[in] run    Run number just finished.
  */
@@ -128,6 +129,7 @@ void vcmtpSendv3::clearRuninProdSet(int run)
 /**
  * Blocks until a product is acknowledged by all receivers, returns the product
  * index.
+ * This is for the use of testapp only.
  *
  * @return   Product index of the most recent ACKed product.
  */
@@ -140,7 +142,7 @@ uint32_t vcmtpSendv3::getNotify()
 
 
 /**
- * Return the local port number.
+ * Returns the local port number.
  *
  * @return                   The local port number in host byte-order.
  * @throw std::runtime_error  The port number cannot be obtained.
@@ -153,6 +155,7 @@ unsigned short vcmtpSendv3::getTcpPortNum()
 
 /**
  * Blocks until a product is confirmed to be removed by the time.
+ * This is for the use of testapp only.
  *
  * @return   Product index of the most recent ACKed product.
  */
@@ -269,7 +272,7 @@ uint32_t vcmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
 /**
  * Sets sending rate. The timer thread needs this link speed to calculate
- * the sleep time.
+ * the sleep time. It is an alternative solution to tc rate limiting.
  *
  * @param[in] speed         Given link speed, which supports up to 18000 Pbps,
  *                          speed should be in the form of bits per second.
@@ -285,7 +288,8 @@ void vcmtpSendv3::SetSendRate(uint64_t speed)
 
 
 /**
- * Sets the maximum RTT in the multicast group.
+ * Sets the maximum RTT in the multicast group. The value of max RTT will
+ * be used to adjust the sleep time for the timer.
  *
  * @param[in] rtt     Maximum RTT value in milliseconds.
  */
@@ -310,12 +314,12 @@ void vcmtpSendv3::SetMaxRTT(double rtt)
  */
 void vcmtpSendv3::Start()
 {
-    /** start listening to incoming connections */
+    /* start listening to incoming connections */
     tcpsend->Init();
-    /** initialize UDP connection */
+    /* initialize UDP connection */
     udpsend->Init();
 
-    /** initializes a new SilenceSuppressor instance. */
+    /* initializes a new SilenceSuppressor instance. */
     suppressor = new SilenceSuppressor(PRODNUM * EXPTRUN);
 
     int retval = pthread_create(&timer_t, NULL, &vcmtpSendv3::timerWrapper, this);
@@ -381,7 +385,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
     }
 
     /**
-     * Since the metadata pointer is not guaranteed to be consistent,
+     * Since the metadata pointer is not guaranteed to be persistent,
      * the content of metadata is copied to a dynamically allocated array
      * and saved in senderProdMeta.
      */
@@ -1255,7 +1259,8 @@ void vcmtpSendv3::timerThread()
         const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
          * Only if the product is removed by this remove call, notify the
-         * sending application
+         * sending application. Since timer and retx thread access the
+         * RetxMetadata exclusively, notify_of_eop() will be called only once.
          */
         if (notifier && isRemoved) {
             notifier->notify_of_eop(prodindex);
