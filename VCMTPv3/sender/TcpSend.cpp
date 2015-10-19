@@ -33,6 +33,7 @@
 #include "TcpSend.h"
 
 #include <errno.h>
+#include <exception>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
