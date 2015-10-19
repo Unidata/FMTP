@@ -647,12 +647,20 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 WriteToLog(debugmsg);
             #endif
             char sigStr[33];
-            (void)sprint_signaturet(sigStr, sizeof(sigStr), retxMeta->metadata);
-            udebug("vcmtpSendv3::runRetxThread(): Entered: "
-                    "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
-                    (unsigned long)recvheader.prodindex,
-                    (unsigned long)retxMeta->prodLength,
-                    (unsigned)retxMeta->metaSize, sigStr);
+            if (retxMeta) {
+                (void)sprint_signaturet(sigStr, sizeof(sigStr),
+                        retxMeta->metadata);
+                udebug("vcmtpSendv3::runRetxThread(): Entered: "
+                        "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
+                        (unsigned long)recvheader.prodindex,
+                        (unsigned long)retxMeta->prodLength,
+                        (unsigned)retxMeta->metaSize, sigStr);
+            }
+            else {
+                udebug("vcmtpSendv3::runRetxThread(): Entered: "
+                        "prodindex=%lu, prodSize=%lu, retxMeta=NULL",
+                        (unsigned long)recvheader.prodindex);
+            }
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
