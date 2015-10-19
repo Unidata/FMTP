@@ -115,9 +115,7 @@ public:
     bool rmRetxMetadata(uint32_t prodindex);
 
 private:
-    bool rmRetxMetadataNoLock(uint32_t prodindex);
-
-    /** first: prodindex; second: pointer to metadata of the specified prodindex */
+    /* first: prodindex; second: pointer to metadata of the specified prodindex */
     std::map<uint32_t, RetxMetadata*> indexMetaMap;
     std::mutex                        indexMetaMapLock;
 };

@@ -97,13 +97,30 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
             it->second->unfinReceivers.erase(retxsockfd);
             if (it->second->unfinReceivers.empty()) {
                 if (it->second->inuse) {
-                    it->second->remove = true;
+                    if (it->second->remove) {
+                        /**
+                         * If the remove flag is already marked as true, it implies
+                         * the deletion has been successfully done by another call.
+                         * Thus, the prodRemoved should be set to false and nothing
+                         * else should be done.
+                         */
+                        prodRemoved = false;
+                    }
+                    else {
+                        /**
+                         * If the remove flag is not marked as true, it implies
+                         * the deletion is successfully done by this call. Thus,
+                         * it deserves to set the prodRemoved to true.
+                         */
+                        it->second->remove = true;
+                        prodRemoved = true;
+                    }
                 }
                 else {
                     it->second->~RetxMetadata();
                     indexMetaMap.erase(it);
+                    prodRemoved = true;
                 }
-                prodRemoved = true;
             }
             else {
                 prodRemoved = false;
@@ -172,47 +189,44 @@ bool senderMetadata::releaseMetadata(uint32_t prodindex)
 
 
 /**
- * Remove the RetxMetadata identified by a given prodindex. Actually calling
- * the non-lock remove function and put a mutex lock on the map.
+ * Remove the RetxMetadata identified by a given product index. It returns
+ * a boolean status value to indicate whether the remove is successful or not.
+ * If successful, it's a true, otherwise it's a false.
  *
  * @param[in] prodindex         product index of the requested product
  * @return    True if removal is successful, otherwise false.
  */
 bool senderMetadata::rmRetxMetadata(uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(indexMetaMapLock);
-    bool rmSuccess = rmRetxMetadataNoLock(prodindex);
-    return rmSuccess;
-}
-
-
-/**
- * Remove the RetxMetadata identified by a given product index. This function
- * doesn't have any mutex locks to protect. The caller needs to do all the
- * protection. It returns a boolean status value to indicate whether the remove
- * is successful or not. If successful, it's a true, otherwise it's a false.
- *
- * @param[in] prodindex         product index of the requested product
- * @return    True if removal is successful, otherwise false.
- */
-bool senderMetadata::rmRetxMetadataNoLock(uint32_t prodindex)
-{
     bool rmSuccess;
     std::map<uint32_t, RetxMetadata*>::iterator it;
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
-        /**
-         * The deletion could either be an immediate one or a delayed one.
-         * Either case the removal can be considered successful as long as
-         * next call guarantees to delete it when it sees the remove flag.
-         */
         if (it->second->inuse) {
-            it->second->remove = true;
+            if (it->second->remove) {
+                /**
+                 * If the remove flag is already marked as true, it implies
+                 * the deletion has been successfully done by another call.
+                 * Thus, the rmSuccess should be set to false and nothing
+                 * else should be done.
+                 */
+                rmSuccess = false;
+            }
+            else {
+                /**
+                 * If the remove flag is not marked as true, it implies
+                 * the deletion is successfully done by this call. Thus,
+                 * it deserves to set the rmSuccess to true.
+                 */
+                it->second->remove = true;
+                rmSuccess = true;
+            }
         }
         else {
             it->second->~RetxMetadata();
             indexMetaMap.erase(it);
+            rmSuccess = true;
         }
-        rmSuccess = true;
     }
     else {
         rmSuccess = false;
