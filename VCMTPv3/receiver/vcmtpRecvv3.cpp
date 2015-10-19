@@ -936,6 +936,7 @@ void vcmtpRecvv3::retxHandler()
          */
         if (nbytes == 0) {
             throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                    "Error reading VCMTP header: "
                     "EOF read from the retransmission TCP socket.");
         }
         else {
@@ -949,7 +950,10 @@ void vcmtpRecvv3::retxHandler()
             (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
             if (nbytes == 0) {
-                Stop();
+                //Stop();
+                throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                        "Error reading VCMTP_RETX_BOP: "
+                        "EOF read from the retransmission TCP socket.");
             }
             else {
                 retxBOPHandler(header, paytmp);
@@ -1054,9 +1058,14 @@ void vcmtpRecvv3::retxHandler()
                  * drop the payload since there is no location allocated
                  * in the product queue.
                  */
-                tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                nbytes = tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
+                if (nbytes == 0) {
+                    throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                            "Error reading VCMTP_RETX_DATA (prodsize <= 0): "
+                            "EOF read from the retransmission TCP socket.");
+                }
 
                 /*
                  * The TrackerMap will only be erased when the associated
@@ -1071,18 +1080,29 @@ void vcmtpRecvv3::retxHandler()
             if(prodptr) {
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
                                              &ignoredState);
-                tcprecv->recvData(NULL, 0, (char*)prodptr + header.seqnum,
+                nbytes = tcprecv->recvData(NULL, 0, (char*)prodptr +
+                                           header.seqnum,
                                   header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
+                if (nbytes == 0) {
+                    throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                            "Error reading VCMTP_RETX_DATA (with prodptr): "
+                            "EOF read from the retransmission TCP socket.");
+                }
             }
             else {
                 /** dump the payload since there is no product queue */
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
                                              &ignoredState);
-                tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                nbytes = tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
+                if (nbytes == 0) {
+                    throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                            "Error reading VCMTP_RETX_DATA (without prodptr): "
+                            "EOF read from the retransmission TCP socket.");
+                }
             }
 
             uint32_t iBlock = header.seqnum/VCMTP_DATA_LEN;
