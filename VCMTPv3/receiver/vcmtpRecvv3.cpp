@@ -928,14 +928,15 @@ void vcmtpRecvv3::retxHandler()
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
         /*
          * recvData returning 0 indicates an unexpected socket close, thus
-         * VCMTP receiver should stop right away and return.
+         * VCMTP receiver should stop right away and throw an exception.
          * Since TcpRecv::recvData() either returns 0 or VCMTP_HEADER_LEN here,
          * decodeHeader() should only be called if nbytes is not 0. Besides,
          * decodeHeader() itself does not do any header size check, because
          * nbytes should always equal VCMTP_HEADER_LEN when successful.
          */
         if (nbytes == 0) {
-            Stop();
+            throw std::runtime_error("vcmtpRecvv3::retxHandler() "
+                    "EOF read from the retransmission TCP socket.");
         }
         else {
             /* TcpRecv::recvData() will return requested number of bytes */

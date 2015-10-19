@@ -239,8 +239,14 @@ void TcpSend::Init()
                     + std::to_string(static_cast<unsigned int>(tcpPort)));
         }
     }
-    catch (std::exception& e) {
+    catch (std::runtime_error& e) {
         close(sockfd);
+        /**
+         * Let the sender make some noise instead of quietly sending a FIN
+         * to the receiver. The exception caught in TcpSend will bubble up
+         * and eventually being logged in the LDM log file.
+         */
+        std::rethrow_exception(e);
     }
     /* listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
@@ -264,6 +270,7 @@ int TcpSend::parseHeader(int retxsockfd, VcmtpHeader* recvheader)
     char recvbuf[VCMTP_HEADER_LEN];
     recvall(retxsockfd, recvbuf, sizeof(recvbuf));
 
+    // TODO: re-write using sizeof()
     memcpy(&recvheader->prodindex,  recvbuf,    4);
     memcpy(&recvheader->seqnum,     recvbuf+4,  4);
     memcpy(&recvheader->payloadlen, recvbuf+8,  2);
