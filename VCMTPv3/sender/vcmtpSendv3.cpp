@@ -659,7 +659,8 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
             else {
                 udebug("vcmtpSendv3::runRetxThread(): Entered: "
                         "prodindex=%lu, prodSize=%lu, retxMeta=NULL",
-                        (unsigned long)recvheader.prodindex);
+                        (unsigned long)recvheader.prodindex,
+                        (unsigned long)retxMeta->prodLength);
             }
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
