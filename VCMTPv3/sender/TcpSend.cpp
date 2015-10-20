@@ -247,7 +247,7 @@ void TcpSend::Init()
          * to the receiver. The exception caught in TcpSend will bubble up
          * and eventually being logged in the LDM log file.
          */
-        std::rethrow_exception(e);
+        std::rethrow_exception(std::current_exception());
     }
     /* listen() returns right away, it's non-blocking */
     listen(sockfd, MAX_CONNECTION);
