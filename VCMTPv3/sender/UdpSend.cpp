@@ -140,6 +140,9 @@ void UdpSend::Init()
  * @param[in] *data         a constant void type pointer that points to where
  *                          the piece of memory data to be sent lies.
  * @param[in] datalen       length of that piece of memory data.
+ *
+ * @throws    std::runtime_error  if an error occurs when calling sendmsg().
+ * @throws    std::runtime_error  if bytes sent not equal to expectation.
  */
 ssize_t UdpSend::SendData(void* header, size_t headerLen, void* data,
                           size_t dataLen)
@@ -160,7 +163,16 @@ ssize_t UdpSend::SendData(void* header, size_t headerLen, void* data,
     msg.msg_controllen = 0;
     msg.msg_flags      = 0;
 
-    int ret = sendmsg(sock_fd, &msg, 0);
+    ssize_t ret = sendmsg(sock_fd, &msg, 0);
+    if (ret == -1) {
+        throw std::runtime_error(
+                "UdpSend::SendData() error occurred when calling sendmsg()");
+    }
+    else if (ret != (headerLen + dataLen)) {
+        throw std::runtime_error(
+                "UdpSend::SendData() bytes sent on wire not equal "
+                "to expectation.");
+    }
     return ret;
 }
 
@@ -171,18 +183,22 @@ ssize_t UdpSend::SendData(void* header, size_t headerLen, void* data,
  * @param[in] *buff              a constant void type pointer that points to
  *                               where the piece of memory data to be sent lies.
  * @param[in] len                length of that piece of memory data.
- * @throws    std::runtime_error  if an error occurs writing to the the UDP
- *                               socket.
+ * @throws    std::runtime_error  if an error occurs when calling sendto().
+ * @throws    std::runtime_error  if bytes sent not equal to expectation.
  */
 ssize_t UdpSend::SendTo(const void* buff, size_t len)
 {
-    const ssize_t nbytes = sendto(sock_fd, buff, len, 0,
-                                  (struct sockaddr *)&recv_addr,
-                                  sizeof(recv_addr));
+    ssize_t nbytes = sendto(sock_fd, buff, len, 0,
+                            (struct sockaddr *)&recv_addr, sizeof(recv_addr));
 
     if (nbytes == -1) {
         throw std::runtime_error(
-                "UdpSend::SendTo() sendto() couldn't write to UDP socket");
+                "UdpSend::SendTo() error occurred when calling sendto()");
+    }
+    else if (nbytes != len) {
+        throw std::runtime_error(
+                "UdpSend::SendTo() bytes sent on wire not equal "
+                "to expectation.");
     }
 
     return nbytes;
@@ -197,7 +213,7 @@ ssize_t UdpSend::SendTo(const void* buff, size_t len)
  * @throws    std::runtime_error  if an error occurs writing to the the UDP
  *                               socket.
  */
-int UdpSend::SendTo(struct iovec* const iovec, const int nvec)
+ssize_t UdpSend::SendTo(struct iovec* const iovec, const int nvec)
 {
     struct msghdr msg;
 
@@ -209,11 +225,22 @@ int UdpSend::SendTo(struct iovec* const iovec, const int nvec)
     msg.msg_controllen = 0;
     msg.msg_flags      = 0;
 
-    int nbytes = sendmsg(sock_fd, &msg, 0);
+    ssize_t nbytes = sendmsg(sock_fd, &msg, 0);
+
+    /* computes total expected bytes to be sent. */
+    size_t expbytes = 0;
+    for(int i = 0; i < nvec; ++i) {
+        expbytes += iovec[i].iov_len;
+    }
 
     if (nbytes == -1) {
         throw std::runtime_error(
-                "UdpSend::SendTo() sendmsg() couldn't write to UDP socket");
+                "UdpSend::SendTo() error occurred when calling sendmsg()");
+    }
+    else if (nbytes != expbytes) {
+        throw std::runtime_error(
+                "UdpSend::SendTo() nbytes sent on wire not equal "
+                "to expbytes.");
     }
 
     return nbytes;

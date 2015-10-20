@@ -65,7 +65,7 @@ public:
      * @param[in] iovec  First I/O vector.
      * @param[in] nvec   Number of I/O vectors.
      */
-    int SendTo(struct iovec* const iovec, const int nvec);
+    ssize_t SendTo(struct iovec* const iovec, const int nvec);
 
 private:
     int                   sock_fd;
