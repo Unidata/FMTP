@@ -106,7 +106,7 @@ public:
     uint32_t       sendProduct(void* data, uint32_t dataSize);
     uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
                                uint16_t metaSize);
-    //void           SetSendRate(uint64_t speed);
+    void           SetSendRate(uint64_t speed);
     /** RTT passed in milliseconds */
     void           SetMaxRTT(double rtt);
     /** Sender side start point, the first function to be called */
@@ -251,7 +251,7 @@ private:
     std::mutex          exitMutex;
     std::exception_ptr  except;
     bool                exceptIsSet;
-    //RateShaper          rateshaper;
+    RateShaper          rateshaper;
     std::mutex          notifyprodmtx;
     std::mutex          notifycvmtx;
     uint32_t            notifyprodidx;

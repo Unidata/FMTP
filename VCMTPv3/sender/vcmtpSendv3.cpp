@@ -277,14 +277,12 @@ uint32_t vcmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
  * @param[in] speed         Given link speed, which supports up to 18000 Pbps,
  *                          speed should be in the form of bits per second.
  */
-/*
 void vcmtpSendv3::SetSendRate(uint64_t speed)
 {
     rateshaper.SetRate(speed);
     std::unique_lock<std::mutex> lock(linkmtx);
     linkspeed = speed;
 }
-*/
 
 
 /**
@@ -1065,21 +1063,17 @@ void vcmtpSendv3::sendData(void* data, uint32_t dataSize)
          * linkspeed will be a non-zero value. By checking linkspeed, app
          * can decide whether to do rate shaping.
          */
-        /*
         if (linkspeed) {
             rateshaper.CalPeriod(sizeof(header) + payloadlen);
         }
-        */
         if(udpsend->SendData(&header, sizeof(header), data,
                              (size_t)payloadlen) < 0) {
             throw std::runtime_error(
                     "vcmtpSendv3::sendProduct::SendData() error");
         }
-        /*
         if (linkspeed) {
             rateshaper.Sleep();
         }
-        */
 
         #ifdef MODBASE
             uint32_t tmpidx = prodIndex % MODBASE;
