@@ -249,7 +249,6 @@ private:
     /** maximum RTT in milliseconds */
     double              maxrtt;
     std::mutex          exitMutex;
-    //std::exception      except;
     std::exception_ptr  except;
     bool                exceptIsSet;
     //RateShaper          rateshaper;
