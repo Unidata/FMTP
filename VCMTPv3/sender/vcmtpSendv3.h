@@ -41,7 +41,7 @@
 #include <set>
 
 #include "ProdIndexDelayQueue.h"
-//#include "../RateShaper/RateShaper.h"
+#include "../RateShaper/RateShaper.h"
 #include "RetxThreads.h"
 #include "SendAppNotifier.h"
 #include "senderMetadata.h"
