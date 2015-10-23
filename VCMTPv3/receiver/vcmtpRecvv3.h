@@ -193,6 +193,16 @@ private:
                                const uint32_t mostRecent);
     /**
      * Requests BOP packets for data-products that come after the current
+     * data-product up to and excluding a given data-product.
+     *
+     * @param[in] prodindex  Index of the last data-product whose BOP packet was
+     *                       missed.
+     * @return               1 means everything is okay. 2 means out-of-sequence
+     *                       packet is received.
+     */
+    int requestMissingBopsExclusive(const uint32_t prodindex);
+    /**
+     * Requests BOP packets for data-products that come after the current
      * data-product up to and including a given data-product.
      *
      * @param[in] prodindex  Index of the last data-product whose BOP packet was
@@ -200,7 +210,7 @@ private:
      * @return               1 means everything is okay. 2 means out-of-sequence
      *                       packet is received.
      */
-    int requestMissingBops(const uint32_t prodindex);
+    int requestMissingBopsInclusive(const uint32_t prodindex);
     /**
      * Handles a multicast VCMTP data-packet given the associated peeked-at and
      * decoded VCMTP header. Directly store and check for missing blocks.
