@@ -24,6 +24,7 @@
 
 #include "RateShaper.h"
 
+#include <stdexcept>
 #include <thread>
 
 
@@ -44,7 +45,7 @@ RateShaper::RateShaper()
  */
 RateShaper::~RateShaper()
 {
-    // TODO Auto-generated destructor stub
+    // Auto-generated destructor stub
 }
 
 
@@ -52,11 +53,23 @@ RateShaper::~RateShaper()
  * Sets the sending rate to a given value.
  *
  * @param[in] rate_bps Sending rate in bits per second.
- * @return    None
+ *
+ * @throw std::runtime_error  If reads negative input rate.
+ * @throw std::runtime_error  If input rate less than 1Kbps.
  */
-void RateShaper::SetRate(double rate_bps)
+void RateShaper::SetRate(unsigned int rate_bps)
 {
-    rate = rate_bps;
+    if (rate_bps < 0) {
+        throw std::runtime_error(
+                "RateShaper::SetRate() input rate is negative.");
+    }
+    else if (rate_bps < 1000) {
+        throw std::runtime_error(
+                "RateShaper::SetRate() rate possibly in wrong metric.");
+    }
+    else {
+        rate = rate_bps;
+    }
 }
 
 
@@ -64,13 +77,20 @@ void RateShaper::SetRate(double rate_bps)
  * Calculates the time period based the pre-set rate, and starts to time.
  *
  * @param[in] size     Size of the packet to be sent.
- * @return    None
+ *
+ * @throw std::runtime_error  If input size is not positive.
  */
-void RateShaper::CalPeriod(unsigned int size)
+void RateShaper::CalcPeriod(unsigned int size)
 {
-    txsize = size;
-    /* compute time period in seconds */
-    period = (size * 8) / rate;
+    if (size <= 0) {
+        throw std::runtime_error(
+                "RateShaper::CalcPeriod() input size is not positive.");
+    }
+    else {
+        txsize = size;
+    }
+    /* compute time period (t_s) in seconds */
+    period = ((double)size * 8) / (double)rate;
     start_time  = HRC::now();
 }
 
@@ -78,15 +98,22 @@ void RateShaper::CalPeriod(unsigned int size)
 /**
  * Stops the clock, calculates the transmission time, and sleeps for the
  * rest of the time period.
- *
- * @param[in] None
- * @return    None
+ * Note that t_nic = s / r_nic and t_s = s / r_s, where r_nic is the NIC rate
+ * and r_s is the specified rate. If r_nic < r_s, there is t_nic < t_s. Then
+ * to limit the rate, the function just needs to sleep for (t_s - t_nic).
+ * Else, for r_nic < r_s, the application is asking for more than NIC can
+ * provide. In this case, nothing should be done, meaning letting NIC send at
+ * full speed is enough.
  */
 void RateShaper::Sleep()
 {
     end_time = HRC::now();
-    std::chrono::duration<double> txtime = end_time - start_time;
+    std::chrono::duration<double> txtime =
+        std::chrono::duration_cast<std::chrono::duration<double>>
+        (end_time - start_time);
     std::chrono::duration<double> p(period);
-    /* sleep for the computed time */
-    std::this_thread::sleep_for(p - txtime);
+    /* p is t_s, txtime is t_nic */
+    if (p > txtime) {
+        std::this_thread::sleep_for(p - txtime);
+    }
 }

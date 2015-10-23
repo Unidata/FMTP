@@ -36,16 +36,16 @@ public:
     RateShaper();
     ~RateShaper();
     /* sets the expected rate in bits/sec */
-    void SetRate(double rate_bps);
+    void SetRate(unsigned int rate_bps);
     /* calculate the time period based on the rate */
-    void CalPeriod(unsigned int size);
+    void CalcPeriod(unsigned int size);
     /* sleep for an amount of time based the calculated value */
     void Sleep();
 
 private:
     double period;
     double sleeptime;
-    double rate;
+    unsigned int rate;
     /* transmission packet size */
     unsigned int txsize;
     /* transmission start time */
