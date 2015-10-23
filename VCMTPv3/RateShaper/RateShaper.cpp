@@ -57,7 +57,7 @@ RateShaper::~RateShaper()
  * @throw std::runtime_error  If reads negative input rate.
  * @throw std::runtime_error  If input rate less than 1Kbps.
  */
-void RateShaper::SetRate(unsigned int rate_bps)
+void RateShaper::SetRate(uint64_t rate_bps)
 {
     if (rate_bps < 0) {
         throw std::runtime_error(
@@ -80,7 +80,7 @@ void RateShaper::SetRate(unsigned int rate_bps)
  *
  * @throw std::runtime_error  If input size is not positive.
  */
-void RateShaper::CalcPeriod(unsigned int size)
+void RateShaper::CalcPeriod(uint64_t size)
 {
     if (size <= 0) {
         throw std::runtime_error(
@@ -90,7 +90,7 @@ void RateShaper::CalcPeriod(unsigned int size)
         txsize = size;
     }
     /* compute time period (t_s) in seconds */
-    period = ((double)size * 8) / (double)rate;
+    period = (static_cast<double>(size) * 8) / static_cast<double>(rate);
     start_time  = HRC::now();
 }
 
