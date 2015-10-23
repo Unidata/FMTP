@@ -27,6 +27,7 @@
 
 #include <time.h>
 #include <chrono>
+#include <cstdint>
 
 typedef std::chrono::high_resolution_clock HRC;
 
@@ -36,18 +37,19 @@ public:
     RateShaper();
     ~RateShaper();
     /* sets the expected rate in bits/sec */
-    void SetRate(double rate_bps);
+    void SetRate(uint64_t rate_bps);
     /* calculate the time period based on the rate */
-    void CalPeriod(unsigned int size);
+    void CalcPeriod(uint64_t size);
     /* sleep for an amount of time based the calculated value */
     void Sleep();
 
 private:
     double period;
     double sleeptime;
-    double rate;
+    /* uint32_t only supports up to 4Gbps, should use uint64_t */
+    uint64_t rate;
     /* transmission packet size */
-    unsigned int txsize;
+    uint64_t txsize;
     /* transmission start time */
     HRC::time_point start_time;
     /* transmission end time */

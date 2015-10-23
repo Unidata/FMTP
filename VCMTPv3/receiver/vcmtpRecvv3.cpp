@@ -297,11 +297,20 @@ void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
                 "than 0 bytes returned.");
     }
 
-    /* records the most recent product index */
-    prodidx_mcast = header.prodindex;
-
     checkPayloadLen(header, nbytes);
     BOPHandler(header, pktBuf + VCMTP_HEADER_LEN);
+
+    /**
+     * detects completely missing products by checking the consistency
+     * between last logged prodindex and currently received prodindex.
+     */
+    if (header.prodindex > (prodidx_mcast + 1)) {
+        int state = requestMissingBops(header.prodindex);
+        if (state == 1) {
+            /* records the most recent product index */
+            prodidx_mcast = header.prodindex;
+        }
+    }
 }
 
 

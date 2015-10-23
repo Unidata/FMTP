@@ -1064,7 +1064,7 @@ void vcmtpSendv3::sendData(void* data, uint32_t dataSize)
          * can decide whether to do rate shaping.
          */
         if (linkspeed) {
-            rateshaper.CalPeriod(sizeof(header) + payloadlen);
+            rateshaper.CalcPeriod(sizeof(header) + payloadlen);
         }
         if(udpsend->SendData(&header, sizeof(header), data,
                              (size_t)payloadlen) < 0) {
