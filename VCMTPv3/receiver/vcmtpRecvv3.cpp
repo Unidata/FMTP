@@ -1176,7 +1176,7 @@ void vcmtpRecvv3::retxHandler()
             retxEOPHandler(header);
         }
         else if (header.flags == VCMTP_RETX_REJ) {
-            (void)rmMisBOPinSet(header.prodindex);
+            const bool hadBop = rmMisBOPinSet(header.prodindex);
             /*
              * if associated bitmap exists, remove the bitmap. Also avoid
              * duplicated notification if the product's bitmap has
@@ -1184,8 +1184,8 @@ void vcmtpRecvv3::retxHandler()
              * Short-circuit evaluation guarantees the block map will not
              * be removed if it is complete.
              */
-            if (!pBlockMNG->isComplete(header.prodindex) &&
-                pBlockMNG->rmProd(header.prodindex)) {
+            if ((!pBlockMNG->isComplete(header.prodindex) &&
+                pBlockMNG->rmProd(header.prodindex)) || hadBop) {
                 #ifdef MODBASE
                     uint32_t tmpidx = header.prodindex % MODBASE;
                 #else
@@ -1205,7 +1205,7 @@ void vcmtpRecvv3::retxHandler()
                     std::unique_lock<std::mutex> lock(trackermtx);
                     inTracker = trackermap.count(header.prodindex);
                 }
-                if (notifier && inTracker) {
+                if (notifier) {
                     notifier->notify_of_missed_prod(header.prodindex);
                 }
                 else if (inTracker) {
