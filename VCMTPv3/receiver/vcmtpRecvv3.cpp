@@ -304,13 +304,7 @@ void vcmtpRecvv3::mcastBOPHandler(const VcmtpHeader& header)
      * detects completely missing products by checking the consistency
      * between last logged prodindex and currently received prodindex.
      */
-    if (header.prodindex > (prodidx_mcast + 1)) {
-        int state = requestMissingBops(header.prodindex);
-        if (state == 1) {
-            /* records the most recent product index */
-            prodidx_mcast = header.prodindex;
-        }
-    }
+    requestMissingBops(header.prodindex);
 }
 
 
@@ -832,7 +826,8 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         EOPHandler(header);
     }
     else {
-        int state = requestMissingBops(header.prodindex);
+        (void)requestMissingBops(header.prodindex);
+#if 0
         /**
          * prodidx_mcast is only updated if no corresponding BOP is found.
          * Because if we assume packets arriving in sequence, then the index
@@ -849,6 +844,7 @@ void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
         if (state == 1) {
             prodidx_mcast = header.prodindex;
         }
+#endif
     }
 }
 
@@ -1456,17 +1452,17 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
  * data-product up to and including a given data-product but only if the BOP
  * hasn't already been requested (i.e., each missed BOP is requested only once).
  *
- * @param[in] prodindex  Index of the last data-product whose BOP packet was
- *                       missed.
+ * @param[in] prodindex  Index of the data-product of the last packet to be
+ *                       received.
  * @return               1 means everything is okay. 2 means out-of-sequence
  *                       packet is received.
  */
 int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
 {
-    uint32_t lastprodidx = 0xFFFFFFFF;
     /* fetches the most recent product index */
-    lastprodidx = prodidx_mcast;
+    uint32_t lastprodidx = prodidx_mcast;
 
+#if 0
     /**
      * When out-of-sequence packet is detected, there could be several possible
      * cases. (1) DATA1-DATA2-EOP1. Here EOP1 goes out of sequence somehow. If
@@ -1490,12 +1486,23 @@ int vcmtpRecvv3::requestMissingBops(const uint32_t prodindex)
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
         #endif
+        udebug("vcmtpRecvv3::requestMissingBops(): Returning 2: prodindex=%lu, "
+                "lastprodidx=%lu", (unsigned long)prodindex,
+                (unsigned long)lastprodidx);
         return 2;
     }
+#endif
 
-    for (uint32_t i = (lastprodidx + 1); i != (prodindex + 1); i++) {
-        if (addUnrqBOPinSet(i)) {
-            pushMissingBopReq(i);
+    if (prodindex - lastprodidx > 0)
+        prodidx_mcast = prodindex;
+    if (prodindex - lastprodidx > 1) {
+        udebug("vcmtpRecvv3::requestMissingBops(): Requesting from "
+                "%lu through %lu, inclusive", (unsigned long)lastprodidx+1,
+                    (unsigned long)prodindex-1);
+        for (uint32_t i = (lastprodidx + 1); i != prodindex; i++) {
+            if (addUnrqBOPinSet(i)) {
+                pushMissingBopReq(i);
+            }
         }
     }
 
@@ -1558,13 +1565,15 @@ void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
     else {
         char buf[1];
         (void)recv(mcastSock, buf, 1, 0); // skip unusable datagram
-        state = requestMissingBops(header.prodindex);
+        (void)requestMissingBops(header.prodindex);
     }
 
+#if 0
     /* records the most recent product index */
     if (state == 1) {
         prodidx_mcast = header.prodindex;
     }
+#endif
 }
 
 
