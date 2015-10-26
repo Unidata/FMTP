@@ -192,6 +192,13 @@ private:
     void requestAnyMissingData(const uint32_t prodindex,
                                const uint32_t mostRecent);
     /**
+     * Requests BOP packets for a prodindex interval.
+     *
+     * @param[in] openleft   Open left end of the prodindex interval.
+     * @param[in] openright  Open right end of the prodindex interval.
+     */
+    void requestMissingBops(const uint32_t openleft, const uint32_t openright);
+    /**
      * Requests BOP packets for data-products that come after the current
      * data-product up to and excluding a given data-product.
      *

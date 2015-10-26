@@ -96,7 +96,8 @@ vcmtpRecvv3::vcmtpRecvv3(
     retx_t(),
     mcast_t(),
     timer_t(),
-    linkspeed(0),
+    //linkspeed(0),
+    linkspeed(1000000000),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
     mcastHandlerCanceled(ATOMIC_FLAG_INIT),
     measure(new Measure())
@@ -790,8 +791,7 @@ void vcmtpRecvv3::mcastHandler()
 void vcmtpRecvv3::mcastEOPHandler(const VcmtpHeader& header)
 {
     char          pktBuf[VCMTP_HEADER_LEN];
-    uint32_t      lastprodidx = 0xFFFFFFFF;
-    /** read the EOP packet out in order to remove it from buffer */
+    /* read the EOP packet out in order to remove it from buffer */
     const ssize_t nbytes = recv(mcastSock, pktBuf, VCMTP_HEADER_LEN, 0);
 
     if (nbytes < 0) {
@@ -1448,6 +1448,25 @@ void vcmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
 
 
 /**
+ * Requests BOP packets for a prodindex interval.
+ *
+ * @param[in] openleft   Open left end of the prodindex interval.
+ * @param[in] openright  Open right end of the prodindex interval.
+ */
+void vcmtpRecvv3::requestMissingBops(const uint32_t openleft,
+                                     const uint32_t openright)
+{
+    if (openright - openleft > 1) {
+        for (uint32_t i = (openleft + 1); i != openright; i++) {
+            if (addUnrqBOPinSet(i)) {
+                pushMissingBopReq(i);
+            }
+        }
+    }
+}
+
+
+/**
  * Requests BOP packets for data-products that come after the current
  * data-product up to and excluding a given data-product but only if the BOP
  * hasn't already been requested (i.e., each missed BOP is requested only once).
@@ -1461,51 +1480,15 @@ int vcmtpRecvv3::requestMissingBopsExclusive(const uint32_t prodindex)
 {
     /* fetches the most recent product index */
     uint32_t lastprodidx = prodidx_mcast;
-
-#if 0
-    /**
-     * When out-of-sequence packet is detected, there could be several possible
-     * cases. (1) DATA1-DATA2-EOP1. Here EOP1 goes out of sequence somehow. If
-     * BOP1 is received, then it does not matter since mcastEOPHandler() will
-     * handle it. But if BOP1 is also missing, then both 1 and 2 do not have
-     * BOPs. This causes requestMissingBops() to be called but with lastprodidx
-     * already updated to 2. Because lastprodidx is only updated by mcastHandler
-     * thread, its value should increase in sequence, identical to the order
-     * that mcastHandler is seeing packets. Also, lastprodidx is only updated
-     * after corresponding operation. Then this prodindex < lastprodidx case
-     * implies whatever needs to be done is done. Thus, upon detecting this
-     * case, it directly returns but not to throw any exception in order to
-     * the thread running.
-     */
-    if (prodindex < lastprodidx) {
-        #ifdef DEBUG2
-            std::string debugmsg = "[ERR PKT SEQ] vcmtpRecvv3::"
-                "requestMissingBops() out of sequence packet received, current"
-                " lastprodidx = " + std::to_string(lastprodidx) +
-                ", passed in prodindex = " + std::to_string(prodindex);
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-        #endif
-        udebug("vcmtpRecvv3::requestMissingBops(): Returning 2: prodindex=%lu, "
-                "lastprodidx=%lu", (unsigned long)prodindex,
+    udebug("vcmtpRecvv3::requestMissingBopsExclusive(): "
+            "prodindex = %lu, lastprodidx = %lu", (unsigned long)prodindex,
                 (unsigned long)lastprodidx);
-        return 2;
-    }
-#endif
 
     if (prodindex - lastprodidx > 0) {
         prodidx_mcast = prodindex;
     }
-    if (prodindex - lastprodidx > 1) {
-        udebug("vcmtpRecvv3::requestMissingBops(): Requesting from "
-                "%lu through %lu, inclusive", (unsigned long)lastprodidx+1,
-                    (unsigned long)prodindex-1);
-        for (uint32_t i = (lastprodidx + 1); i != prodindex; i++) {
-            if (addUnrqBOPinSet(i)) {
-                pushMissingBopReq(i);
-            }
-        }
-    }
+
+    requestMissingBops(lastprodidx, prodindex);
 
     return 1;
 }
@@ -1525,51 +1508,15 @@ int vcmtpRecvv3::requestMissingBopsInclusive(const uint32_t prodindex)
 {
     /* fetches the most recent product index */
     uint32_t lastprodidx = prodidx_mcast;
-
-#if 0
-    /**
-     * When out-of-sequence packet is detected, there could be several possible
-     * cases. (1) DATA1-DATA2-EOP1. Here EOP1 goes out of sequence somehow. If
-     * BOP1 is received, then it does not matter since mcastEOPHandler() will
-     * handle it. But if BOP1 is also missing, then both 1 and 2 do not have
-     * BOPs. This causes requestMissingBops() to be called but with lastprodidx
-     * already updated to 2. Because lastprodidx is only updated by mcastHandler
-     * thread, its value should increase in sequence, identical to the order
-     * that mcastHandler is seeing packets. Also, lastprodidx is only updated
-     * after corresponding operation. Then this prodindex < lastprodidx case
-     * implies whatever needs to be done is done. Thus, upon detecting this
-     * case, it directly returns but not to throw any exception in order to
-     * the thread running.
-     */
-    if (prodindex < lastprodidx) {
-        #ifdef DEBUG2
-            std::string debugmsg = "[ERR PKT SEQ] vcmtpRecvv3::"
-                "requestMissingBops() out of sequence packet received, current"
-                " lastprodidx = " + std::to_string(lastprodidx) +
-                ", passed in prodindex = " + std::to_string(prodindex);
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-        #endif
-        udebug("vcmtpRecvv3::requestMissingBops(): Returning 2: prodindex=%lu, "
-                "lastprodidx=%lu", (unsigned long)prodindex,
+    udebug("vcmtpRecvv3::requestMissingBopsInclusive(): "
+            "prodindex = %lu, lastprodidx = %lu", (unsigned long)prodindex,
                 (unsigned long)lastprodidx);
-        return 2;
-    }
-#endif
 
     if (prodindex - lastprodidx > 0) {
         prodidx_mcast = prodindex;
     }
-    if (prodindex - lastprodidx > 1) {
-        udebug("vcmtpRecvv3::requestMissingBops(): Requesting from "
-                "%lu through %lu, inclusive", (unsigned long)lastprodidx+1,
-                    (unsigned long)prodindex-1);
-        for (uint32_t i = (lastprodidx + 1); i != (prodindex + 1); i++) {
-            if (addUnrqBOPinSet(i)) {
-                pushMissingBopReq(i);
-            }
-        }
-    }
+
+    requestMissingBops(lastprodidx, prodindex+1);
 
     return 1;
 }
@@ -1587,7 +1534,7 @@ int vcmtpRecvv3::requestMissingBopsInclusive(const uint32_t prodindex)
  */
 void vcmtpRecvv3::recvMemData(const VcmtpHeader& header)
 {
-    int state = 0;
+    //int state = 0;
     uint32_t prodsize = 0;
     {
         std::unique_lock<std::mutex> lock(trackermtx);
