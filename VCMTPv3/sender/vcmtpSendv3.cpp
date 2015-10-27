@@ -415,6 +415,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
         senderProdMeta->unfinReceivers.insert(*it);
 
     /* Add current RetxMetadata into sendMetadata::indexMetaMap */
+    /*
     char sigStr[33];
     (void)sprint_signaturet(sigStr, sizeof(sigStr), senderProdMeta->metadata);
     udebug("vcmtpSendv3::addRetxMetadata(): Adding entry: "
@@ -422,6 +423,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
             (unsigned long)senderProdMeta->prodindex,
             (unsigned long)senderProdMeta->prodLength,
             (unsigned)senderProdMeta->metaSize, sigStr);
+    */
     sendMeta->addRetxMetadata(senderProdMeta);
 
     /* Update multicast start time in RetxMetadata */
@@ -644,6 +646,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
             #endif
+            /*
             char sigStr[33];
             if (retxMeta) {
                 (void)sprint_signaturet(sigStr, sizeof(sigStr),
@@ -659,6 +662,7 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                         "prodindex=%lu, retxMeta=NULL",
                         (unsigned long)recvheader.prodindex);
             }
+            */
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
@@ -904,9 +908,11 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     char sigStr[33];
     (void)sprint_signaturet(sigStr, sizeof(sigStr), metadata);
 #if 1
+    /*
     udebug("vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=%lu, "
             "prodSize=%lu, metaSize=%u, sig=%s", (unsigned long)prodIndex,
             (unsigned long)prodSize, (unsigned)metaSize, sigStr);
+    */
 #else
     std::cerr << "vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=" <<
             prodIndex << ", prodSize=" << prodSize << ", metaSize=" << metaSize
