@@ -39,9 +39,6 @@
 #include <system_error>
 
 
-extern "C" int sprint_signaturet(char*, size_t, void*);
-extern "C" void udebug(const char* fmt ...);
-
 
 #ifndef NULL
     #define NULL 0
@@ -388,7 +385,7 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
      * and saved in senderProdMeta.
      */
     char* metadata_ptr = new char[metaSize];
-    (void*)memcpy(metadata_ptr, metadata, metaSize);
+    (void)memcpy(metadata_ptr, metadata, metaSize);
 
     /* Update current prodindex in RetxMetadata */
     senderProdMeta->prodindex        = prodIndex;
@@ -415,15 +412,6 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
         senderProdMeta->unfinReceivers.insert(*it);
 
     /* Add current RetxMetadata into sendMetadata::indexMetaMap */
-    /*
-    char sigStr[33];
-    (void)sprint_signaturet(sigStr, sizeof(sigStr), senderProdMeta->metadata);
-    udebug("vcmtpSendv3::addRetxMetadata(): Adding entry: "
-            "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
-            (unsigned long)senderProdMeta->prodindex,
-            (unsigned long)senderProdMeta->prodLength,
-            (unsigned)senderProdMeta->metaSize, sigStr);
-    */
     sendMeta->addRetxMetadata(senderProdMeta);
 
     /* Update multicast start time in RetxMetadata */
@@ -646,23 +634,6 @@ void vcmtpSendv3::RunRetxThread(int retxsockfd)
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
             #endif
-            /*
-            char sigStr[33];
-            if (retxMeta) {
-                (void)sprint_signaturet(sigStr, sizeof(sigStr),
-                        retxMeta->metadata);
-                udebug("vcmtpSendv3::RunRetxThread(): Entered: "
-                        "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
-                        (unsigned long)recvheader.prodindex,
-                        (unsigned long)retxMeta->prodLength,
-                        (unsigned)retxMeta->metaSize, sigStr);
-            }
-            else {
-                udebug("vcmtpSendv3::RunRetxThread(): Entered: "
-                        "prodindex=%lu, retxMeta=NULL",
-                        (unsigned long)recvheader.prodindex);
-            }
-            */
             handleBopReq(&recvheader, retxMeta, retxsockfd);
         }
         else if (recvheader.flags == VCMTP_EOP_REQ) {
@@ -809,16 +780,6 @@ void vcmtpSendv3::retransBOP(
     bopMsg.metasize = htons(retxMeta->metaSize);
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
 
-#if 0
-    char sigStr[33];
-    (void)sprint_signaturet(sigStr, sizeof(sigStr), retxMeta->metadata);
-    udebug("vcmtpRecvv3::retransBOP(): Entered: "
-            "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
-            (unsigned long)recvheader->prodindex,
-            (unsigned long)retxMeta->prodLength,
-            (unsigned)retxMeta->metaSize, sigStr);
-#endif
-
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is corret */
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
                                ntohs(sendheader.payloadlen));
@@ -904,20 +865,6 @@ void vcmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     VcmtpHeader   header;
     BOPMsg        bopMsg;
     struct iovec  ioVec[4];
-
-    char sigStr[33];
-    (void)sprint_signaturet(sigStr, sizeof(sigStr), metadata);
-#if 1
-    /*
-    udebug("vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=%lu, "
-            "prodSize=%lu, metaSize=%u, sig=%s", (unsigned long)prodIndex,
-            (unsigned long)prodSize, (unsigned)metaSize, sigStr);
-    */
-#else
-    std::cerr << "vcmtpSendv3::SendBOPMessage(): Entered: prodIndex=" <<
-            prodIndex << ", prodSize=" << prodSize << ", metaSize=" << metaSize
-            << ", sig=" << sigStr << std::endl;
-#endif
 
     /* Set the VCMTP packet header. */
     header.prodindex  = htonl(prodIndex);

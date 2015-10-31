@@ -30,6 +30,7 @@
 
 #include <errno.h>
 #include <netdb.h>
+#include <string>
 #include <sys/socket.h>
 #include <unistd.h>
 

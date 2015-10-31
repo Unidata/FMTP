@@ -59,11 +59,7 @@ RateShaper::~RateShaper()
  */
 void RateShaper::SetRate(uint64_t rate_bps)
 {
-    if (rate_bps < 0) {
-        throw std::runtime_error(
-                "RateShaper::SetRate() input rate is negative.");
-    }
-    else if (rate_bps < 1000) {
+    if (rate_bps < 1000) {
         throw std::runtime_error(
                 "RateShaper::SetRate() rate possibly in wrong metric.");
     }
