@@ -39,8 +39,6 @@
 #include <iostream>
 #include <stdexcept>
 
-extern "C" void udebug(const char* fmt ...);
-
 
 /**
  * Constructor of TcpRecv.
@@ -158,16 +156,6 @@ void TcpRecv::initSocket()
         throw std::system_error(errno, std::system_category(),
                 "TcpRecv::TcpRecv() error creating socket");
 
-#if 1
-    udebug("TcpRecv::initSocket(): Connecting TCP socket %d to %s:%u",
-            sockfd, inet_ntoa(servAddr.sin_addr),
-            (unsigned)ntohs(servAddr.sin_port));
-#else
-    cout << std::string("TcpRecv::initSocket(): Connecting TCP socket ").
-            append(std::to_string(sockfd)).append(" to ").
-            append(inet_ntoa(servAddr.sin_addr)).append(":").
-            append(std::to_string(ntohs(servAddr.sin_port))).append("\n");
-#endif
     while (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
         if (errno == ECONNREFUSED || errno == ETIMEDOUT ||
                 errno == ECONNRESET || errno == EHOSTUNREACH) {

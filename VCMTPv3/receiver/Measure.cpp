@@ -29,6 +29,8 @@
 
 #include "Measure.h"
 
+#include <string>
+
 
 /**
  * Constructor of the Measure class.

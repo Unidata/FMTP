@@ -49,9 +49,6 @@
 
 #define Frcv 20
 
-extern "C" int sprint_signaturet(char*, size_t, char*);
-extern "C" void udebug(const char* fmt ...);
-
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -389,13 +386,6 @@ void vcmtpRecvv3::BOPHandler(const VcmtpHeader& header,
     }
     if (insertion && !inTracker) {
         if(notifier) {
-            char sigStr[33];
-            (void)sprint_signaturet(sigStr, sizeof(sigStr), BOPmsg.metadata);
-            udebug("vcmtpRecvv3::BOPHandler(): Calling notify_of_bop(): "
-                    "prodindex=%lu, prodSize=%lu, metasize=%u, sig=%s",
-                    (unsigned long)header.prodindex, (unsigned long)BOPmsg.prodsize,
-                    (unsigned)BOPmsg.metasize, sigStr);
-
             notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
                     BOPmsg.metadata, BOPmsg.metasize, &prodptr);
         }
@@ -1480,9 +1470,6 @@ int vcmtpRecvv3::requestMissingBopsExclusive(const uint32_t prodindex)
 {
     /* fetches the most recent product index */
     uint32_t lastprodidx = prodidx_mcast;
-    udebug("vcmtpRecvv3::requestMissingBopsExclusive(): "
-            "prodindex = %lu, lastprodidx = %lu", (unsigned long)prodindex,
-                (unsigned long)lastprodidx);
 
     if (prodindex - lastprodidx > 0) {
         prodidx_mcast = prodindex;
@@ -1508,9 +1495,6 @@ int vcmtpRecvv3::requestMissingBopsInclusive(const uint32_t prodindex)
 {
     /* fetches the most recent product index */
     uint32_t lastprodidx = prodidx_mcast;
-    udebug("vcmtpRecvv3::requestMissingBopsInclusive(): "
-            "prodindex = %lu, lastprodidx = %lu", (unsigned long)prodindex,
-                (unsigned long)lastprodidx);
 
     if (prodindex - lastprodidx > 0) {
         prodidx_mcast = prodindex;
@@ -1639,9 +1623,6 @@ bool vcmtpRecvv3::sendBOPRetxReq(uint32_t prodindex)
     header.seqnum     = 0;
     header.payloadlen = 0;
     header.flags      = htons(VCMTP_BOP_REQ);
-
-    udebug("vcmtpRecvv3::sendBOPRetxReq(): Entered: prodindex=%lu",
-                (unsigned long)prodindex);
 
     return (-1 != tcprecv->sendData(&header, sizeof(VcmtpHeader), NULL, 0));
 }
