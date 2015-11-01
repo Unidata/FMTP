@@ -930,9 +930,12 @@ void vcmtpRecvv3::retxHandler()
          * nbytes should always equal VCMTP_HEADER_LEN when successful.
          */
         if (nbytes == 0) {
+            Stop();
+            /*
             throw std::runtime_error("vcmtpRecvv3::retxHandler() "
                     "Error reading VCMTP header: "
                     "EOF read from the retransmission TCP socket.");
+            */
         }
         else {
             /* TcpRecv::recvData() will return requested number of bytes */
