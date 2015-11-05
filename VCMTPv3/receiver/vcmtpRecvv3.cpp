@@ -94,7 +94,7 @@ vcmtpRecvv3::vcmtpRecvv3(
     mcast_t(),
     timer_t(),
     //linkspeed(0),
-    linkspeed(1000000000),
+    linkspeed(20000000),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
     mcastHandlerCanceled(ATOMIC_FLAG_INIT),
     measure(new Measure())
