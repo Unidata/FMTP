@@ -1017,6 +1017,7 @@ void vcmtpSendv3::sendData(void* data, uint32_t dataSize)
          * linkspeed will be a non-zero value. By checking linkspeed, app
          * can decide whether to do rate shaping.
          */
+        //TODO: use Rateshaper to replace tc?
         if (linkspeed) {
             rateshaper.CalcPeriod(sizeof(header) + payloadlen);
         }
