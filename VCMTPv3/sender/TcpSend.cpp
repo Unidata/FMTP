@@ -86,8 +86,9 @@ TcpSend::~TcpSend()
  * list is a globally shared resource, thus it needs to be protected by a lock.
  *
  * @param[in] none
- * @return    newsockfd         file descriptor of the newly connected socket.
- * @throw  runtime_error    if accept() system call fails.
+ * @return    newsockfd       file descriptor of the newly connected socket.
+ * @throw  std::runtime_error if accept() system call fails.
+ * @throw  std::system_error  if TCP keepalive can't be enabled on the socket.
  */
 int TcpSend::acceptConn()
 {
@@ -113,6 +114,29 @@ int TcpSend::acceptConn()
     cerr << std::string("TcpSend::acceptConn(): Accepted new socket ").
             append(std::to_string(newsockfd)).append("\n");
 #endif
+
+    {
+        int             enabled = 1;
+        const socklen_t optlen = sizeof(enabled);
+        if (setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &enabled, optlen)) {
+            close(newsockfd);
+            throw std::system_error(errno, std::system_category(),
+                    "TcpSend::acceptConn() Couldn't enable TCP keep-alive");
+        }
+        int keepalive_time = 600; // number of idle seconds before probing
+        int keepalive_intvl = 60; // seconds between probes
+        int keepalive_cnt = 5;    // number of probes before failure
+        if (setsockopt(newsockfd, IPPROTO_TCP, TCP_KEEPIDLE, &keepalive_time,
+                    optlen) ||
+                setsockopt(newsockfd, IPPROTO_TCP, TCP_KEEPINTVL,
+                        &keepalive_intvl, optlen) ||
+                setsockopt(newsockfd, IPPROTO_TCP, TCP_KEEPCNT, &keepalive_cnt,
+                    optlen)) {
+            close(newsockfd);
+            throw std::system_error(errno, std::system_category(),
+                    "TcpSend::acceptConn() Couldn't set TCP keep-alive parameters");
+        }
+    }
     {
         std::unique_lock<std::mutex> lock(sockListMutex);
         connSockList.push_back(newsockfd);
