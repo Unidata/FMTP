@@ -117,7 +117,7 @@ int TcpSend::acceptConn()
 
     {
         int             enabled = 1;
-        const socklen_t optlen = sizeof(enabled);
+        const socklen_t optlen = sizeof(int);
         if (setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &enabled, optlen)) {
             close(newsockfd);
             throw std::system_error(errno, std::system_category(),
