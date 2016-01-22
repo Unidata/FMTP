@@ -1078,7 +1078,8 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
      * period should be the larger value between fsnd * multicast time and max
      * RTT.
      */
-    //TODO: is it possible to use a constant timer? e.g. 30 min
+    //TODO: after a discussion, we decided to use a constant timer. But the
+    //timer value still needs to be studied. (e.g. 15 min)
     senderProdMeta->retxTimeoutPeriod = std::max(mcastPeriod.count() *
             senderProdMeta->retxTimeoutRatio, maxrtt / 1000);
 }
