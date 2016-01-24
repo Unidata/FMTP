@@ -258,6 +258,7 @@ private:
     std::condition_variable notify_cv;
     std::condition_variable memrelease_cv;
     SilenceSuppressor*  suppressor;
+    double              tsnd;
 
 
     /* member variables for measurement use only */

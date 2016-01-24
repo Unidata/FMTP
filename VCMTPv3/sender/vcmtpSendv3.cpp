@@ -94,6 +94,7 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     exceptIsSet(false),
     coor_t(),
     timer_t(),
+    tsnd(15.0),
     txdone(false)
 {
 }
@@ -1077,11 +1078,15 @@ void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
      * Set up timer timeout period. According to the VCMTP design, the timeout
      * period should be the larger value between fsnd * multicast time and max
      * RTT.
-     */
-    //TODO: after a discussion, we decided to use a constant timer. But the
-    //timer value still needs to be studied. (e.g. 15 min)
+    * TODO: after a discussion, we decided to use a constant timer. But the
+    * timer value still needs to be studied. (e.g. 15 min)
+    */
+    /*
     senderProdMeta->retxTimeoutPeriod = std::max(mcastPeriod.count() *
             senderProdMeta->retxTimeoutRatio, maxrtt / 1000);
+    */
+    /* convert tsnd from minutes to seconds */
+    senderProdMeta->retxTimeoutPeriod = tsnd * 60;
 }
 
 
