@@ -88,7 +88,6 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
     prodIndex(initProdIndex),
     retxTimeoutRatio(timeoutRatio),
     linkspeed(0),
-    maxrtt(89),
     exitMutex(),
     except(),
     exceptIsSet(false),
@@ -285,19 +284,6 @@ void vcmtpSendv3::SetSendRate(uint64_t speed)
 
 
 /**
- * Sets the maximum RTT in the multicast group. The value of max RTT will
- * be used to adjust the sleep time for the timer.
- *
- * @param[in] rtt     Maximum RTT value in milliseconds.
- */
-void vcmtpSendv3::SetMaxRTT(double rtt)
-{
-    std::unique_lock<std::mutex> lock(rttmtx);
-    maxrtt = rtt;
-}
-
-
-/**
  * Starts the coordinator thread and timer thread from this function. And
  * passes a vcmtpSendv3 type pointer to each newly created thread so that
  * coordinator and timer can have access to all the resources inside this
@@ -415,9 +401,6 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
 
     /* Add current RetxMetadata into sendMetadata::indexMetaMap */
     sendMeta->addRetxMetadata(senderProdMeta);
-
-    /* Update multicast start time in RetxMetadata */
-    senderProdMeta->mcastStartTime = HRclock::now();
 
     return senderProdMeta;
 }
@@ -1066,26 +1049,10 @@ void vcmtpSendv3::sendData(void* data, uint32_t dataSize)
  */
 void vcmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
 {
-    /* Get end time of multicasting for measuring product transmit time */
-    senderProdMeta->mcastEndTime = HRclock::now();
-
-    /* Cast chrono::time_point type value into double duration type */
-    std::chrono::duration<double> mcastPeriod =
-        std::chrono::duration_cast<std::chrono::duration<double>>
-        (senderProdMeta->mcastEndTime - senderProdMeta->mcastStartTime);
-
     /**
-     * Set up timer timeout period. According to the VCMTP design, the timeout
-     * period should be the larger value between fsnd * multicast time and max
-     * RTT.
-    * TODO: after a discussion, we decided to use a constant timer. But the
-    * timer value still needs to be studied. (e.g. 15 min)
+    * use a constant timer. the timer value has been studied and roughly 2 min
+    * is the minimum requirement.
     */
-    /*
-    senderProdMeta->retxTimeoutPeriod = std::max(mcastPeriod.count() *
-            senderProdMeta->retxTimeoutRatio, maxrtt / 1000);
-    */
-    /* convert tsnd from minutes to seconds */
     senderProdMeta->retxTimeoutPeriod = tsnd * 60;
 }
 
