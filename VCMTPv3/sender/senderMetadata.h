@@ -79,7 +79,6 @@ struct RetxMetadata {
         prodindex(meta.prodindex),
         prodLength(meta.prodLength),
         metaSize(meta.metaSize),
-        retxTimeoutRatio(meta.retxTimeoutRatio),
         retxTimeoutPeriod(meta.retxTimeoutPeriod),
         unfinReceivers(meta.unfinReceivers),
         inuse(meta.inuse),
