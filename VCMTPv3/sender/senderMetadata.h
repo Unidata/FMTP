@@ -51,7 +51,6 @@ struct RetxMetadata {
     uint32_t       prodLength;
     uint16_t       metaSize;          /*!< metadata size               */
     void*          metadata;          /*!< metadata pointer            */
-    float          retxTimeoutRatio;  /*!< ratio to scale timeout time */
     double         retxTimeoutPeriod; /*!< timeout time in seconds     */
     void*          dataprod_p;        /*!< pointer to the data product */
     /* unfinished receiver set indexed by socket id */
@@ -62,9 +61,8 @@ struct RetxMetadata {
     bool           remove;
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
-                    metadata(NULL), retxTimeoutRatio(20.0),
-                    retxTimeoutPeriod(99999999999.0), dataprod_p(NULL),
-                    inuse(false), remove(false) {}
+                    metadata(NULL), retxTimeoutPeriod(99999999999.0),
+                    dataprod_p(NULL), inuse(false), remove(false) {}
     ~RetxMetadata() {
         delete[] (char*)metadata;
         metadata = NULL;

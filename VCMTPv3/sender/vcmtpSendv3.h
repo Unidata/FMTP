@@ -95,7 +95,7 @@ public:
                  const unsigned char   ttl = 1,
                  const std::string     ifAddr = "0.0.0.0",
                  const uint32_t        initProdIndex = 0,
-                 const float           timeoutRatio = 500.0);
+                 const float           tsnd = 15.0);
     ~vcmtpSendv3();
 
     void           clearRuninProdSet(int run);

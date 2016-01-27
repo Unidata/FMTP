@@ -79,21 +79,20 @@ vcmtpSendv3::vcmtpSendv3(const char*                 tcpAddr,
                          const unsigned char         ttl,
                          const std::string           ifAddr,
                          const uint32_t              initProdIndex,
-                         const float                 timeoutRatio)
+                         const float                 tsnd)
 :
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     notifier(notifier),
     prodIndex(initProdIndex),
-    retxTimeoutRatio(timeoutRatio),
     linkspeed(0),
     exitMutex(),
     except(),
     exceptIsSet(false),
     coor_t(),
     timer_t(),
-    tsnd(15.0),
+    tsnd(tsnd),
     txdone(false)
 {
 }
@@ -389,9 +388,6 @@ RetxMetadata* vcmtpSendv3::addRetxMetadata(void* const data,
 
     /* Update current product pointer in RetxMetadata */
     senderProdMeta->dataprod_p       = (void*)data;
-
-    /* Update the per-product timeout ratio */
-    senderProdMeta->retxTimeoutRatio = retxTimeoutRatio;
 
     /* Get a full list of current connected sockets and add to unfinished set */
     std::list<int> currSockList = tcpsend->getConnSockList();
