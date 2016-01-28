@@ -51,9 +51,6 @@ struct RetxMetadata {
     uint32_t       prodLength;
     uint16_t       metaSize;          /*!< metadata size               */
     void*          metadata;          /*!< metadata pointer            */
-    HRclock::time_point mcastStartTime;    /*!< multicasting start time    */
-    HRclock::time_point mcastEndTime;      /*!< multicasting end time      */
-    float          retxTimeoutRatio;  /*!< ratio to scale timeout time */
     double         retxTimeoutPeriod; /*!< timeout time in seconds     */
     void*          dataprod_p;        /*!< pointer to the data product */
     /* unfinished receiver set indexed by socket id */
@@ -64,10 +61,8 @@ struct RetxMetadata {
     bool           remove;
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
-                    metadata(NULL), mcastStartTime(HRclock::now()),
-                    mcastEndTime(mcastStartTime), retxTimeoutRatio(20.0),
-                    retxTimeoutPeriod(99999999999.0), dataprod_p(NULL),
-                    inuse(false), remove(false) {}
+                    metadata(NULL), retxTimeoutPeriod(99999999999.0),
+                    dataprod_p(NULL), inuse(false), remove(false) {}
     ~RetxMetadata() {
         delete[] (char*)metadata;
         metadata = NULL;
@@ -84,9 +79,6 @@ struct RetxMetadata {
         prodindex(meta.prodindex),
         prodLength(meta.prodLength),
         metaSize(meta.metaSize),
-        mcastStartTime(meta.mcastStartTime),
-        mcastEndTime(meta.mcastEndTime),
-        retxTimeoutRatio(meta.retxTimeoutRatio),
         retxTimeoutPeriod(meta.retxTimeoutPeriod),
         unfinReceivers(meta.unfinReceivers),
         inuse(meta.inuse),

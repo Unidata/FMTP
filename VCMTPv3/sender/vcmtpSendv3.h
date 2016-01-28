@@ -95,7 +95,7 @@ public:
                  const unsigned char   ttl = 1,
                  const std::string     ifAddr = "0.0.0.0",
                  const uint32_t        initProdIndex = 0,
-                 const float           timeoutRatio = 500.0);
+                 const float           tsnd = 15.0);
     ~vcmtpSendv3();
 
     void           clearRuninProdSet(int run);
@@ -107,8 +107,6 @@ public:
     uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
                                uint16_t metaSize);
     void           SetSendRate(uint64_t speed);
-    /** RTT passed in milliseconds */
-    void           SetMaxRTT(double rtt);
     /** Sender side start point, the first function to be called */
     void           Start();
     /** Sender side stop point */
@@ -245,9 +243,6 @@ private:
     RetxThreads         retxThreadList;
     std::mutex          linkmtx;
     uint64_t            linkspeed;
-    std::mutex          rttmtx;
-    /** maximum RTT in milliseconds */
-    double              maxrtt;
     std::mutex          exitMutex;
     std::exception_ptr  except;
     bool                exceptIsSet;
@@ -258,6 +253,7 @@ private:
     std::condition_variable notify_cv;
     std::condition_variable memrelease_cv;
     SilenceSuppressor*  suppressor;
+    double              tsnd;
 
 
     /* member variables for measurement use only */
