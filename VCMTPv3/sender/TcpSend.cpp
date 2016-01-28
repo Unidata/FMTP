@@ -90,11 +90,18 @@ void TcpSend::setKeepAlive(
         const int sock)
 {
     int             enabled = 1;
-    const socklen_t optlen = sizeof(int);
-    if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &enabled, optlen))
+    const socklen_t intlen = sizeof(int);
+    if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &enabled, intlen))
         throw std::system_error(errno, std::system_category(),
-                "TcpSend::acceptConn() Couldn't enable TCP keep-alive "
-                "on socket " + std::to_string(sock));
+                "TcpSend::setKeepAlive() Couldn't enable TCP keep-alive on "
+                "socket " + std::to_string(sock));
+
+#ifdef SO_NOSIGPIPE
+    if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &enabled, intlen))
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::setKeepAlive() Couldn't disable SIGPIPE on socket " +
+                std::to_string(sock));
+#endif
 
     int idle = 60;     // number of idle seconds before probing
     int interval = 30; // seconds between probes
@@ -124,12 +131,12 @@ void TcpSend::setKeepAlive(
     #error No TCP keep-alive interval-name macro defined
 #endif
 
-    if (setsockopt(sock, proto_level, idle_name, &idle, optlen) ||
-            setsockopt(sock, proto_level, intvl_name, &interval, optlen) ||
-            setsockopt(sock, proto_level, TCP_KEEPCNT, &count, optlen))
+    if (setsockopt(sock, proto_level, idle_name, &idle, intlen) ||
+            setsockopt(sock, proto_level, intvl_name, &interval, intlen) ||
+            setsockopt(sock, proto_level, TCP_KEEPCNT, &count, intlen))
         throw std::system_error(errno, std::system_category(),
-                "TcpSend::setKeepAlive() Couldn't set TCP keep-alive parameters "
-                "on socket " + std::to_string(sock));
+                "TcpSend::setKeepAlive() Couldn't set TCP keep-alive "
+                "parameters on socket " + std::to_string(sock));
 }
 
 
