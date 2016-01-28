@@ -72,6 +72,8 @@ private:
     unsigned short     tcpPort;
     std::list<int>     connSockList;
     std::mutex         sockListMutex; /*!< to protect shared sockList */
+
+    void setKeepAlive(const int sock);
 };
 
 

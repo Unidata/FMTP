@@ -81,6 +81,59 @@ TcpSend::~TcpSend()
 
 
 /**
+ * Sets the keep-alive mechanism on a TCP socket.
+ *
+ * @param[in] sock               The TCP socket on which to set keep-alive
+ * @throws    std::system_error  Keep-alive couldn't be set
+ */
+void TcpSend::setKeepAlive(
+        const int sock)
+{
+    int             enabled = 1;
+    const socklen_t optlen = sizeof(int);
+    if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &enabled, optlen))
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::acceptConn() Couldn't enable TCP keep-alive "
+                "on socket " + std::to_string(sock));
+
+    int idle = 60;     // number of idle seconds before probing
+    int interval = 30; // seconds between probes
+    int count = 5;     // number of probes before failure
+
+#ifdef IPPROTO_TCP
+    int proto_level = IPPROTO_TCP;
+#elif defined(SOL_TCP)
+    int proto_level = SOL_TCP;
+#else
+    #error No TCP protocol-level macro defined
+#endif
+
+#ifdef TCP_KEEPIDLE
+    int idle_name = TCP_KEEPIDLE;
+#elif defined(TCP_KEEPALIVE)
+    int idle_name = TCP_KEEPALIVE;
+#else
+    #error No TCP keep-alive idle-name macro defined
+#endif
+
+#ifdef TCP_KEEPINTVL
+    int intvl_name = TCP_KEEPINTVL;
+#elif defined(TCP_KEEPALIVE)
+    int intvl_name = TCP_KEEPALIVE;
+#else
+    #error No TCP keep-alive interval-name macro defined
+#endif
+
+    if (setsockopt(sock, proto_level, idle_name, &idle, optlen) ||
+            setsockopt(sock, proto_level, intvl_name, &interval, optlen) ||
+            setsockopt(sock, proto_level, TCP_KEEPCNT, &count, optlen))
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::setKeepAlive() Couldn't set TCP keep-alive parameters "
+                "on socket " + std::to_string(sock));
+}
+
+
+/**
  * Accept incoming tcp connection requests and push them into the socket list.
  * Then return the current socket file descriptor for further use. The socket
  * list is a globally shared resource, thus it needs to be protected by a lock.
@@ -115,28 +168,8 @@ int TcpSend::acceptConn()
             append(std::to_string(newsockfd)).append("\n");
 #endif
 
-    {
-        int             enabled = 1;
-        const socklen_t optlen = sizeof(int);
-        if (setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &enabled, optlen)) {
-            close(newsockfd);
-            throw std::system_error(errno, std::system_category(),
-                    "TcpSend::acceptConn() Couldn't enable TCP keep-alive");
-        }
-        int keepalive_time = 600; // number of idle seconds before probing
-        int keepalive_intvl = 60; // seconds between probes
-        int keepalive_cnt = 5;    // number of probes before failure
-        if (setsockopt(newsockfd, IPPROTO_TCP, TCP_KEEPIDLE, &keepalive_time,
-                    optlen) ||
-                setsockopt(newsockfd, IPPROTO_TCP, TCP_KEEPINTVL,
-                        &keepalive_intvl, optlen) ||
-                setsockopt(newsockfd, IPPROTO_TCP, TCP_KEEPCNT, &keepalive_cnt,
-                    optlen)) {
-            close(newsockfd);
-            throw std::system_error(errno, std::system_category(),
-                    "TcpSend::acceptConn() Couldn't set TCP keep-alive parameters");
-        }
-    }
+    setKeepAlive(newsockfd);
+
     {
         std::unique_lock<std::mutex> lock(sockListMutex);
         connSockList.push_back(newsockfd);
@@ -183,15 +216,12 @@ unsigned short TcpSend::getPortNum()
  * Initializer for TcpSend class, taking tcp address and tcp port to establish
  * a tcp connection. When the connection is established, keep listen on it with
  * a maximum of MAX_CONNECTION allowed to connect. Consistency is strongly
- * ensured by cancelling whatever has been done before exceptions are thrown.
+ * ensured by canceling whatever has been done before exceptions are thrown.
  *
  * @param[in] none
  *
  * @throw  std::runtime_error    if `tcpAddr` is invalid.
  * @throw  std::runtime_error    if socket creation fails.
- * @throw  std::runtime_error    if enabling keepalive fails.
- * @throw  std::runtime_error    if setting keepalive time fails.
- * @throw  std::runtime_error    if setting keepalive interval fails.
  * @throw  std::runtime_error    if socket bind() operation fails.
  */
 void TcpSend::Init()
@@ -206,42 +236,6 @@ void TcpSend::Init()
     }
 
     try {
-        /* set keep alive flag */
-        if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &alive,
-                       sizeof(int)) < 0) {
-            throw std::runtime_error(
-                    "TcpSend::Init() error setting SO_KEEPALIVE");
-        }
-        /* set TCP keep alive time, default is 2 hours */
-        // TODO: determine a proper alive time value if mixed feedtypes are sent.
-        /*
-        #ifdef __linux__
-            if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, &aliveidle,
-                           sizeof(int)) < 0) {
-        #elif __APPLE__
-            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveidle,
-                           sizeof(int)) < 0) {
-        #endif
-            throw std::runtime_error(
-                    "TcpSend::Init() error setting keep alive time");
-        }
-        */
-        /* set TCP keep alive interval, default 1 sec */
-        // TODO: determine a proper alive interval value
-        #if __APPLE__
-            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &aliveintvl,
-                           sizeof(int)) < 0) {
-        #elif defined(TCP_KEEPINTVL)
-            if (setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, &aliveintvl,
-                           sizeof(int)) < 0) {
-        #else
-            if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &aliveintvl,
-                           sizeof(int)) < 0) {
-        #endif
-            throw std::runtime_error(
-                    "TcpSend::Init() error setting keep alive interval");
-        }
-
         (void) memset((char *) &servAddr, 0, sizeof(servAddr));
         servAddr.sin_family = AF_INET;
         in_addr_t inAddr = inet_addr(tcpAddr.c_str());
