@@ -81,7 +81,9 @@ TcpSend::~TcpSend()
 
 
 /**
- * Sets the keep-alive mechanism on a TCP socket.
+ * Sets the keep-alive mechanism on a TCP socket. When the mechanism determines
+ * that the socket is no longer connected, a subsequent `read()` on the socket
+ * should either cause a SIGPIPE to be generated or the `read()` to return `-1`.
  *
  * @param[in] sock               The TCP socket on which to set keep-alive
  * @throws    std::system_error  Keep-alive couldn't be set
@@ -97,6 +99,7 @@ void TcpSend::setKeepAlive(
                 "socket " + std::to_string(sock));
 
 #ifdef SO_NOSIGPIPE
+    // Favor synchronous notification of disconnection via `read()`
     if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &enabled, intlen))
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::setKeepAlive() Couldn't disable SIGPIPE on socket " +
@@ -116,23 +119,23 @@ void TcpSend::setKeepAlive(
 #endif
 
 #ifdef TCP_KEEPIDLE
-    int idle_name = TCP_KEEPIDLE;
+    int idle_opt = TCP_KEEPIDLE;
 #elif defined(TCP_KEEPALIVE)
-    int idle_name = TCP_KEEPALIVE;
+    int idle_opt = TCP_KEEPALIVE;
 #else
-    #error No TCP keep-alive idle-name macro defined
+    #error No macro defined for the TCP keep-alive idle-time option
 #endif
 
 #ifdef TCP_KEEPINTVL
-    int intvl_name = TCP_KEEPINTVL;
+    int intvl_opt = TCP_KEEPINTVL;
 #elif defined(TCP_KEEPALIVE)
-    int intvl_name = TCP_KEEPALIVE;
+    int intvl_opt = TCP_KEEPALIVE;
 #else
-    #error No TCP keep-alive interval-name macro defined
+    #error No macro defined for the TCP keep-alive interval option
 #endif
 
-    if (setsockopt(sock, proto_level, idle_name, &idle, intlen) ||
-            setsockopt(sock, proto_level, intvl_name, &interval, intlen) ||
+    if (setsockopt(sock, proto_level, idle_opt, &idle, intlen) ||
+            setsockopt(sock, proto_level, intvl_opt, &interval, intlen) ||
             setsockopt(sock, proto_level, TCP_KEEPCNT, &count, intlen))
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::setKeepAlive() Couldn't set TCP keep-alive "
