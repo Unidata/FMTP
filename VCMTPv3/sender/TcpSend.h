@@ -72,6 +72,14 @@ private:
     unsigned short     tcpPort;
     std::list<int>     connSockList;
     std::mutex         sockListMutex; /*!< to protect shared sockList */
+
+    /**
+     * Sets the keep-alive mechanism on a TCP socket.
+     *
+     * @param[in] sock               The TCP socket on which to set keep-alive
+     * @throws    std::system_error  Keep-alive couldn't be set
+     */
+    void setKeepAlive(const int sock);
 };
 
 
