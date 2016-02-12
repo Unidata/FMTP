@@ -115,28 +115,26 @@ void TcpSend::setKeepAlive(
 #elif defined(SOL_TCP)
     int proto_level = SOL_TCP;
 #else
-    #error No TCP protocol-level macro defined
+    #error No macro defined for the TCP protocol level
 #endif
 
-#ifdef TCP_KEEPIDLE
-    int idle_opt = TCP_KEEPIDLE;
-#elif defined(TCP_KEEPALIVE)
-    int idle_opt = TCP_KEEPALIVE;
-#else
-    #error No macro defined for the TCP keep-alive idle-time option
-#endif
-
-#ifdef TCP_KEEPINTVL
-    int intvl_opt = TCP_KEEPINTVL;
-#elif defined(TCP_KEEPALIVE)
-    int intvl_opt = TCP_KEEPALIVE;
-#else
-    #error No macro defined for the TCP keep-alive interval option
-#endif
-
-    if (setsockopt(sock, proto_level, idle_opt, &idle, intlen) ||
-            setsockopt(sock, proto_level, intvl_opt, &interval, intlen) ||
+#if __sun__
+    idle *= 1000; // Milliseconds
+    unsigned duration = (interval*(count-1)) * 1000; // Milliseconds
+    if (setsockopt(sock, proto_level, TCP_KEEPALIVE_THRESHOLD, &idle, intlen) ||
+            setsockopt(sock, proto_level, TCP_KEEPALIVE_ABORT_THRESHOLD,
+                    &duration, sizeof(duration)))
+#elif __APPLE__
+    if (setsockopt(sock, proto_level, TCP_KEEPALIVE, &idle, intlen) ||
+            setsockopt(sock, proto_level, TCP_KEEPINTVL, &interval, intlen) ||
             setsockopt(sock, proto_level, TCP_KEEPCNT, &count, intlen))
+#elif __linux__
+    if (setsockopt(sock, proto_level, TCP_KEEPIDLE, &idle, intlen) ||
+            setsockopt(sock, proto_level, TCP_KEEPINTVL, &interval, intlen) ||
+            setsockopt(sock, proto_level, TCP_KEEPCNT, &count, intlen))
+#else
+    #error Do not know how to set keep-alive parameters for this O/S
+#endif
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::setKeepAlive() Couldn't set TCP keep-alive "
                 "parameters on socket " + std::to_string(sock));
