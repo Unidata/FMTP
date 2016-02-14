@@ -119,11 +119,25 @@ void TcpSend::setKeepAlive(
 #endif
 
 #if __sun__
+    #if TCP_KEEPALIVE_THRESHOLD
+        int idle_opt = TCP_KEEPALIVE_THRESHOLD;
+    #elif TCP_NOTIFY_THRESHOLD
+        int idle_opt = TCP_NOTIFY_THRESHOLD;
+    #else
+        #error No TCP keep-alive idle-time macro
+    #endif
+    #if TCP_KEEPALIVE_ABORT_THRESHOLD
+        int duration_opt = TCP_KEEPALIVE_ABORT_THRESHOLD;
+    #elif TCP_ABORT_THRESHOLD
+        int duration_opt = TCP_ABORT_THRESHOLD;
+    #else
+        #error No TCP keep-alive duration macro
+    #endif
     idle *= 1000; // Milliseconds
     unsigned duration = (interval*(count-1)) * 1000; // Milliseconds
-    if (setsockopt(sock, proto_level, TCP_KEEPALIVE_THRESHOLD, &idle, intlen) ||
-            setsockopt(sock, proto_level, TCP_KEEPALIVE_ABORT_THRESHOLD,
-                    &duration, sizeof(duration)))
+    if (setsockopt(sock, proto_level, idle_opt, &idle, intlen) ||
+            setsockopt(sock, proto_level, duration_opt, &duration,
+                    sizeof(duration)))
 #elif __APPLE__
     if (setsockopt(sock, proto_level, TCP_KEEPALIVE, &idle, intlen) ||
             setsockopt(sock, proto_level, TCP_KEEPINTVL, &interval, intlen) ||
