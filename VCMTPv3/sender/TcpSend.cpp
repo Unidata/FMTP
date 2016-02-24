@@ -277,8 +277,7 @@ void TcpSend::Init()
 #endif
         if(::bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
             throw std::system_error(errno, std::system_category(),
-                    "TcpSend::TcpSend(): Couldn't bind "
-                    + tcpAddr + ":"
+                    "TcpSend::TcpSend(): Couldn't bind " + tcpAddr + ":"
                     + std::to_string(static_cast<unsigned int>(tcpPort)));
         }
     }
