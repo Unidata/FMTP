@@ -65,10 +65,9 @@ void SilenceSuppressor::clearrange(uint32_t end)
 
 
 /**
- * Removes the given product from the prodset.
+ * Queries the first prodindex in the prodset.
  *
- * @param[in] prodindex    Product index to be removed.
- * @return    The status of std::set::erase() operation.
+ * @return    The prodindex of the first product.
  */
 uint32_t SilenceSuppressor::query()
 {
