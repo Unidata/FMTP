@@ -53,13 +53,14 @@
 /**
  * Constructs the receiver side instance (for integration with LDM).
  *
- * @param[in] tcpAddr       Tcp unicast address for retransmission.
- * @param[in] tcpPort       Tcp unicast port for retransmission.
- * @param[in] mcastAddr     Udp multicast address for receiving data products.
- * @param[in] mcastPort     Udp multicast port for receiving data products.
+ * @param[in] tcpAddr       Sender TCP unicast address for retransmission.
+ * @param[in] tcpPort       Sender TCP unicast port for retransmission.
+ * @param[in] mcastAddr     UDP multicast address for receiving data products.
+ * @param[in] mcastPort     UDP multicast port for receiving data products.
  * @param[in] notifier      Callback function to notify receiving application
  *                          of incoming Begin-Of-Product messages.
- * @param[in] ifAddr        IP of the interface to listen for multicast packets.
+ * @param[in] ifAddr        IP of the receiver interface for setting a filter
+ *                          to accept for multicast packets.
  */
 vcmtpRecvv3::vcmtpRecvv3(
     const std::string    tcpAddr,
