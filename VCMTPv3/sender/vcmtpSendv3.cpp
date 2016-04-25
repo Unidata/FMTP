@@ -679,9 +679,7 @@ void vcmtpSendv3::retransmit(
         sendheader.flags      = htons(VCMTP_RETX_DATA);
 
         /**
-         * The entire first data-block is sent because it simplifies the
-         * computation of the payload length and a request should start at the
-         * beginning of a data-block anyway.
+         * aligns starting seqnum to the multiple-of-MTU boundary.
          */
         start = (start/VCMTP_DATA_LEN) * VCMTP_DATA_LEN;
         uint16_t payLen = VCMTP_DATA_LEN;
