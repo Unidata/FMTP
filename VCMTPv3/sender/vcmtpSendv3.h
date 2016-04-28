@@ -98,10 +98,22 @@ public:
                  const float           tsnd = 2.0);
     ~vcmtpSendv3();
 
+    /* ----------- testapp-specific APIs begin ----------- */
+    /* performs reset for each run in multiple runs */
     void           clearRuninProdSet(int run);
+    /*
+     * gets notification of a complete and ACKed file,
+     * should be used together with silence suppressor.
+     */
     uint32_t       getNotify();
-    unsigned short getTcpPortNum();
+    /*
+     * releases memory of a complete and ACKed file,
+     * should be used together with silence suppressor.
+     */
     uint32_t       releaseMem();
+    /* ----------- testapp-specific APIs end ----------- */
+
+    unsigned short getTcpPortNum();
     uint32_t       getNextProdIndex() const {return prodIndex;}
     uint32_t       sendProduct(void* data, uint32_t dataSize);
     uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
