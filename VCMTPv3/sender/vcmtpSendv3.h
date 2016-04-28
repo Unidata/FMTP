@@ -252,7 +252,9 @@ private:
     uint32_t            notifyprodidx;
     std::condition_variable notify_cv;
     std::condition_variable memrelease_cv;
+    /* SilenceSuppressor is only used for testapp */
     SilenceSuppressor*  suppressor;
+    /* sender maximum retransmission timeout */
     double              tsnd;
 
 
