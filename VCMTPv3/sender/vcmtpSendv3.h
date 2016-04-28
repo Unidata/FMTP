@@ -118,6 +118,7 @@ public:
     uint32_t       sendProduct(void* data, uint32_t dataSize);
     uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
                                uint16_t metaSize);
+    void           sendProductStream();
     void           SetSendRate(uint64_t speed);
     /** Sender side start point, the first function to be called */
     void           Start();
