@@ -235,7 +235,6 @@ private:
     senderMetadata*     sendMeta;
     /** sending application callback hook */
     SendAppNotifier*    notifier;
-    float               retxTimeoutRatio;
     ProdIndexDelayQueue timerDelayQ;
     pthread_t           coor_t;
     pthread_t           timer_t;
