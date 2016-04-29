@@ -269,14 +269,20 @@ uint32_t vcmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
 /**
  * Transfers stream of files.
- * Expected behavior from application: fetch_next_product() should:
+ * Expected behavior from application: fetch_next_prod() should:
  * (i): return the pointers and metadata of next file
  * (ii): block until there is a new file
  * (iii): return 0 to indicate the end of a file stream
  */
 void vcmtpSendv3::sendProductStream()
 {
-    while(notifier->fetch_next_product()) {
+    void* data     = NULL;
+    void* metadata = NULL;
+    uint32_t datasize;
+    uint16_t metasize;
+    while (notifier->fetch_next_prod(&data, &datasize, &metadata, &metasize))
+    {
+        sendProduct(data, datasize, metadata, metasize);
     }
 }
 
