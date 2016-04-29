@@ -18,3 +18,4 @@ Makefile
 tags
 cscope.*
 .DS_Store
+.libs
