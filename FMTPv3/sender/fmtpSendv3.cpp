@@ -276,6 +276,7 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
  */
 void fmtpSendv3::sendProductStream()
 {
+#if 0
     void* data     = NULL;
     void* metadata = NULL;
     uint32_t datasize;
@@ -284,6 +285,7 @@ void fmtpSendv3::sendProductStream()
     {
         sendProduct(data, datasize, metadata, metasize);
     }
+#endif
 }
 
 
