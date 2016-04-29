@@ -15,3 +15,6 @@ Makefile
 *.lo
 *.o
 *.la
+tags
+cscope.*
+.DS_Store
