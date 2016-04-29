@@ -174,22 +174,12 @@ int TcpSend::acceptConn()
                 "TcpSend::acceptConn() couldn't get address of socket " +
                 std::to_string(static_cast<long long>(sockfd)));
     }
-#if 0
-    cerr << std::string("TcpSend::acceptConn(): Accept()ing on socket ").
-            append(std::to_string(sockfd)).append(" (").
-            append(inet_ntoa(addr.sin_addr)).append(":").
-            append(std::to_string(ntohs(addr.sin_port))).append(")\n");
-#endif
+
     int newsockfd = accept(sockfd, NULL, NULL);
     if(newsockfd < 0) {
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::acceptConn() error reading from socket");
     }
-
-#if 0
-    cerr << std::string("TcpSend::acceptConn(): Accepted new socket ").
-            append(std::to_string(newsockfd)).append("\n");
-#endif
 
     setKeepAlive(newsockfd);
 
