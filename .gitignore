@@ -15,3 +15,5 @@ Makefile
 *.lo
 *.o
 *.la
+tags
+cscope.*
