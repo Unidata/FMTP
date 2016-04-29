@@ -17,3 +17,4 @@ Makefile
 *.la
 tags
 cscope.*
+.DS_Store
