@@ -5,7 +5,7 @@
 #endif
 
 /* Name of package */
-#define PACKAGE "vcmtp"
+#define PACKAGE "fmtp"
 
 
 #ifdef VERSION

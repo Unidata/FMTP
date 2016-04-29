@@ -26,10 +26,10 @@ lib_la_SOURCES		= \
     TcpServer.cpp TcpServer.h \
     Tester.cpp Tester.h \
     UdpComm.cpp UdpComm.h \
-    VCMTPComm.cpp VCMTPComm.h \
-    vcmtp.cpp vcmtp.h \
-    VcmtpEventQueueManager.cpp VcmtpEventQueueManager.h \
-    VcmtpFileEntry.h \
-    VCMTPReceiver.cpp VCMTPReceiver.h \
-    VCMTPSender.cpp VCMTPSender.h \
-    VcmtpSenderMetadata.cpp VcmtpSenderMetadata.h
+    FMTPComm.cpp FMTPComm.h \
+    fmtp.cpp fmtp.h \
+    FmtpEventQueueManager.cpp FmtpEventQueueManager.h \
+    FmtpFileEntry.h \
+    FMTPReceiver.cpp FMTPReceiver.h \
+    FMTPSender.cpp FMTPSender.h \
+    FmtpSenderMetadata.cpp FmtpSenderMetadata.h

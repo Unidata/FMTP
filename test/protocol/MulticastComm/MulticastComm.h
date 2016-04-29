@@ -14,7 +14,7 @@
 #ifndef MULTICASTCOMM_H_
 #define MULTICASTCOMM_H_
 
-#include "vcmtp.h"
+#include "fmtp.h"
 #include "InetComm.h"
 #include <pthread.h>
 

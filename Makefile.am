@@ -4,12 +4,12 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= VCMTPv3 test
+SUBDIRS 		= FMTPv3 test
 ACLOCAL_AMFLAGS         = -I m4
 EXTRA_DIST		= m4 CHANGE_LOG COPYRIGHT 
-noinst_LTLIBRARIES	= libvcmtp.la
-libvcmtp_la_SOURCES	= dummy.cpp
-libvcmtp_la_LIBADD	= VCMTPv3/lib.la
+noinst_LTLIBRARIES	= libfmtp.la
+libfmtp_la_SOURCES	= dummy.cpp
+libfmtp_la_LIBADD	= FMTPv3/lib.la
 dist_doc_data		= CHANGE_LOG COPYRIGHT README
 
 version.m4:             CHANGE_LOG

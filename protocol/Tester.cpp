@@ -9,8 +9,8 @@
 
 Tester::Tester()
 :   ptr_status_proxy(0),
-    ptr_vcmtp_receiver(0),
-    ptr_vcmtp_sender(0)
+    ptr_fmtp_receiver(0),
+    ptr_fmtp_sender(0)
 {
 }
 
@@ -19,7 +19,7 @@ Tester::~Tester() {
 }
 
 void Tester::StartTest() {
-	VCMTPInit();
+	FMTPInit();
 
 	string serv_addr = ConfigInfo::GetInstance()->GetValue("Monitor_Server");
 	string port = ConfigInfo::GetInstance()->GetValue("Monitor_Server_Port");
@@ -29,7 +29,7 @@ void Tester::StartTest() {
 
 	if (IsSender()) {
 		if (serv_addr.length() > 0) {
-			ptr_status_proxy = new SenderStatusProxy(serv_addr, atoi(port.c_str()), group_id, vcmtp_port, send_buf_size);
+			ptr_status_proxy = new SenderStatusProxy(serv_addr, atoi(port.c_str()), group_id, fmtp_port, send_buf_size);
 			cout << "Connecting manager server..." << endl;
 			ptr_status_proxy->ConnectServer();
 			cout << "Server connected." << endl;
@@ -48,7 +48,7 @@ void Tester::StartTest() {
 //		sched_setscheduler(0, SCHED_RR, &sp);
 
 		if (serv_addr.length() > 0) {
-			ptr_status_proxy = new ReceiverStatusProxy(serv_addr, atoi(port.c_str()), group_id, vcmtp_port, recv_buf_size);
+			ptr_status_proxy = new ReceiverStatusProxy(serv_addr, atoi(port.c_str()), group_id, fmtp_port, recv_buf_size);
 			ptr_status_proxy->ConnectServer();
 			ptr_status_proxy->StartService();
 		}

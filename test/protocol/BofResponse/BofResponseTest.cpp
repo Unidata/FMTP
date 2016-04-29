@@ -77,7 +77,7 @@ class BofResponseTest : public CppUnit::TestFixture {
         // test class MemoryBofResponse
         void runMemoryBofResponseTest()
         {
-            static char                    bofrBuf[VCMTP_PACKET_LEN];
+            static char                    bofrBuf[FMTP_PACKET_LEN];
             static const MemoryBofResponse membofr_obj1(bofrBuf, sizeof(bofrBuf), true);
             static const MemoryBofResponse membofr_obj2(bofrBuf, sizeof(bofrBuf), false);
             const BofResponse* new_bofr;

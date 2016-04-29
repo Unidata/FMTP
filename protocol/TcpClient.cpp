@@ -93,7 +93,7 @@ TcpClient::~TcpClient() {
  * Class Name: TcpClient
  * Function Name: Connect()
  *
- * Description: Connecting to TCP server socket (e.g. VCMTP sender) to
+ * Description: Connecting to TCP server socket (e.g. FMTP sender) to
  * establish a connection.
  *
  * Input:  none

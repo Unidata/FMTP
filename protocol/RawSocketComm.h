@@ -8,7 +8,7 @@
 #ifndef RAWSOCKETCOMM_H_
 #define RAWSOCKETCOMM_H_
 
-#include "vcmtp.h"
+#include "fmtp.h"
 #include "InetComm.h"
 #include <cstdio>
 

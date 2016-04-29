@@ -3,8 +3,8 @@ dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
 m4_include([version.m4])
-AC_INIT([VCMTP], VERSION_ID, [support-vcmtp@unidata.ucar.edu],,
-    [http://www.unidata.ucar.edu/software/vcmtp])
+AC_INIT([FMTP], VERSION_ID, [support-fmtp@unidata.ucar.edu],,
+    [http://www.unidata.ucar.edu/software/fmtp])
 
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -105,11 +105,11 @@ AC_CONFIG_FILES([
     Makefile
     test/Makefile
     test/sender/Makefile
-    VCMTPv3/Makefile
-    VCMTPv3/receiver/Makefile
-    VCMTPv3/sender/Makefile
-    VCMTPv3/SilenceSuppressor/Makefile
-    VCMTPv3/RateShaper/Makefile
+    FMTPv3/Makefile
+    FMTPv3/receiver/Makefile
+    FMTPv3/sender/Makefile
+    FMTPv3/SilenceSuppressor/Makefile
+    FMTPv3/RateShaper/Makefile
 ])
 
 AC_OUTPUT

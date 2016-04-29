@@ -7,10 +7,10 @@
 
 #include "SenderStatusProxy.h"
 
-SenderStatusProxy::SenderStatusProxy(string addr, int port, string group_addr, int vcmtp_port, int buff_size)
+SenderStatusProxy::SenderStatusProxy(string addr, int port, string group_addr, int fmtp_port, int buff_size)
 			: StatusProxy(addr, port) {
-	vcmtp_group_addr = group_addr;
-	vcmtp_port_num = vcmtp_port;
+	fmtp_group_addr = group_addr;
+	fmtp_port_num = fmtp_port;
 	buffer_size = buff_size;
 	ptr_sender = NULL;
 	integrator = NULL;
@@ -46,9 +46,9 @@ void SenderStatusProxy::InitializeExecutionProcess() {
 		delete ptr_sender;
 	}
 
-	ptr_sender = new VCMTPSender(buffer_size);
+	ptr_sender = new FMTPSender(buffer_size);
 	ptr_sender->SetStatusProxy(this);
-	ptr_sender->JoinGroup(vcmtp_group_addr, vcmtp_port_num);
+	ptr_sender->JoinGroup(fmtp_group_addr, fmtp_port_num);
 
 	SendMessageLocal(INFORMATIONAL, "I'm the sender. Just joined the multicast group.");
 
@@ -143,11 +143,11 @@ int SenderStatusProxy::HandleCommand(const char* command) {
 	else if (parts.front().compare("SetLogSwitch") == 0) {
 		if (parts.size() == 2) {
 			if (parts.back().compare("On") == 0) {
-				VCMTP::is_log_enabled = true;
+				FMTP::is_log_enabled = true;
 				SendMessageLocal(COMMAND_RESPONSE, "Log switch set to ON.");
 			}
 			else if (parts.back().compare("Off") == 0) {
-				VCMTP::is_log_enabled = false;
+				FMTP::is_log_enabled = false;
 				SendMessageLocal(COMMAND_RESPONSE, "Log switch set to OFF.");
 			}
 		}

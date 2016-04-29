@@ -6,13 +6,13 @@
  * @file BofResponse.cpp
  *
  * This file defines the response by a receiving application to a
- * beginning-of-file notification from the VCMTP layer.
+ * beginning-of-file notification from the FMTP layer.
  *
  * @author: Steven R. Emmerson
  */
 
 #include "BofResponse.h"
-#include "vcmtp.h"
+#include "fmtp.h"
 
 #include <errno.h>
 #include <stdexcept>
@@ -27,7 +27,7 @@
  */
 const BofResponse* BofResponse::getIgnore()
 {
-    static char                    ignoreBuf[VCMTP_PACKET_LEN];
+    static char                    ignoreBuf[FMTP_PACKET_LEN];
     static const MemoryBofResponse ignore(ignoreBuf, sizeof(ignoreBuf), false);
 
     return &ignore;

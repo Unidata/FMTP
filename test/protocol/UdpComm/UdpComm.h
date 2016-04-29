@@ -14,7 +14,7 @@
 #ifndef UDPCOMM_H_
 #define UDPCOMM_H_
 
-#include "vcmtp.h"
+#include "fmtp.h"
 
 void SysError(string s);
 

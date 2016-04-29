@@ -6,7 +6,7 @@
  * @file BofResponse.h
  *
  * This file declares the response by a receiving application to a
- * beginning-of-file notification from the VCMTP layer.
+ * beginning-of-file notification from the FMTP layer.
  *
  * @author: Steven R. Emmerson
  */
@@ -14,7 +14,7 @@
 #ifndef BOFRESPONSE_H_
 #define BOFRESPONSE_H_
 
-#include <vcmtp.h>
+#include <fmtp.h>
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -40,7 +40,7 @@ public:
      * @retval    0                  The socket is closed.
      * @return                       The number of bytes read from the socket.
      * @throws    invalid_argument   If @code{offset < 0 ||
-     *                               nbytes > VCMTP_PACKET_LEN ||
+     *                               nbytes > FMTP_PACKET_LEN ||
      *                               offset+nbytes >} size of file.
      * @throws    runtime_exception  If an I/O error occurs on the socket.
      */

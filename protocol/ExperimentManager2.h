@@ -14,7 +14,7 @@
 #include <stdio.h>
 
 class SenderStatusProxy;
-class VCMTPSender;
+class FMTPSender;
 
 
 struct File_Sample {
@@ -36,8 +36,8 @@ public:
 	ExperimentManager2();
 	~ExperimentManager2();
 
-	void StartExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
-	void StartExperiment2(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
+	void StartExperiment(SenderStatusProxy* sender_proxy, FMTPSender* sender);
+	void StartExperiment2(SenderStatusProxy* sender_proxy, FMTPSender* sender);
 	void ReadFileSizes(vector<int>& file_sizes);
 	void GenerateFile(string file_name, int size);
 	void ReadInterArrivals(vector<double>& inter_arrival_times);
@@ -54,12 +54,12 @@ private:
 	pthread_mutex_t write_mutex;
 
 	SenderStatusProxy* sender_proxy;
-	VCMTPSender* sender;
+	FMTPSender* sender;
 
 	File_Sample GenerateFiles();
 	void RunOneExperimentSet(vector<int>& file_sizes, vector<double>& inter_arrival_times, int timeout, int rho, int loss_rate);
-	//void DoSpeedTest(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
-	//void DoLowSpeedExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
+	//void DoSpeedTest(SenderStatusProxy* sender_proxy, FMTPSender* sender);
+	//void DoLowSpeedExperiment(SenderStatusProxy* sender_proxy, FMTPSender* sender);
 };
 
 #endif /* EXPERIMENTMANAGER2_H_ */

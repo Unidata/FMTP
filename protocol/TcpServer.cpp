@@ -6,9 +6,9 @@
  */
 
 #include "TcpServer.h"
-#include "VCMTPSender.h"
+#include "FMTPSender.h"
 
-TcpServer::TcpServer(int port, VCMTPSender* sender) {
+TcpServer::TcpServer(int port, FMTPSender* sender) {
 	port_num = port;
 	ptr_sender = sender;
 
@@ -76,7 +76,7 @@ int TcpServer::Accept() {
 	conn_sock_list.push_back(conn_sock);
 	pthread_mutex_unlock(&sock_list_mutex);
 
-	// start the retransmission thread in the VCMTPSender process
+	// start the retransmission thread in the FMTPSender process
 	ptr_sender->StartNewRetransThread(conn_sock);
 
 	return conn_sock;

@@ -25,8 +25,8 @@
  * @brief     Token-Bucket-like Rate shaper header file.
  */
 
-#ifndef VCMTP_VCMTPV3_RATESHAPER_H_
-#define VCMTP_VCMTPV3_RATESHAPER_H_
+#ifndef FMTP_FMTPV3_RATESHAPER_H_
+#define FMTP_FMTPV3_RATESHAPER_H_
 
 
 #include <time.h>
@@ -63,4 +63,4 @@ private:
     HRC::time_point last_check_time;
 };
 
-#endif /* VCMTP_VCMTPV3_RATESHAPER_H_ */
+#endif /* FMTP_FMTPV3_RATESHAPER_H_ */

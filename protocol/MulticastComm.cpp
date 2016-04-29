@@ -249,15 +249,15 @@ ssize_t MulticastComm::SendData(
  * Class Name: MulticastComm
  * Function Name: SendPacket()
  *
- * Description: Send whole vcmtp packet inside buffer to the multicast group.
+ * Description: Send whole fmtp packet inside buffer to the multicast group.
  *
- * Input:  *buffer      pointer to the VCMTP packet data buffer
+ * Input:  *buffer      pointer to the FMTP packet data buffer
  *         flags        sendto() socket flags
  *         *dst_addr    MulticastComm has its own dst_addr, use NULL here
  * Output: return       success number or -1
  ****************************************************************************/
 ssize_t MulticastComm::SendPacket(PacketBuffer* buffer, int flags, void* dst_addr) {
-	return sendto(sock_fd, buffer->vcmtp_header, buffer->data_len + VCMTP_HLEN,
+	return sendto(sock_fd, buffer->fmtp_header, buffer->data_len + FMTP_HLEN,
 					flags, &this->dst_addr, sizeof(sockaddr_in));
 }
 
