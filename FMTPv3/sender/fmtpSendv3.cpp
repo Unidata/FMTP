@@ -1200,7 +1200,7 @@ void fmtpSendv3::timerThread()
         #endif
 
         /* Set the FMTP packet header (EOP message). */
-        FmtpHeader              EOPmsg;
+        FmtpHeader          EOPmsg;
         EOPmsg.prodindex  = htonl(prodindex);
         EOPmsg.seqnum     = 0;
         EOPmsg.payloadlen = 0;

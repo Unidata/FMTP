@@ -177,7 +177,8 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
  *
  * @throw std::runtime_error if TcpSend::send() fails.
  */
-void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header)
+void senderMetadata::notifyUnACKedRcvrs(uint32_t prodindex,
+                                        FmtpHeader* header)
 {
     std::map<uint32_t, RetxMetadata*>::iterator it;
     std::set<int>::iterator sockit;
@@ -187,7 +188,7 @@ void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header)
             for (sockit = it->second->unfinReceivers.begin();
                  sockit != it->second->unfinReceivers.end(); ++sockit)
             {
-                int retval = TcpSend::send(*sockit, &header, NULL, 0);
+                int retval = TcpSend::send(*sockit, header, NULL, 0);
                 if (retval < 0) {
                     throw std::runtime_error(
                             "senderMetadata::notifyUnACKedRcvrs() "
