@@ -1201,10 +1201,10 @@ void fmtpSendv3::timerThread()
 
         /* Set the FMTP packet header (EOP message). */
         FmtpHeader              EOPmsg;
-        sendheader.prodindex  = htonl(prodindex);
-        sendheader.seqnum     = 0;
-        sendheader.payloadlen = 0;
-        sendheader.flags      = htons(FMTP_RETX_EOP);
+        EOPmsg.prodindex  = htonl(prodindex);
+        EOPmsg.seqnum     = 0;
+        EOPmsg.payloadlen = 0;
+        EOPmsg.flags      = htons(FMTP_RETX_EOP);
         /* notify all unACKed receivers with an EOP. */
         sendMeta->notifyUnACKedRcvrs(prodindex, &EOPmsg);
 
