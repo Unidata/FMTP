@@ -382,8 +382,8 @@ int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
 int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
                   size_t paylen)
 {
-    sendall(retxsockfd, sendheader, sizeof(FmtpHeader));
-    sendall(retxsockfd, payload, paylen);
+    sendallstatic(retxsockfd, sendheader, sizeof(FmtpHeader));
+    sendallstatic(retxsockfd, payload, paylen);
 
     return (sizeof(FmtpHeader) + paylen);
 }

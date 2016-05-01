@@ -134,6 +134,34 @@ void TcpBase::sendall(const int sock, void* const buf, size_t nbytes)
 
 
 /**
+ * Writes a given number of bytes to a given streaming socket. Returns when that
+ * number is written or an error occurs. This is the static memeber function in
+ * alternative to the member function sendall().
+ *
+ * @param[in] sock    The streaming socket.
+ * @param[in] buf     Pointer to a buffer.
+ * @param[in] nbytes  Number of bytes to write.
+ * @throws std::system_error  if an error is encountered writing to the
+ *                            socket.
+ */
+void TcpBase::sendallstatic(const int sock, void* const buf, size_t nbytes)
+{
+    char*  ptr = (char*) buf;
+
+    while (nbytes > 0) {
+        int nwritten = send(sock, ptr, nbytes, 0);
+        if (nwritten <= 0) {
+            throw std::system_error(errno, std::system_category(),
+                    "TcpBase::sendall() Error sending to socket " +
+                    std::to_string(sock));
+        }
+        ptr += nwritten;
+        nbytes -= nwritten;
+    }
+}
+
+
+/**
  * Writes a given number of bytes. Returns when that number is written or an
  * error occurs.
  *

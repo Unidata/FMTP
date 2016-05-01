@@ -75,6 +75,8 @@ protected:
      *                            socket.
      */
     void sendall(const int sock, void* const buf, size_t nbytes);
+    /* the static member function version of sendall() */
+    static void sendallstatic(const int sock, void* const buf, size_t nbytes);
 
     /**
      * Writes a given number of bytes. Returns when that number is written or an
