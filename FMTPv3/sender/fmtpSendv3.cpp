@@ -269,10 +269,6 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
 /**
  * Transfers stream of files.
- * Expected behavior from application: fetch_next_prod() should:
- * (i): return the pointers and metadata of next file
- * (ii): block until there is a new file
- * (iii): return 0 to indicate the end of a file stream
  */
 void fmtpSendv3::sendProductStream()
 {
