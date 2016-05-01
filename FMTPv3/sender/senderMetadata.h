@@ -105,8 +105,7 @@ public:
     void addRetxMetadata(RetxMetadata* ptrMeta);
     bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
     RetxMetadata* getMetadata(uint32_t prodindex);
-    void notifyUnACKedRcvrs(const uint32_t prodindex,
-                            const FmtpHeader* const header);
+    void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header);
     bool releaseMetadata(uint32_t prodindex);
     bool rmRetxMetadata(uint32_t prodindex);
 

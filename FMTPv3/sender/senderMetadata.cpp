@@ -177,8 +177,7 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
  *
  * @throw std::runtime_error if TcpSend::send() fails.
  */
-void notifyUnACKedRcvrs(const uint32_t prodindex,
-                        const FmtpHeader* const header)
+void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header)
 {
     std::map<uint32_t, RetxMetadata*>::iterator it;
     std::set<int>::iterator sockit;
