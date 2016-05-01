@@ -363,3 +363,27 @@ int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
 
     return (sizeof(FmtpHeader) + paylen);
 }
+
+
+/**
+ * Sends a FMTP packet through the given retransmission connection identified
+ * by retxsockfd. It blocks until all sending is finished. Or it can terminate
+ * with error occurred. This is the static member function in alternative to
+ * the TcpSend::sendData().
+ *
+ * @param[in] retxsockfd    retransmission socket file descriptor.
+ * @param[in] *sendheader   pointer of a FmtpHeader structure, whose fields
+ *                          are to hold the ready-to-send information.
+ * @param[in] *payload      pointer to the ready-to-send memory buffer which
+ *                          holds the packet payload.
+ * @param[in] paylen        size to be sent (size of the payload)
+ * @return    retval        return the total bytes sent.
+ */
+int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
+                  size_t paylen)
+{
+    sendall(retxsockfd, sendheader, sizeof(FmtpHeader));
+    sendall(retxsockfd, payload, paylen);
+
+    return (sizeof(FmtpHeader) + paylen);
+}

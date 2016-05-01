@@ -65,6 +65,8 @@ public:
     /** gathering send by calling io vector system call */
     int sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
                  size_t paylen);
+    static int send(int retxsockfd, FmtpHeader* sendheader, char* payload,
+                    size_t paylen);
 
 private:
     struct sockaddr_in servAddr;
