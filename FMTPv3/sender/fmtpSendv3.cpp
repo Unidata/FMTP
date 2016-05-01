@@ -1199,6 +1199,15 @@ void fmtpSendv3::timerThread()
             WriteToLog(debugmsg);
         #endif
 
+        /* Set the FMTP packet header (EOP message). */
+        FmtpHeader              EOPmsg;
+        sendheader.prodindex  = htonl(prodindex);
+        sendheader.seqnum     = 0;
+        sendheader.payloadlen = 0;
+        sendheader.flags      = htons(FMTP_RETX_EOP);
+        /* notify all unACKed receivers with an EOP. */
+        sendMeta->notifyUnACKedRcvrs(prodindex, &EOPmsg);
+
         const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
          * Only if the product is removed by this remove call, notify the
