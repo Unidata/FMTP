@@ -268,20 +268,10 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
 
 /**
- * Transfers stream of files.
+ * Transfers a file stream.
  */
 void fmtpSendv3::sendProductStream()
 {
-#if 0
-    void* data     = NULL;
-    void* metadata = NULL;
-    uint32_t datasize;
-    uint16_t metasize;
-    while (notifier->fetch_next_prod(&data, &datasize, &metadata, &metasize))
-    {
-        sendProduct(data, datasize, metadata, metasize);
-    }
-#endif
 }
 
 
