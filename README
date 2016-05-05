@@ -1,9 +1,9 @@
-                          VCMTP README FILE
+                          FMTP README FILE
 
 INTRODUCTION:
 
     This package contains the source-code for the Virtual Circuit Multicast
-    Transport Protocol (VCMTP).
+    Transport Protocol (FMTP).
 
 RELEASE IDENTIFICATION:
 
@@ -43,7 +43,7 @@ SUPPORT:
 
     You may request support by sending an email inquiry to
     
-        support-vcmtp@unidata.ucar.edu
+        support-fmtp@unidata.ucar.edu
         
     Please include a description of the type of platform (hardware and
     operating system) and any relevant information that can help us answer your
