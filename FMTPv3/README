@@ -12,7 +12,7 @@ CONTENTS OF THIS FILE
 INTRODUCTION
 ------------
 
-VCMTPv3 is the third version of the reliable multicast transportation protocol
+FMTP is the third version of the reliable multicast transportation protocol
 developed by University of Virginia. Currently, this protocol is running in
 the user space as an application protocol. And underneath it's calling the
 standard TCP/UDP and IP protocol stack. This protocol is consisted of two major
@@ -27,7 +27,7 @@ The sender timer is used to form a window for legal retransmission and release
 resources after the window is closed. And the receiver timer is used to watch
 the EOPs. If it finds missing EOP, a requested will be sent back immediately.
 The whole program is written in C++.
-VCMTPv3 is integrated into LDM7 as an underlying layer. Also, a testing
+FMTP is integrated into LDM7 as an underlying layer. Also, a testing
 application suite is provided as a simple replacement for LDM. The test
 application provides product stream transmission. It reads the metadata of LDM
 to replay the feedtype with exactly the same product size and inter-arrival
@@ -39,7 +39,7 @@ time. The only difference is that the content of a product is all 0.
 SYSTEM REQUIREMENTS
 -------------------
 
-VCMTPv3 is developed and tested on Linux/UNIX. All the mainstream distributions
+FMTP is developed and tested on Linux/UNIX. All the mainstream distributions
 such as Ubuntu LTS 12.04 or above, CentOS 5 or above, Mac OSX 10.9 or above
 and FreeBSD 9 or above will be supported. Microsoft Windows is not supported.
 
@@ -56,8 +56,8 @@ INSTALLATION
 
 Before actually start to compile and install the protocol. Make sure the listed
 pre-requisites have been met. All of the following instructions will be given
-based on CentOS 6.6 x86_64. Here, only the instructions for installing VCMTPv3
-with test applications are provided. To use LDM along with VCMTPv3, please see
+based on CentOS 6.6 x86_64. Here, only the instructions for installing FMTP
+with test applications are provided. To use LDM along with FMTP, please see
 LDM Tutorial (http://www.unidata.ucar.edu/software/ldm/ldm-current/tutorial/).
 
 * Git
@@ -70,11 +70,11 @@ LDM Tutorial (http://www.unidata.ucar.edu/software/ldm/ldm-current/tutorial/).
   provided any more, you could use clang++ as an alternative.
 
 * Next, for sending side, go into the sending protocol folder
-  $ cd VCMTPv3/sender
+  $ cd FMTP/sender
   $ make -f Makefile_send
 
 * For receiving side, go into the receiving protocol folder
-  $ cd VCMTPv3/receiver
+  $ cd FMTP/receiver
   $ make -f Makefile_recv
 
 DEBUG and TEST flags
@@ -88,9 +88,9 @@ DEBUG level 2 is enabled, detailed statements on a per-packet basis will be
 printed to indicate the multicast and retransmission status of each block.
 DEBUG1 flag will not generate log files, all the statements will only be
 printed on the standard output. DEBUG2 flag will generate a log file as well
-as posting all the statements to the standard output. A VCMTPv3_SENDER.log will
-be generated in vcmtp/VCMTPv3/sender/, a VCMTPv3_RECEIVER.log will be generated
-in vcmtp/VCMTPv3/receiver/
+as posting all the statements to the standard output. A FMTP_SENDER.log will
+be generated in fmtp/FMTP/sender/, a FMTP_RECEIVER.log will be generated
+in fmtp/FMTP/receiver/
 TEST flags are used to switch between different test cases. For example, if
 TEST_BOP flag is set, the testSendApp will emulate the BOP-missing case.
 Similarly, TEST_DATA_MISS enables emulation for data block missing case and
@@ -123,7 +123,7 @@ and file-delivery ratio and etc.
 USAGE
 -----
 
-VCMTPv3 is designed to cooperate with LDM (by UCAR) as an underlying transport
+FMTP is designed to cooperate with LDM (by UCAR) as an underlying transport
 protocol. But it's also possible to work alone using the testing applications.
 There is a testSendApp.cpp in the sender folder and a testRecvApp.cpp in the
 receiver folder.
@@ -148,7 +148,7 @@ will work. Another scenario is two sides running on different nodes. Specifying
 whatever interface on the node and the corresponding interface on the peer will
 work. But pay attention that these interfaces should be physically connected.
 If there is a mocked product queue and TTL needs to be non-one value,
-developers can modify the testSendApp.cpp to call another vcmtpSendv3()
+developers can modify the testSendApp.cpp to call another fmtpSendv3()
 constructor. The testSendApp has a built-in random sized product generator.
 It reads the plain text file (which contains a single column of product sizes)
 and parses that text file to extract each number as a size for a product. Then
@@ -160,11 +160,11 @@ first, or the other receivers could be affected if testSendApp is terminated
 first instead.
 
 APIs:
-The sending side VCMTPv3 APIs include its constructor vcmtpSendv3(), Start()
+The sending side FMTP APIs include its constructor fmtpSendv3(), Start()
 and sendProduct(). Applications should call the constructor first and call
 Start() to start the preparation work. After that, applications can call
 sendProduct() repeatedly to send products.
-The receiving side VCMTPv3 APIs include constructor vcmtpRecvv3(), Start()
+The receiving side FMTP APIs include constructor fmtpRecvv3(), Start()
 and SetLinkSpeed(). Applications should first call the constructor and then
 call SetLinkSpeed() to set the link rate. Then applications can call Start()
 to receive data products.
@@ -174,17 +174,17 @@ Since UDP doesn't handle flow control and congestion control. There should be
 a way to limit the sending rate. Hence, the rate shaper is implemented as an
 optional module to do application-layer rate shaping. By calling SetSendRate()
 in the sending application with rate in bits per second as the only parameter,
-VCMTP will shaper the rate to the specified value on a per-packet basis, which
-means sleeping intervals will be inserted between the transmission of two VCMTP
-packets. To disable this rate shaper, just do not call SetSendRate(), VCMTP
+FMTP will shaper the rate to the specified value on a per-packet basis, which
+means sleeping intervals will be inserted between the transmission of two FMTP
+packets. To disable this rate shaper, just do not call SetSendRate(), FMTP
 will check if a valid rate is set. If not, then it implies there is some other
 method applied for shaping the rate.
 
 Silence Suppressor:
 The original LDM feedtypes contain much silence. When replaying the metadata,
-VCMTP is sleeping on the silence period most of the time. In order to speed up
+FMTP is sleeping on the silence period most of the time. In order to speed up
 some tests (those don't strictly require an identical departure process), the
-silence suppressor is implemented as an extra module. Every time VCMTP sends a
+silence suppressor is implemented as an extra module. Every time FMTP sends a
 product, it starts to wait for the inter-arrival time. However, it wakes up if
 either all receivers have acknowledged this product or the sender side timer
 expires. Either way, the product will be released and thus suppressing the
@@ -197,10 +197,10 @@ from the silence suppressor.
 
 Doxygen is also supported to generate various kinds of documentations. Now only
 a HTML format document will be generated by doxygen. But if necessary, there is
-a configuration file named vcmtpdocs.conf which can be modified to enable other
+a configuration file named fmtpdocs.conf which can be modified to enable other
 outputs. To run doxygen generation process, do the following
 
-$ doxygen vcmtpdocs.conf
+$ doxygen fmtpdocs.conf
 
 As the command is finished, a new folder named html will appear under current
 path. You can use a browser to view the whole documentation.
