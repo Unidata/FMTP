@@ -1,7 +1,7 @@
 Derived from the remarkable dissector template by Reinhold Kainhofer
 <reinhold@kainhofer.com> and further developed by Shawn Chen
 <sc7cq@virginia.edu>, this plugin is made possible to dissect a protocol
-named Virtual-Circuit Multicast Transportation Protocol (VCMTP).
+named Virtual-Circuit Multicast Transportation Protocol (FMTP).
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
