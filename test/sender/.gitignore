@@ -2,3 +2,6 @@ ProdIndexDeleyQueueTest
 ProdIndexDelayQueueTest
 Makefile.in
 Makefile
+ProdIndexDelayQueueTest.log
+ProdIndexDelayQueueTest.trs
+test-suite.log
