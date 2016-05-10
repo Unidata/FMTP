@@ -21,7 +21,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 
-project(vcmtp-wireshark-plugin C)
+project(fmtp-wireshark-plugin C)
 
 cmake_minimum_required(VERSION 2.6)
 set(CMAKE_BACKWARDS_COMPATIBILITY 2.6)
@@ -43,7 +43,7 @@ set(LINK_MODE_MODULE MODULE)
 
 
 set(DISSECTOR_SRC
-	packet-vcmtp.c
+	packet-fmtp.c
 )
 
 set(PLUGIN_FILES
@@ -70,15 +70,15 @@ register_dissector_files(plugin.c
 	${DISSECTOR_SRC}
 )
 
-add_library(vcmtp ${LINK_MODE_MODULE}
+add_library(fmtp ${LINK_MODE_MODULE}
 	${PLUGIN_FILES}
 )
-set_target_properties(vcmtp PROPERTIES PREFIX "")
-set_target_properties(vcmtp PROPERTIES LINK_FLAGS "${WS_LINK_FLAGS}")
+set_target_properties(fmtp PROPERTIES PREFIX "")
+set_target_properties(fmtp PROPERTIES LINK_FLAGS "${WS_LINK_FLAGS}")
 
-target_link_libraries(vcmtp wireshark)
+target_link_libraries(fmtp wireshark)
 
-install(TARGETS vcmtp
+install(TARGETS fmtp
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/plugins NAMELINK_SKIP
 )
 

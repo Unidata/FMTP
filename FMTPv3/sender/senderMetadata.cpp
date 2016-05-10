@@ -30,6 +30,7 @@
 
 
 #include "senderMetadata.h"
+#include "TcpSend.h"
 
 
 #ifndef NULL
@@ -156,6 +157,46 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
         }
     }
     return temp;
+}
+
+
+/**
+ * Sends all unACKed receivers an EOP. This is to make sure the unACKed
+ * receivers did not miss the whole last file.
+ * Also another possibility is that the receiver timer is set improperly,
+ * in which case the receiver missed the last few blocks of the last file
+ * but is still waiting for the reiceiver timer to wake up and detect loss.
+ * This improperly set receiver timer wakes up after the sender timer expires,
+ * which causes no RETX_END to come back to the sender in time.
+ * But either case, it looks the same from the sender's perspective. The
+ * sender will retransmit an EOP via TCP to guarantee receivers know the
+ * existance of a file, but cannot guarantee the successful delivery.
+ *
+ * @param[in] prodindex         product index of the product
+ * @param[in] header            the EOP message
+ *
+ * @throw std::runtime_error if TcpSend::send() fails.
+ */
+void senderMetadata::notifyUnACKedRcvrs(uint32_t prodindex,
+                                        FmtpHeader* header)
+{
+    std::map<uint32_t, RetxMetadata*>::iterator it;
+    std::set<int>::iterator sockit;
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
+        if (!it->second->unfinReceivers.empty()) {
+            for (sockit = it->second->unfinReceivers.begin();
+                 sockit != it->second->unfinReceivers.end(); ++sockit)
+            {
+                int retval = TcpSend::send(*sockit, header, NULL, 0);
+                if (retval < 0) {
+                    throw std::runtime_error(
+                            "senderMetadata::notifyUnACKedRcvrs() "
+                            "TcpSend::sendData() error");
+                }
+            }
+        }
+    }
 }
 
 

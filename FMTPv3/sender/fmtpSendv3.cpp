@@ -268,24 +268,10 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
 
 /**
- * Transfers stream of files.
- * Expected behavior from application: fetch_next_prod() should:
- * (i): return the pointers and metadata of next file
- * (ii): block until there is a new file
- * (iii): return 0 to indicate the end of a file stream
+ * Transfers a file stream.
  */
 void fmtpSendv3::sendProductStream()
 {
-#if 0
-    void* data     = NULL;
-    void* metadata = NULL;
-    uint32_t datasize;
-    uint16_t metasize;
-    while (notifier->fetch_next_prod(&data, &datasize, &metadata, &metasize))
-    {
-        sendProduct(data, datasize, metadata, metasize);
-    }
-#endif
 }
 
 
@@ -1202,6 +1188,15 @@ void fmtpSendv3::timerThread()
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);
         #endif
+
+        /* Set the FMTP packet header (EOP message). */
+        FmtpHeader          EOPmsg;
+        EOPmsg.prodindex  = htonl(prodindex);
+        EOPmsg.seqnum     = 0;
+        EOPmsg.payloadlen = 0;
+        EOPmsg.flags      = htons(FMTP_RETX_EOP);
+        /* notify all unACKed receivers with an EOP. */
+        sendMeta->notifyUnACKedRcvrs(prodindex, &EOPmsg);
 
         const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
