@@ -48,7 +48,7 @@
 
 #include "Measure.h"
 #include "ProdBlockMNG.h"
-#include "RecvAppNotifier.h"
+#include "RecvProxy.h"
 #include "TcpRecv.h"
 #include "fmtpBase.h"
 
@@ -77,11 +77,11 @@ typedef std::unordered_map<uint32_t, bool> EOPStatusMap;
 class fmtpRecvv3 {
 public:
     fmtpRecvv3(const std::string    tcpAddr,
-                const unsigned short tcpPort,
-                const std::string    mcastAddr,
-                const unsigned short mcastPort,
-                RecvAppNotifier*     notifier = NULL,
-                const std::string    ifAddr = "0.0.0.0");
+               const unsigned short tcpPort,
+               const std::string    mcastAddr,
+               const unsigned short mcastPort,
+               RecvProxy*           notifier = NULL,
+               const std::string    ifAddr = "0.0.0.0");
     ~fmtpRecvv3();
 
     uint32_t getNotify();
@@ -266,7 +266,7 @@ private:
     struct ip_mreq          mreq;
     std::atomic<uint32_t>   prodidx_mcast;
     /* callback function of the receiving application */
-    RecvAppNotifier*        notifier;
+    RecvProxy*              notifier;
     TcpRecv*                tcprecv;
     /* a map from prodindex to struct ProdTracker */
     TrackerMap              trackermap;

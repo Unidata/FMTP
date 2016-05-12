@@ -67,7 +67,7 @@ fmtpRecvv3::fmtpRecvv3(
     const unsigned short tcpPort,
     const std::string    mcastAddr,
     const unsigned short mcastPort,
-    RecvAppNotifier*     notifier,
+    RecvProxy*           notifier,
     const std::string    ifAddr)
 :
     tcpAddr(tcpAddr),
