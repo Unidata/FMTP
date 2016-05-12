@@ -193,6 +193,22 @@ int TcpSend::acceptConn()
 
 
 /**
+ * Closes tcp connections and removes them from the current connection list.
+ *
+ * @param[in] sockfd          Socket to be closed.
+ * @throw  std::system_error  if close() system call fails.
+ */
+void TcpSend::dismantleConn(int sockfd)
+{
+    rmSockInList(sockfd);
+    if (close(sockfd) < 0) {
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::dismantleConn() error closing socket");
+    }
+}
+
+
+/**
  * Accept incoming tcp connection requests and push them into the socket list.
  * Then return the current socket file descriptor for further use.
  *

@@ -53,6 +53,7 @@ public:
     ~TcpSend();
 
     int acceptConn();
+    void dismantleConn(int sockfd);
     /** return the reference of a socket list */
     const std::list<int>& getConnSockList();
     unsigned short getPortNum();

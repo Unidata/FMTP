@@ -425,6 +425,18 @@ void* fmtpSendv3::coordinator(void* ptr)
     try {
         while(1) {
             int newtcpsockfd = sendptr->tcpsend->acceptConn();
+            /**
+             * Requests the application to verify a new receiver. Shuts down
+             * the connection if failing. Otherwise fork a new thread for the
+             * receiver. This access control process can be skipped if there
+             * is no application support (e.g. testApp).
+             */
+            if (sendptr->notifier) {
+                if (!sendptr->notifier->verify_new_recv(newtcpsockfd)) {
+                    sendptr->tcpsend->dismantleConn(newtcpsockfd);
+                    continue;
+                }
+            }
             int initState;
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
             sendptr->StartNewRetxThread(newtcpsockfd);
