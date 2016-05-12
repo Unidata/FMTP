@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file SendAppNotifier.h
+ * @file SendProxy.h
  *
  * This file declares the API for classes that notify a sending application
  * about files.
@@ -11,8 +11,8 @@
  * @author: Shawn Chen <sc7cq@virginia.edu>
  */
 
-#ifndef FMTP_SENDER_SENDAPPNOTIFIER_H_
-#define FMTP_SENDER_SENDAPPNOTIFIER_H_
+#ifndef FMTP_SENDER_SENDPROXY_H_
+#define FMTP_SENDER_SENDPROXY_H_
 
 
 #include <stdint.h>
@@ -21,11 +21,11 @@
 /**
  * This base class notifies a sending application about events.
  */
-class SendAppNotifier
+class SendProxy
 {
 public:
-    SendAppNotifier() {};
-    virtual ~SendAppNotifier() {};        // definition must exist
+    SendProxy() {};
+    virtual ~SendProxy() {};        // definition must exist
 
     /**
      * Notifies the sending application about the complete reception of the
@@ -35,4 +35,4 @@ public:
 };
 
 
-#endif /* FMTP_SENDER_SENDAPPNOTIFIER_H_ */
+#endif /* FMTP_SENDER_SENDPROXY_H_ */

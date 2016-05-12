@@ -10,7 +10,7 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= ProdIndexDelayQueue.cpp ProdIndexDelayQueue.h \
                           RetxThreads.cpp RetxThreads.h \
 			  senderMetadata.cpp senderMetadata.h \
-			  SendAppNotifier.h \
+			  SendProxy.h \
 			  TcpSend.cpp TcpSend.h \
 			  UdpSend.cpp UdpSend.h \
 			  fmtpSendv3.cpp fmtpSendv3.h

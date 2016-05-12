@@ -43,7 +43,7 @@
 #include "ProdIndexDelayQueue.h"
 #include "../RateShaper/RateShaper.h"
 #include "RetxThreads.h"
-#include "SendAppNotifier.h"
+#include "SendProxy.h"
 #include "senderMetadata.h"
 #include "../SilenceSuppressor/SilenceSuppressor.h"
 #include "TcpSend.h"
@@ -91,7 +91,7 @@ public:
                  const unsigned short  tcpPort,
                  const char*           mcastAddr,
                  const unsigned short  mcastPort,
-                 SendAppNotifier*      notifier = NULL,
+                 SendProxy*            notifier = NULL,
                  const unsigned char   ttl = 1,
                  const std::string     ifAddr = "0.0.0.0",
                  const uint32_t        initProdIndex = 0,
@@ -247,7 +247,7 @@ private:
     /** maintaining metadata for retx use. */
     senderMetadata*     sendMeta;
     /** sending application callback hook */
-    SendAppNotifier*    notifier;
+    SendProxy*          notifier;
     ProdIndexDelayQueue timerDelayQ;
     pthread_t           coor_t;
     pthread_t           timer_t;

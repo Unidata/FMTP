@@ -72,14 +72,14 @@
  *                           performance and robustness.
  */
 fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
-                         const unsigned short        tcpPort,
-                         const char*                 mcastAddr,
-                         const unsigned short        mcastPort,
-                         SendAppNotifier*            notifier,
-                         const unsigned char         ttl,
-                         const std::string           ifAddr,
-                         const uint32_t              initProdIndex,
-                         const float                 tsnd)
+                       const unsigned short        tcpPort,
+                       const char*                 mcastAddr,
+                       const unsigned short        mcastPort,
+                       SendProxy*                  notifier,
+                       const unsigned char         ttl,
+                       const std::string           ifAddr,
+                       const uint32_t              initProdIndex,
+                       const float                 tsnd)
 :
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
