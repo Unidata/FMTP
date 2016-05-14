@@ -437,7 +437,9 @@ void* fmtpSendv3::coordinator(void* ptr)
                     continue;
                 }
             }
-            // TODO: update pmtu
+            /* If new receiver accepted, measure its path MTU and update */
+            sendptr->tcpsend->updatePathMTU(newtcpsockfd);
+
             int initState;
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
             sendptr->StartNewRetxThread(newtcpsockfd);
