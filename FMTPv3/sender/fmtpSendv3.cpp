@@ -437,6 +437,8 @@ void* fmtpSendv3::coordinator(void* ptr)
                     continue;
                 }
             }
+            // new_mtu = max(new_mtu, MIN_MTU);
+            // MCAST_MTU = min(new_mtu, current_mtu);
             int initState;
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
             sendptr->StartNewRetxThread(newtcpsockfd);

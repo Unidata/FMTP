@@ -37,6 +37,7 @@
 
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <atomic>
 #include <list>
 #include <mutex>
 #include <string>
@@ -56,6 +57,7 @@ public:
     void dismantleConn(int sockfd);
     /** return the reference of a socket list */
     const std::list<int>& getConnSockList();
+    int getMinPathMTU();
     unsigned short getPortNum();
     void Init(); /*!< start point that upper layer should call */
     /** only parse the header part of a coming packet */
@@ -68,6 +70,7 @@ public:
                  size_t paylen);
     static int send(int retxsockfd, FmtpHeader* sendheader, char* payload,
                     size_t paylen);
+    void updatePathMTU(int sockfd);
 
 private:
     struct sockaddr_in servAddr;
@@ -75,6 +78,7 @@ private:
     unsigned short     tcpPort;
     std::list<int>     connSockList;
     std::mutex         sockListMutex; /*!< to protect shared sockList */
+    std::atomic<int>   pmtu (MIN_MTU); /* min path MTU of the mcast group */
 
     /**
      * Sets the keep-alive mechanism on a TCP socket.

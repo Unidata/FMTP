@@ -403,3 +403,28 @@ int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
 
     return (sizeof(FmtpHeader) + paylen);
 }
+
+
+/**
+ * Reads the path MTU of a receiver connection, and updates the minimum path
+ * MTU with the new obtained value (or remains unchanged).
+ *
+ * @param[in] sockfd    socket file descriptor of a receiver connection.
+ *
+ * @throw  std::system_error    if obtained MTU is invalid.
+ */
+void TcpSend::updatePathMTU(int sockfd)
+{
+    int mtu;
+    socklen_t mtulen = sizeof(mtu);
+    /* TODO: need to support multiple platforms */
+    getsockopt(sockfd, SOL_IP, IP_MTU, &mtu, &mtulen);
+    if (mtu <= 0) {
+        throw std::system_error(errno, std::system_category(),
+                "TcpSend::updatePathMTU() error obtaining MTU");
+    }
+    /* force mtu to be at least MIN_MTU, cannot afford mtu to be too small */
+    mtu = (mtu < MIN_MTU) ? MIN_MTU : mtu;
+    /* update pmtu with the newly joined mtu */
+    pmtu = (mtu < pmtu) ? mtu : pmtu;
+}
