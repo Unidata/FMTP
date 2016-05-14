@@ -113,6 +113,9 @@ typedef struct timerParameter {
     double   seconds;
 } timerParam;
 
+/* define minimum MTU for FMTP usage */
+const int MIN_MTU = 1500;
+
 
 class fmtpBase {
 public:
