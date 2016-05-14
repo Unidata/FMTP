@@ -270,6 +270,7 @@ void TcpSend::Init()
     int alive = 1;
     //int aliveidle = 10; /* keep alive time = 10 sec */
     int aliveintvl = 30; /* keep alive interval = 30 sec */
+    pmtu = MIN_MTU; /* initialize pmtu with defined min MTU */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -438,5 +439,7 @@ void TcpSend::updatePathMTU(int sockfd)
     /* force mtu to be at least MIN_MTU, cannot afford mtu to be too small */
     mtu = (mtu < MIN_MTU) ? MIN_MTU : mtu;
     /* update pmtu with the newly joined mtu */
-    pmtu = (mtu < pmtu) ? mtu : pmtu;
+    if (mtu < pmtu) {
+         pmtu = mtu;
+    }
 }

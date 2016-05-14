@@ -78,7 +78,7 @@ private:
     unsigned short     tcpPort;
     std::list<int>     connSockList;
     std::mutex         sockListMutex; /*!< to protect shared sockList */
-    std::atomic<int>   pmtu (MIN_MTU); /* min path MTU of the mcast group */
+    std::atomic<int>   pmtu; /* min path MTU of the mcast group */
 
     /**
      * Sets the keep-alive mechanism on a TCP socket.
