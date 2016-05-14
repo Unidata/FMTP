@@ -222,6 +222,18 @@ const std::list<int>& TcpSend::getConnSockList()
 
 
 /**
+ * Gets the min path MTU.
+ *
+ * @param[in] none
+ * @return    pmtu    Up-to-date min path MTU.
+ */
+int TcpSend::getMinPathMTU()
+{
+    return pmtu;
+}
+
+
+/**
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
