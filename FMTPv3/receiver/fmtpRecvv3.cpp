@@ -899,7 +899,6 @@ void fmtpRecvv3::retxHandler()
 {
     FmtpHeader header;
     char        pktHead[FMTP_HEADER_LEN];
-    char        paytmp[FMTP_DATA_LEN];
     int         initState;
     int         ignoredState;
 
@@ -941,6 +940,10 @@ void fmtpRecvv3::retxHandler()
             /* TcpRecv::recvData() will return requested number of bytes */
             decodeHeader(pktHead, header);
         }
+
+        /* dynamically creates a buffer on stack based on payload size */
+        const int bufsize = header.payloadlen;
+        char      paytmp[bufsize];
 
         if (header.flags == FMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
@@ -1025,11 +1028,6 @@ void fmtpRecvv3::retxHandler()
                 WriteToLog(debugmsg);
             #endif
 
-            /**
-             * directly writing unwanted data to NULL is not allowed. So here
-             * uses a temp buffer as trash to dump the payload content.
-             */
-            char     tmp[FMTP_DATA_LEN];
             uint32_t prodsize = 0;
             void*    prodptr  = NULL;
             {
@@ -1056,7 +1054,7 @@ void fmtpRecvv3::retxHandler()
                  * drop the payload since there is no location allocated
                  * in the product queue.
                  */
-                nbytes = tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                nbytes = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
                 if (nbytes == 0) {
@@ -1075,12 +1073,11 @@ void fmtpRecvv3::retxHandler()
                 continue;
             }
 
-            if(prodptr) {
+            if (prodptr) {
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
                                              &ignoredState);
                 nbytes = tcprecv->recvData(NULL, 0, (char*)prodptr +
-                                           header.seqnum,
-                                  header.payloadlen);
+                                           header.seqnum, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
                 if (nbytes == 0) {
@@ -1093,7 +1090,7 @@ void fmtpRecvv3::retxHandler()
                 /** dump the payload since there is no product queue */
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
                                              &ignoredState);
-                nbytes = tcprecv->recvData(NULL, 0, tmp, header.payloadlen);
+                nbytes = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
                 if (nbytes == 0) {
