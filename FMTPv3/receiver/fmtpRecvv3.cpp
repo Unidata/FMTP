@@ -343,7 +343,7 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
  * @throw std::runtime_error   if the amount of metadata is invalid.
  */
 void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
-                             const char* const  FmtpPacketData)
+                            const char* const  FmtpPacketData)
 {
     uint32_t blknum = 0;
     void*    prodptr = NULL;
@@ -361,8 +361,6 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     wire += sizeof(BOPmsg.prodsize);
     BOPmsg.metasize = ntohs(*(uint16_t*)wire);
     wire += sizeof(BOPmsg.metasize);
-    BOPmsg.metasize = BOPmsg.metasize > AVAIL_BOP_LEN
-                      ? AVAIL_BOP_LEN : BOPmsg.metasize;
     if ((header.payloadlen - BOPCONST) != BOPmsg.metasize) {
         throw std::runtime_error("fmtpRecvv3::BOPHandler(): metasize "
                 "mismatched payload indicated by header");
