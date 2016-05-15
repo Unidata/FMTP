@@ -60,13 +60,16 @@ typedef struct FmtpRetxReqMessage {
 } RetxReqMsg;
 
 
-const int MAX_FMTP_PACKET_LEN = 1460;
-const int FMTP_HEADER_LEN     = sizeof(FmtpHeader);
-const int FMTP_DATA_LEN       = MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN;
+/* define minimum MTU for FMTP usage */
+const int MIN_MTU         = 1500;
+const int FMTP_HEADER_LEN = sizeof(FmtpHeader);
+const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
+
+int MTU                 = MIN_MTU;
+int MAX_FMTP_PACKET_LEN = MTU - 20 - 20; /* exclude IP and TCP header */
+int FMTP_DATA_LEN       = MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN;
 /* sizeof(uint32_t) for BOPMsg.prodsize, sizeof(uint16_t) for BOPMsg.metasize */
-const int AVAIL_BOP_LEN        = FMTP_DATA_LEN - sizeof(uint32_t)
-                                 - sizeof(uint16_t);
-const int RETX_REQ_LEN         = sizeof(RetxReqMsg);
+int AVAIL_BOP_LEN       = FMTP_DATA_LEN - sizeof(uint32_t) - sizeof(uint16_t);
 
 
 /**
@@ -112,9 +115,6 @@ typedef struct timerParameter {
     uint32_t prodindex;
     double   seconds;
 } timerParam;
-
-/* define minimum MTU for FMTP usage */
-const int MIN_MTU = 1500;
 
 
 class fmtpBase {
