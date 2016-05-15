@@ -464,9 +464,9 @@ void* fmtpSendv3::coordinator(void* ptr)
  *                        the request will be rejected.
  * @param[in] sock        The receiver's socket.
  */
-void fmtpSendv3::handleRetxReq(FmtpHeader* const  recvheader,
-                                RetxMetadata* const retxMeta,
-                                const int           sock)
+void fmtpSendv3::handleRetxReq(FmtpHeader* const   recvheader,
+                               RetxMetadata* const retxMeta,
+                               const int           sock)
 {
     if (retxMeta) {
         retransmit(recvheader, retxMeta, sock);
@@ -690,14 +690,15 @@ void fmtpSendv3::rejRetxReq(const uint32_t prodindex, const int sock)
  * @throw std::runtime_error if TcpSend::send() fails.
  */
 void fmtpSendv3::retransmit(
-        const FmtpHeader* const  recvheader,
+        const FmtpHeader*   const recvheader,
         const RetxMetadata* const retxMeta,
         const int                 sock)
 {
-    if (0 < recvheader->payloadlen) {
+    if (recvheader->payloadlen > 0) {
         uint32_t start = recvheader->seqnum;
+        /* make sure the requested bytes do not exceed file size */
         uint32_t out   = MIN(retxMeta->prodLength,
-                start + recvheader->payloadlen);
+                             start + recvheader->payloadlen);
 
         FmtpHeader sendheader;
         sendheader.prodindex  = htonl(recvheader->prodindex);
@@ -712,10 +713,14 @@ void fmtpSendv3::retransmit(
         /**
          * Support sending multiple blocks.
          */
-        for (uint32_t nbytes = out - start; 0 < nbytes; nbytes -= payLen) {
-            if (payLen > nbytes)
+        for (uint32_t nbytes = out - start; nbytes > 0;
+             nbytes -= payLen, start += payLen) {
+            if (payLen > nbytes) {
                 /** only last block might be truncated */
                 payLen = nbytes;
+            } else {
+                payLen = FMTP_DATA_LEN;
+            }
 
             sendheader.seqnum     = htonl(start);
             sendheader.payloadlen = htons(payLen);
@@ -751,6 +756,7 @@ void fmtpSendv3::retransmit(
         }
     }
 }
+
 
 /**
  * Retransmits BOP to a receiver. All necessary metadata will be retrieved

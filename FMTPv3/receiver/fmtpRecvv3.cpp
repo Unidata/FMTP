@@ -848,8 +848,8 @@ void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
  * @param[in] datalen    Amount of data in bytes.
  */
 void fmtpRecvv3::pushMissingDataReq(const uint32_t prodindex,
-                                     const uint32_t seqnum,
-                                     const uint16_t datalen)
+                                    const uint32_t seqnum,
+                                    const uint16_t datalen)
 {
     INLReqMsg reqmsg = {MISSING_DATA, prodindex, seqnum, datalen};
     msgqueue.push(reqmsg);
@@ -1387,14 +1387,14 @@ void fmtpRecvv3::readMcastData(const FmtpHeader& header)
  * data-packet of the current data-product and its most recently-received
  * data-packet.
  *
- * @pre                 The most recently-received data-packet is for the
- *                      current data-product.
- * @param[in] prodindex Product index.
- * @param[in] seqnum    The most recently-received data-packet of the current
- *                      data-product.
+ * @pre                  The most recently-received data-packet is for the
+ *                       current data-product.
+ * @param[in] prodindex  Product index.
+ * @param[in] mostRecent The most recently-received data-packet of the current
+ *                       data-product.
  */
 void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
-                                        const uint32_t mostRecent)
+                                       const uint32_t mostRecent)
 {
     uint32_t seqnum = 0;
     {
@@ -1410,29 +1410,34 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
      * block sequence number.
      */
     if (seqnum != mostRecent) {
+        // TODO: should get rid of this force alignment */
         seqnum = (seqnum / FMTP_DATA_LEN) * FMTP_DATA_LEN;
 
         std::unique_lock<std::mutex> lock(msgQmutex);
+        /* merged requests, multiple missing blocks in one request */
+        pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
 
+        #ifdef MODBASE
+            uint32_t tmpidx = prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = prodindex;
+        #endif
+
+        #ifdef DEBUG2
+            std::string debugmsg = "[RETX REQ] Product #" +
+                std::to_string(tmpidx);
+            debugmsg += ": Data block is missing. SeqNum = ";
+            debugmsg += std::to_string(seqnum);
+            debugmsg += ". Request retx.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
+
+        /*
         for (; seqnum < mostRecent; seqnum += FMTP_DATA_LEN) {
             pushMissingDataReq(prodindex, seqnum, FMTP_DATA_LEN);
-
-            #ifdef MODBASE
-                uint32_t tmpidx = prodindex % MODBASE;
-            #else
-                uint32_t tmpidx = prodindex;
-            #endif
-
-            #ifdef DEBUG2
-                std::string debugmsg = "[RETX REQ] Product #" +
-                    std::to_string(tmpidx);
-                debugmsg += ": Data block is missing. SeqNum = ";
-                debugmsg += std::to_string(seqnum);
-                debugmsg += ". Request retx.";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
         }
+        */
         msgQfilled.notify_one();
     }
 }
