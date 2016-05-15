@@ -65,11 +65,11 @@ const int MIN_MTU         = 1500;
 const int FMTP_HEADER_LEN = sizeof(FmtpHeader);
 const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
 
-int MTU                 = MIN_MTU;
-int MAX_FMTP_PACKET_LEN = MTU - 20 - 20; /* exclude IP and TCP header */
-int FMTP_DATA_LEN       = MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN;
+const int MTU                 = MIN_MTU;
+const int MAX_FMTP_PACKET_LEN = MTU - 20 - 20; /* exclude IP and TCP header */
+const int FMTP_DATA_LEN       = MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN;
 /* sizeof(uint32_t) for BOPMsg.prodsize, sizeof(uint16_t) for BOPMsg.metasize */
-int AVAIL_BOP_LEN       = FMTP_DATA_LEN - sizeof(uint32_t) - sizeof(uint16_t);
+const int AVAIL_BOP_LEN       = FMTP_DATA_LEN - sizeof(uint32_t) - sizeof(uint16_t);
 
 
 /**
