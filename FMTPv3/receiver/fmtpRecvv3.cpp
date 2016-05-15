@@ -1339,7 +1339,7 @@ void fmtpRecvv3::readMcastData(const FmtpHeader& header)
     if (0 == prodptr) {
         const int bufsize = FMTP_HEADER_LEN + header.payloadlen;
         char pktbuf[bufsize];
-        nbytes = recv(mcastSock, pktBuf, bufsize, 0);
+        nbytes = read(mcastSock, &pktbuf, bufsize);
     }
     else {
         struct iovec iovec[2];
