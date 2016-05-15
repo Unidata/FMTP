@@ -234,6 +234,8 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
         /* Add a retransmission metadata entry */
         RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
                                                        metadata, metaSize);
+        // TODO: use latest MTU for file to be sent
+        // TcpSend::getMinPathMTU()
         /* send out BOP message */
         SendBOPMessage(dataSize, metadata, metaSize);
         /* Send the data */
