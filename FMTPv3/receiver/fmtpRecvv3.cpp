@@ -903,7 +903,6 @@ void fmtpRecvv3::retxHandler()
     int         ignoredState;
 
     (void)memset(pktHead, 0, sizeof(pktHead));
-    (void)memset(paytmp, 0, sizeof(paytmp));
     /*
      * Allow the current thread to be cancelled only when it is likely blocked
      * attempting to read from the unicast socket because that prevents the
@@ -944,6 +943,7 @@ void fmtpRecvv3::retxHandler()
         /* dynamically creates a buffer on stack based on payload size */
         const int bufsize = header.payloadlen;
         char      paytmp[bufsize];
+        (void)memset(paytmp, 0, sizeof(paytmp));
 
         if (header.flags == FMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
