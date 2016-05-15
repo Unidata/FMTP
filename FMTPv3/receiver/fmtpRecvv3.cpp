@@ -288,8 +288,9 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
         WriteToLog(debugmsg);
     #endif
 
-    char          pktBuf[MAX_FMTP_PACKET_LEN];
-    const ssize_t nbytes = recv(mcastSock, pktBuf, MAX_FMTP_PACKET_LEN, 0);
+    const int     bufsize = FMTP_HEADER_LEN + header.payloadlen;
+    char          pktBuf[bufsize];
+    const ssize_t nbytes = recv(mcastSock, pktBuf, bufsize, 0);
 
     if (nbytes < 0) {
         throw std::runtime_error("fmtpRecvv3::mcastBOPHandler() recv() got less"
@@ -1339,8 +1340,9 @@ void fmtpRecvv3::readMcastData(const FmtpHeader& header)
     }
 
     if (0 == prodptr) {
-        char pktbuf[MAX_FMTP_PACKET_LEN];
-        nbytes = read(mcastSock, &pktbuf, sizeof(pktbuf));
+        const int bufsize = FMTP_HEADER_LEN + header.payloadlen;
+        char pktbuf[bufsize];
+        nbytes = recv(mcastSock, pktBuf, bufsize, 0);
     }
     else {
         struct iovec iovec[2];

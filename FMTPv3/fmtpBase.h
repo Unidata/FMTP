@@ -60,11 +60,12 @@ typedef struct FmtpRetxReqMessage {
 } RetxReqMsg;
 
 
-/* define minimum MTU for FMTP usage */
+/* constants used by both sender and receiver */
 const int MIN_MTU         = 1500;
 const int FMTP_HEADER_LEN = sizeof(FmtpHeader);
 const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
 
+/* non-constants, could change with MTU */
 const int MTU                 = MIN_MTU;
 const int MAX_FMTP_PACKET_LEN = MTU - 20 - 20; /* exclude IP and TCP header */
 const int FMTP_DATA_LEN       = MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN;
