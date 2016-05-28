@@ -2,7 +2,8 @@
  * Copyright (C) 2016 University of Virginia. All rights reserved.
  *
  * @file      ProdSegMNG.h
- * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Ryan Aubrey <rma7qb@virginia.edu>
+ *            Shawn Chen <sc7cq@virginia.edu>
  * @version   1.0
  * @date      May 27, 2016
  *
