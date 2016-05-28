@@ -82,7 +82,7 @@ fmtpRecvv3::fmtpRecvv3(
     notifier(notifier),
     mcastSock(0),
     retxSock(0),
-    pBlockMNG(new ProdBlockMNG()),
+    pSegMNG(new ProdSegMNG()),
     msgQfilled(),
     msgQmutex(),
     BOPSetMtx(),
@@ -122,7 +122,7 @@ fmtpRecvv3::~fmtpRecvv3()
         trackermap.clear();
     }
     delete tcprecv;
-    delete pBlockMNG;
+    delete pSegMNG;
     delete measure;
 }
 
@@ -346,7 +346,6 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
 void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
                             const char* const  FmtpPacketData)
 {
-    uint32_t blknum = 0;
     void*    prodptr = NULL;
     BOPMsg   BOPmsg;
     /**
@@ -368,8 +367,6 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     }
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
-    blknum = BOPmsg.prodsize ? (BOPmsg.prodsize - 1) / FMTP_DATA_LEN + 1 : 0;
-
     /**
      * Here a strict check is performed to make sure the information in
      * trackermap and BlockMNG would not be overwritten by duplicate BOP.
@@ -378,7 +375,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
      * initialization. Also, notify_of_bop() will only be called for a
      * fresh new BOP. All the duplicate calls will be suppressed.
      */
-    bool insertion = pBlockMNG->addProd(header.prodindex, blknum);
+    bool insertion = pSegMNG->addProd(header.prodindex, BOPmsg.prodsize);
     bool inTracker;
     {
         std::unique_lock<std::mutex> lock(trackermtx);
@@ -547,7 +544,7 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
      * RETX_END message back to sender. Meanwhile notify receiving
      * application.
      */
-    if (pBlockMNG->delIfComplete(header.prodindex)) {
+    if (pSegMNG->delIfComplete(header.prodindex)) {
         sendRetxEnd(header.prodindex);
         bool inTracker;
         {
@@ -654,7 +651,7 @@ bool fmtpRecvv3::getEOPStatus(const uint32_t prodindex)
  */
 bool fmtpRecvv3::hasLastBlock(const uint32_t prodindex)
 {
-    return pBlockMNG->getLastBlock(prodindex);
+    return pSegMNG->getLastSegment(prodindex);
 }
 
 
@@ -1100,10 +1097,13 @@ void fmtpRecvv3::retxHandler()
                 }
             }
 
-            uint32_t iBlock = header.seqnum/FMTP_DATA_LEN;
-            pBlockMNG->set(header.prodindex, iBlock);
+            /**
+             * set() returns -1/0/1, receiver can parse the info for detailed
+             * operations. But currently it is ignored to keep the process going
+             */
+            pSegMNG->set(header.prodindex, header.seqnum, header.payloadlen);
 
-            if (pBlockMNG->delIfComplete(header.prodindex)) {
+            if (pSegMNG->delIfComplete(header.prodindex)) {
                 sendRetxEnd(header.prodindex);
                 bool inTracker;
                 {
@@ -1179,8 +1179,8 @@ void fmtpRecvv3::retxHandler()
              * Short-circuit evaluation guarantees the block map will not
              * be removed if it is complete.
              */
-            if ((!pBlockMNG->isComplete(header.prodindex) &&
-                pBlockMNG->rmProd(header.prodindex)) || hadBop) {
+            if ((!pSegMNG->isComplete(header.prodindex) &&
+                pSegMNG->rmProd(header.prodindex)) || hadBop) {
                 #ifdef MODBASE
                     uint32_t tmpidx = header.prodindex % MODBASE;
                 #else
@@ -1376,8 +1376,12 @@ void fmtpRecvv3::readMcastData(const FmtpHeader& header)
             WriteToLog(debugmsg);
         #endif
 
-        /** receiver should trust the packet from sender is legal */
-        pBlockMNG->set(header.prodindex, header.seqnum/FMTP_DATA_LEN);
+        /**
+         * Since now receiver has no knowledge about the segment size, it
+         * trusts the packet from sender is legal. Also, ProdBlockMNG has
+         * control to make sure no malicious segments will be ACKed.
+         */
+        pSegMNG->set(header.prodindex, header.seqnum, header.payloadlen);
     }
 }
 
@@ -1410,9 +1414,6 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
      * block sequence number.
      */
     if (seqnum != mostRecent) {
-        // TODO: should get rid of this force alignment */
-        seqnum = (seqnum / FMTP_DATA_LEN) * FMTP_DATA_LEN;
-
         std::unique_lock<std::mutex> lock(msgQmutex);
         /* merged requests, multiple missing blocks in one request */
         pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
@@ -1433,11 +1434,6 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
             WriteToLog(debugmsg);
         #endif
 
-        /*
-        for (; seqnum < mostRecent; seqnum += FMTP_DATA_LEN) {
-            pushMissingDataReq(prodindex, seqnum, FMTP_DATA_LEN);
-        }
-        */
         msgQfilled.notify_one();
     }
 }

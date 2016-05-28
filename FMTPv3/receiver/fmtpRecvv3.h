@@ -47,7 +47,7 @@
 #include <unordered_set>
 
 #include "Measure.h"
-#include "ProdBlockMNG.h"
+#include "ProdSegMNG.h"
 #include "RecvProxy.h"
 #include "TcpRecv.h"
 #include "fmtpBase.h"
@@ -276,7 +276,7 @@ private:
     /* a map from prodindex to EOP arrival status */
     EOPStatusMap            EOPmap;
     std::mutex              EOPmapmtx;
-    ProdBlockMNG*           pBlockMNG;
+    ProdSegMNG*             pSegMNG;
     std::queue<INLReqMsg>   msgqueue;
     std::condition_variable msgQfilled;
     std::mutex              msgQmutex;
