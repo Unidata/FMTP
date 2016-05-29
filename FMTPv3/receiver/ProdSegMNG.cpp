@@ -239,8 +239,8 @@ int ProdSegMNG::set(const uint32_t prodindex, const uint32_t seqnum,
             else {
                 /* there does not exist an entry starting with seqnum */
                 it = segmap->seqlenMap.lower_bound(seqnum);
-                if ((it != segmap->seqlenMap.begin()) &&
-                    (it != segmap->seqlenMap.end())) {
+                /* as far as map is not empty, it == end is fine */
+                if (it != segmap->seqlenMap.begin()) {
                     /* point to the entry before seqnum, should cover segment */
                     it--;
                     if (it->first + it->second > seqnum + payloadlen) {
