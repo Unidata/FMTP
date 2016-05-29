@@ -540,7 +540,7 @@ void fmtpRecvv3::decodeHeader(char* const  packet, FmtpHeader& header)
 void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
 {
     /**
-     * if bitmap check tells everything is completed, then sends the
+     * if segmap check tells everything is completed, then sends the
      * RETX_END message back to sender. Meanwhile notify receiving
      * application.
      */

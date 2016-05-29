@@ -99,10 +99,6 @@ bool ProdSegMNG::delIfComplete(const uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(mutex);
     if (segmapSet.count(prodindex)) {
-        /*
-         * if complete, free the bitmap on heap and clear associated maps
-         * And count() will return 0 if product does not exist
-         */
         SegMap* segmap = segmapSet[prodindex];
         if (segmap->completed) {
             delete segmap;
@@ -213,7 +209,7 @@ bool ProdSegMNG::rmProd(const uint32_t prodindex)
  *                             1 if set segment successful
  */
 int ProdSegMNG::set(const uint32_t prodindex, const uint32_t seqnum,
-                      const uint16_t payloadlen)
+                    const uint16_t payloadlen)
 {
     int state = 0;
     std::unique_lock<std::mutex> lock(mutex);
@@ -225,7 +221,7 @@ int ProdSegMNG::set(const uint32_t prodindex, const uint32_t seqnum,
                 /* there exists an entry starting with seqnum */
                 if (it->second > payloadlen) {
                     /* entry covers segment, cut head */
-                    uint16_t newlen = it->second - payloadlen;
+                    uint32_t newlen = it->second - payloadlen;
                     segmap->seqlenMap.erase(seqnum);
                     segmap->seqlenMap[seqnum + payloadlen] = newlen;
                     state = 1;
@@ -249,8 +245,8 @@ int ProdSegMNG::set(const uint32_t prodindex, const uint32_t seqnum,
                     it--;
                     if (it->first + it->second > seqnum + payloadlen) {
                         /* entry covers segment, break into two */
-                        uint16_t firstlen  = seqnum - it->first;
-                        uint16_t secondlen = it->second - payloadlen - firstlen;
+                        uint32_t firstlen  = seqnum - it->first;
+                        uint32_t secondlen = it->second - payloadlen - firstlen;
                         segmap->seqlenMap[it->first] = firstlen;
                         segmap->seqlenMap[seqnum + payloadlen] = secondlen;
                         state = 1;
