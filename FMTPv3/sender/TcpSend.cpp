@@ -329,7 +329,8 @@ void TcpSend::Init()
 int TcpSend::parseHeader(int retxsockfd, FmtpHeader* recvheader)
 {
     char recvbuf[FMTP_HEADER_LEN];
-    recvall(retxsockfd, recvbuf, sizeof(recvbuf));
+    if (recvall(retxsockfd, recvbuf, FMTP_HEADER_LEN) < FMTP_HEADER_LEN)
+        return 0;
 
     // TODO: re-write using sizeof()
     memcpy(&recvheader->prodindex,  recvbuf,    4);
