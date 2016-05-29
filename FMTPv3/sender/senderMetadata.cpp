@@ -30,7 +30,6 @@
 
 
 #include "senderMetadata.h"
-#include "TcpSend.h"
 
 #include <algorithm>
 
@@ -90,48 +89,67 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
  *                              connection.
  * @return    True if RetxMetadata is removed, otherwise false.
  */
-bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd)
+bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd,
+                                        TcpSend* tcpsend)
 {
     bool prodRemoved;
     std::map<uint32_t, RetxMetadata*>::iterator it;
-    {
-        std::unique_lock<std::mutex> lock(indexMetaMapLock);
-        if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
-            it->second->unfinReceivers.erase(retxsockfd);
-            if (it->second->unfinReceivers.empty()) {
-                if (it->second->inuse) {
-                    if (it->second->remove) {
-                        /**
-                         * If the remove flag is already marked as true, it implies
-                         * the deletion has been successfully done by another call.
-                         * Thus, the prodRemoved should be set to false and nothing
-                         * else should be done.
-                         */
-                        prodRemoved = false;
-                    }
-                    else {
-                        /**
-                         * If the remove flag is not marked as true, it implies
-                         * the deletion is successfully done by this call. Thus,
-                         * it deserves to set the prodRemoved to true.
-                         */
-                        it->second->remove = true;
-                        prodRemoved = true;
-                    }
+    std::list<int> sklist;
+    std::list<int>::iterator sklit;
+    std::set<int>::iterator sockit;
+
+    std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    /* socklist should not be empty */
+    sklist = tcpsend->getConnSockList();
+    if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
+        it->second->unfinReceivers.erase(retxsockfd);
+        /* find possible legacy offline receivers and erase from set */
+        if (!it->second->unfinReceivers.empty()) {
+            for (sockit = it->second->unfinReceivers.begin();
+                 sockit != it->second->unfinReceivers.end(); ) {
+                sklit = std::find(sklist.begin(), sklist.end(), *sockit);
+                if (sklit == sklist.end()) {
+                    /* erase while iterating, conforming c++0x */
+                    it->second->unfinReceivers.erase(sockit++);
                 }
                 else {
-                    it->second->~RetxMetadata();
-                    indexMetaMap.erase(it);
+                    ++sockit;
+                }
+            }
+        }
+        if (it->second->unfinReceivers.empty()) {
+            if (it->second->inuse) {
+                if (it->second->remove) {
+                    /**
+                     * If the remove flag is already marked as true, it implies
+                     * the deletion has been successfully done by another call.
+                     * Thus, the prodRemoved should be set to false and nothing
+                     * else should be done.
+                     */
+                    prodRemoved = false;
+                }
+                else {
+                    /**
+                     * If the remove flag is not marked as true, it implies
+                     * the deletion is successfully done by this call. Thus,
+                     * it deserves to set the prodRemoved to true.
+                     */
+                    it->second->remove = true;
                     prodRemoved = true;
                 }
             }
             else {
-                prodRemoved = false;
+                it->second->~RetxMetadata();
+                indexMetaMap.erase(it);
+                prodRemoved = true;
             }
         }
         else {
             prodRemoved = false;
         }
+    }
+    else {
+        prodRemoved = false;
     }
     return prodRemoved;
 }

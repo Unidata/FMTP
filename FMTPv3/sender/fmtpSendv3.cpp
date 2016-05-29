@@ -482,17 +482,18 @@ void fmtpSendv3::handleRetxReq(FmtpHeader* const   recvheader,
  *                        nothing is done.
  * @param[in] sock        The receiver's socket.
  */
-void fmtpSendv3::handleRetxEnd(FmtpHeader* const  recvheader,
-                                RetxMetadata* const retxMeta,
-                                const int           sock)
+void fmtpSendv3::handleRetxEnd(FmtpHeader*   const recvheader,
+                               RetxMetadata* const retxMeta,
+                               const int           sock)
 {
     if (retxMeta) {
         /**
-         * Remove the specific receiver out of the unfinished receiver
+         * Remove the specific receiver from the unfinished receiver
          * set. Only if the product is removed by clearUnfinishedSet(),
          * it returns a true value.
          */
-        if (sendMeta->clearUnfinishedSet(recvheader->prodindex, sock)) {
+        if (sendMeta->clearUnfinishedSet(recvheader->prodindex, sock,
+                                         tcpsend)) {
             /**
              * Only if the product is removed by clearUnfinishedSet()
              * since this receiver is the last one in the unfinished set,
