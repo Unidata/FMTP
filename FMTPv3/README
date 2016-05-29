@@ -201,8 +201,20 @@ sender is responsible for tracking the status of all receivers (e.g. which ones
 are offline). To do this, the sender makes use of the TCP keepalive probe
 packets. When the transmission goes into silence for a while, TCP keepalive
 will force a probe sent to connected receivers. The sender can then tell if
-any receiver has dropped offline by the replied ACK. If so, the sender
-propagates this finding to the application.
+any receiver has dropped offline by the replied ACK. If an offline is detected
+and it is not the last receiver in the multicast group, then the sender
+silently closes the receiver-retransmission thread and remove the socket from
+the connected list. Else if it is the last receiver, the sender throws an
+exception and terminates.
+
+In the silent case, the RetxMetadata still holds a copy of the offline socket.
+This could cause the sender to believe a receiver has not ACKed and waits until
+the timer expires. Also, when timer wakes up, a force EOP push to the unACKed
+receiver will fail due to the invalid socket and lead to exception. To solve
+this problem, in senderMetadata::clearUnfinishedSet() and notifyUnACKedRcvrs(),
+the sender compares the unfinRcvr set against the most recent connected socket
+list to find out the invalid offline receivers. And it takes action to erase
+them.
 
 Receiver verification:
 For security concerns, FMTP performs strict access control upon receivers
