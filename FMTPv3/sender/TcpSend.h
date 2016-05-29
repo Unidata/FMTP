@@ -56,7 +56,7 @@ public:
     int acceptConn();
     void dismantleConn(int sockfd);
     /** return the reference of a socket list */
-    const std::list<int>& getConnSockList();
+    const std::list<int> getConnSockList();
     int getMinPathMTU();
     unsigned short getPortNum();
     void Init(); /*!< start point that upper layer should call */

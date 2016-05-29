@@ -32,6 +32,8 @@
 #include "senderMetadata.h"
 #include "TcpSend.h"
 
+#include <algorithm>
+
 
 #ifndef NULL
     #define NULL 0
@@ -171,28 +173,40 @@ RetxMetadata* senderMetadata::getMetadata(uint32_t prodindex)
  * But either case, it looks the same from the sender's perspective. The
  * sender will retransmit an EOP via TCP to guarantee receivers know the
  * existance of a file, but cannot guarantee the successful delivery.
+ * A receiver might drop offline before timer wakes up, and the unfinished
+ * set is not updated. This could cause the sending EOP operation to fail
+ * due to a non-existing connection. This method checks if a connection is
+ * still valid before sending EOP.
  *
  * @param[in] prodindex         product index of the product
  * @param[in] header            the EOP message
  *
  * @throw std::runtime_error if TcpSend::send() fails.
  */
-void senderMetadata::notifyUnACKedRcvrs(uint32_t prodindex,
-                                        FmtpHeader* header)
+void senderMetadata::notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header,
+                                        TcpSend* tcpsend)
 {
     std::map<uint32_t, RetxMetadata*>::iterator it;
     std::set<int>::iterator sockit;
+    std::list<int> sklist;
+    std::list<int>::iterator sklit;
     std::unique_lock<std::mutex> lock(indexMetaMapLock);
+    /* socklist should not be empty */
+    sklist = tcpsend->getConnSockList();
     if ((it = indexMetaMap.find(prodindex)) != indexMetaMap.end()) {
         if (!it->second->unfinReceivers.empty()) {
             for (sockit = it->second->unfinReceivers.begin();
                  sockit != it->second->unfinReceivers.end(); ++sockit)
             {
-                int retval = TcpSend::send(*sockit, header, NULL, 0);
-                if (retval < 0) {
-                    throw std::runtime_error(
-                            "senderMetadata::notifyUnACKedRcvrs() "
-                            "TcpSend::sendData() error");
+                /* check if recvrs in RetxMetadata still exist */
+                sklit = std::find(sklist.begin(), sklist.end(), *sockit);
+                if (sklit != sklist.end()) {
+                    int retval = TcpSend::send(*sockit, header, NULL, 0);
+                    if (retval < 0) {
+                        throw std::runtime_error(
+                                "senderMetadata::notifyUnACKedRcvrs() "
+                                "TcpSend::sendData() error");
+                    }
                 }
             }
         }

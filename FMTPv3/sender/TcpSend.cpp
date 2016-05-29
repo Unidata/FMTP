@@ -210,13 +210,14 @@ void TcpSend::dismantleConn(int sockfd)
 
 /**
  * Accept incoming tcp connection requests and push them into the socket list.
- * Then return the current socket file descriptor for further use.
+ * Then return the current socket list.
  *
  * @param[in] none
  * @return    connSockList          connected socket list (a collection of
  */
-const std::list<int>& TcpSend::getConnSockList()
+const std::list<int> TcpSend::getConnSockList()
 {
+    std::unique_lock<std::mutex> lock(sockListMutex);
     return connSockList;
 }
 

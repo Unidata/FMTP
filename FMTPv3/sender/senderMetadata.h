@@ -43,6 +43,7 @@
 #include <set>
 
 #include "fmtpBase.h"
+#include "TcpSend.h"
 
 
 typedef std::chrono::high_resolution_clock HRclock;
@@ -105,7 +106,8 @@ public:
     void addRetxMetadata(RetxMetadata* ptrMeta);
     bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd);
     RetxMetadata* getMetadata(uint32_t prodindex);
-    void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header);
+    void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header,
+                            TcpSend* tcpsend);
     bool releaseMetadata(uint32_t prodindex);
     bool rmRetxMetadata(uint32_t prodindex);
 

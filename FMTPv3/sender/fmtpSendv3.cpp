@@ -613,6 +613,7 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
                 taskExit(e);
                 std::rethrow_exception(except);
             }
+            // TODO: notify timer not to wait for the offline receiver
             /* if not last receiver, silently exit */
             pthread_exit(NULL);
             // TODO: notify application a receiver went offline?
@@ -678,6 +679,7 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
                 taskExit(e);
                 std::rethrow_exception(except);
             }
+            // TODO: notify timer not to wait for the offline receiver
             /* if not last receiver, silently exit */
             pthread_exit(NULL);
             // TODO: notify application a receiver went offline?
@@ -1249,7 +1251,7 @@ void fmtpSendv3::timerThread()
         EOPmsg.payloadlen = 0;
         EOPmsg.flags      = htons(FMTP_RETX_EOP);
         /* notify all unACKed receivers with an EOP. */
-        sendMeta->notifyUnACKedRcvrs(prodindex, &EOPmsg);
+        sendMeta->notifyUnACKedRcvrs(prodindex, &EOPmsg, tcpsend);
 
         const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
         /**
