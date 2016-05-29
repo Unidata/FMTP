@@ -595,54 +595,92 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
     FmtpHeader recvheader;
 
     while(1) {
-        /** Receive the message from tcp connection and parse the header */
-        if (tcpsend->parseHeader(retxsockfd, &recvheader) < 0) {
-            throw std::runtime_error("fmtpSendv3::RunRetxThread() receive "
-                                     "header error");
+        /* Receive the message from tcp connection and parse the header */
+        int parsestate;
+        try {
+            parsestate = tcpsend->parseHeader(retxsockfd, &recvheader);
+        }
+        catch (const std::runtime_error& e) {
+            /**
+             * TcpSend::parseHeader() TcpBase::recvall() recv() returns -1,
+             * connection is broken.
+             */
+            close(retxsockfd);
+            tcpsend->rmSockInList(retxsockfd);
+            std::list<int> socklist = tcpsend->getConnSockList();
+            if (socklist.empty()) {
+                /* this is the last receiver, should rethrow exception to report */
+                taskExit(e);
+                std::rethrow_exception(except);
+            }
+            /* if not last receiver, silently exit */
+            pthread_exit(NULL);
+            // TODO: notify application a receiver went offline?
+        }
+        if (parsestate == 0) {
+            /* encountered EOF, header incomplete */
+            throw std::runtime_error("fmtpSendv3::RunRetxThread() parseHeader"
+                                     "error, incomplete header");
         }
 
         /* Acquires the product metadata as in exclusive use */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
 
-        if (recvheader.flags == FMTP_RETX_REQ) {
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(recvheader.prodindex);
-                debugmsg += ": RETX_REQ received";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-            handleRetxReq(&recvheader, retxMeta, retxsockfd);
+        try {
+            if (recvheader.flags == FMTP_RETX_REQ) {
+                #ifdef DEBUG2
+                    std::string debugmsg = "Product #" +
+                        std::to_string(recvheader.prodindex);
+                    debugmsg += ": RETX_REQ received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
+                #endif
+                handleRetxReq(&recvheader, retxMeta, retxsockfd);
+            }
+            else if (recvheader.flags == FMTP_RETX_END) {
+                #ifdef DEBUG2
+                    std::string debugmsg = "Product #" +
+                        std::to_string(recvheader.prodindex);
+                    debugmsg += ": RETX_END received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
+                #endif
+                handleRetxEnd(&recvheader, retxMeta, retxsockfd);
+            }
+            else if (recvheader.flags == FMTP_BOP_REQ) {
+                #ifdef DEBUG2
+                    std::string debugmsg = "Product #" +
+                        std::to_string(recvheader.prodindex);
+                    debugmsg += ": BOP_REQ received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
+                #endif
+                handleBopReq(&recvheader, retxMeta, retxsockfd);
+            }
+            else if (recvheader.flags == FMTP_EOP_REQ) {
+                #ifdef DEBUG2
+                    std::string debugmsg = "Product #" +
+                        std::to_string(recvheader.prodindex);
+                    debugmsg += ": EOP_REQ received";
+                    std::cout << debugmsg << std::endl;
+                    WriteToLog(debugmsg);
+                #endif
+                handleEopReq(&recvheader, retxMeta, retxsockfd);
+            }
         }
-        else if (recvheader.flags == FMTP_RETX_END) {
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(recvheader.prodindex);
-                debugmsg += ": RETX_END received";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-            handleRetxEnd(&recvheader, retxMeta, retxsockfd);
-        }
-        else if (recvheader.flags == FMTP_BOP_REQ) {
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(recvheader.prodindex);
-                debugmsg += ": BOP_REQ received";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-            handleBopReq(&recvheader, retxMeta, retxsockfd);
-        }
-        else if (recvheader.flags == FMTP_EOP_REQ) {
-            #ifdef DEBUG2
-                std::string debugmsg = "Product #" +
-                    std::to_string(recvheader.prodindex);
-                debugmsg += ": EOP_REQ received";
-                std::cout << debugmsg << std::endl;
-                WriteToLog(debugmsg);
-            #endif
-            handleEopReq(&recvheader, retxMeta, retxsockfd);
+        catch (const std::runtime_error& e) {
+            /* same as parseHeader(), if connection broken, take action */
+            close(retxsockfd);
+            tcpsend->rmSockInList(retxsockfd);
+            std::list<int> socklist = tcpsend->getConnSockList();
+            if (socklist.empty()) {
+                /* this is the last receiver, should rethrow exception to report */
+                taskExit(e);
+                std::rethrow_exception(except);
+            }
+            /* if not last receiver, silently exit */
+            pthread_exit(NULL);
+            // TODO: notify application a receiver went offline?
         }
 
         /* Releases the product metadata in exclusive use */
