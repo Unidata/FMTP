@@ -270,14 +270,6 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
 
 /**
- * Transfers a file stream.
- */
-void fmtpSendv3::sendProductStream()
-{
-}
-
-
-/**
  * Sets sending rate. The timer thread needs this link speed to calculate
  * the sleep time. It is an alternative solution to tc rate limiting.
  *
