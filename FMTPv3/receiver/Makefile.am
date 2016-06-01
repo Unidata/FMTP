@@ -9,6 +9,6 @@
 EXTRA_DIST		= Makefile_recv
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= TcpRecv.cpp TcpRecv.h fmtpRecvv3.cpp fmtpRecvv3.h \
-			  RecvProxy.h ProdBlockMNG.cpp ProdBlockMNG.h Measure.cpp \
+			  RecvProxy.h ProdSegMNG.cpp ProdSegMNG.h Measure.cpp \
 			  Measure.h
 lib_la_CPPFLAGS		= -I$(srcdir)/..
