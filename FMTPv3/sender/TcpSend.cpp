@@ -433,7 +433,7 @@ void TcpSend::updatePathMTU(int sockfd)
     int mtu = MIN_MTU;
 #ifdef IP_MTU
     socklen_t mtulen = sizeof(mtu);
-    getsockopt(sockfd, SOL_IP, IP_MTU, &mtu, &mtulen);
+    getsockopt(sockfd, IPPROTO_IP, IP_MTU, &mtu, &mtulen);
     if (mtu <= 0) {
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::updatePathMTU() error obtaining MTU");
