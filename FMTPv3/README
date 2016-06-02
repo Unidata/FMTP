@@ -153,7 +153,8 @@ constructor. The testSendApp has a built-in random sized product generator.
 It reads the plain text file (which contains a single column of product sizes)
 and parses that text file to extract each number as a size for a product. Then
 it will read from system's /dev/urandom to fill a buffer of certain size as the
-product to be sent.
+product to be sent. A sample input csv can be found at
+https://github.com/shawnsschen/CC-NIE-Toolbox/blob/master/GENI/day1NGRID_400min.csv
 
 To terminate the transmission, it is recommended to terminate the testRecvApp
 first, or the other receivers could be affected if testSendApp is terminated
