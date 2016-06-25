@@ -430,16 +430,17 @@ int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
  */
 void TcpSend::updatePathMTU(int sockfd)
 {
-    int mtu;
+    int mtu = MIN_MTU;
+#ifdef IP_MTU
     socklen_t mtulen = sizeof(mtu);
-    /* TODO: need to support multiple platforms */
-    getsockopt(sockfd, SOL_IP, IP_MTU, &mtu, &mtulen);
+    getsockopt(sockfd, IPPROTO_IP, IP_MTU, &mtu, &mtulen);
     if (mtu <= 0) {
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::updatePathMTU() error obtaining MTU");
     }
     /* force mtu to be at least MIN_MTU, cannot afford mtu to be too small */
     mtu = (mtu < MIN_MTU) ? MIN_MTU : mtu;
+#endif
     /* update pmtu with the newly joined mtu */
     if (mtu < pmtu) {
          pmtu = mtu;
