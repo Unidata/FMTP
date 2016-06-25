@@ -1429,6 +1429,8 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
                 std::to_string(tmpidx);
             debugmsg += ": Data block is missing. SeqNum = ";
             debugmsg += std::to_string(seqnum);
+            debugmsg += ", (merged) PayLen = ";
+            debugmsg += std::to_string(mostRecent - seqnum);
             debugmsg += ". Request retx.";
             std::cout << debugmsg << std::endl;
             WriteToLog(debugmsg);

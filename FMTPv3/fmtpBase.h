@@ -35,10 +35,10 @@
 #include <string.h>
 #include <strings.h>
 
-#define PRODNUM 207684
-//#define PRODNUM 500
+//#define PRODNUM 207684
+#define PRODNUM 20
 #define MODBASE PRODNUM
-#define EXPTRUN 10
+#define EXPTRUN 1
 
 /**
  * struct of Fmtp header

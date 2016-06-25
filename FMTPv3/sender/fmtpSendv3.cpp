@@ -782,6 +782,8 @@ void fmtpSendv3::retransmit(
                     std::to_string(tmpidx);
                 debugmsg += ": Data block (SeqNum = ";
                 debugmsg += std::to_string(start);
+                debugmsg += "), (PayLen = ";
+                debugmsg += std::to_string(payLen);
                 debugmsg += ") has been retransmitted";
                 std::cout << debugmsg << std::endl;
                 WriteToLog(debugmsg);
