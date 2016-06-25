@@ -1415,8 +1415,19 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
      */
     if (seqnum != mostRecent) {
         std::unique_lock<std::mutex> lock(msgQmutex);
+
+        for (; seqnum < mostRecent; seqnum += FMTP_DATA_LEN) {
+            pushMissingDataReq(prodindex, seqnum, FMTP_DATA_LEN);
+        }
+
+        // TODO: Merged RETX_REQ cannot be implemented so far, because
+        // current FMTP header has a limited payloadlen field of 16 bits.
+        // A merged RETX_REQ could have more than 65535 in payloadlen, the
+        // field thus needs to be upgraded to 32 bits. We will do this in
+        // the next version of FMTP.
+        //
         /* merged requests, multiple missing blocks in one request */
-        pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
+        // pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
 
         #ifdef MODBASE
             uint32_t tmpidx = prodindex % MODBASE;
