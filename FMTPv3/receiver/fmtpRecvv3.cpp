@@ -1410,6 +1410,24 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
 
         for (; seqnum < mostRecent; seqnum += FMTP_DATA_LEN) {
             pushMissingDataReq(prodindex, seqnum, FMTP_DATA_LEN);
+
+            #ifdef MODBASE
+                uint32_t tmpidx = prodindex % MODBASE;
+            #else
+                uint32_t tmpidx = prodindex;
+            #endif
+
+            #ifdef DEBUG2
+                std::string debugmsg = "[RETX REQ] Product #" +
+                    std::to_string(tmpidx);
+                debugmsg += ": Data block is missing. SeqNum = ";
+                debugmsg += std::to_string(seqnum);
+                debugmsg += ", PayLen = ";
+                debugmsg += std::to_string(mostRecent - seqnum);
+                debugmsg += ". Request retx.";
+                std::cout << debugmsg << std::endl;
+                WriteToLog(debugmsg);
+            #endif
         }
 
         // TODO: Merged RETX_REQ cannot be implemented so far, because
@@ -1420,24 +1438,6 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
         //
         /* merged requests, multiple missing blocks in one request */
         // pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
-
-        #ifdef MODBASE
-            uint32_t tmpidx = prodindex % MODBASE;
-        #else
-            uint32_t tmpidx = prodindex;
-        #endif
-
-        #ifdef DEBUG2
-            std::string debugmsg = "[RETX REQ] Product #" +
-                std::to_string(tmpidx);
-            debugmsg += ": Data block is missing. SeqNum = ";
-            debugmsg += std::to_string(seqnum);
-            debugmsg += ", PayLen = ";
-            debugmsg += std::to_string(mostRecent - seqnum);
-            debugmsg += ". Request retx.";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
 
         msgQfilled.notify_one();
     }
