@@ -1271,7 +1271,6 @@ bool fmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
 {
     std::unique_lock<std::mutex> lock(BOPSetMtx);
     bool rmsuccess = misBOPset.erase(prodindex);
-    int size = misBOPset.size();
     return rmsuccess;
 }
 
@@ -1301,7 +1300,34 @@ void fmtpRecvv3::retxEOPHandler(const FmtpHeader& header)
         WriteToLog(debugmsg);
     #endif
 
-    EOPHandler(header);
+    bool hasBOP = false;
+    {
+        std::unique_lock<std::mutex> lock(trackermtx);
+        if (trackermap.count(header.prodindex)) {
+            hasBOP = true;
+        }
+    }
+    if (hasBOP) {
+        EOPHandler(header);
+    }
+    else {
+        /**
+         * TODO: handle forced EOP
+         * If we see a RETX_EOP with no BOP received before, it is
+         * a forced EOP to avoid the silent loss of the last file
+         * in a file-stream. A straight forward way to handle this
+         * case is to call notify_of_missed_prod() and then increment
+         * prodidx_mcast so next time a new file comes in, this file
+         * will not be requested again. However, prodidx_mcast can
+         * only be accessed by multicast thread, updating it here
+         * could mess up the sequence of files on multicast.
+         * Also, what is the end of a file-stream. If a file arrives
+         * 30 min after the previous file (considered as end?), should
+         * we force an EOP for the previous file? I think this handling
+         * needs to be discussed in detail. Currently, the best way is
+         * to simply ignore the forced EOP.
+         */
+    }
 }
 
 
