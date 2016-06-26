@@ -1173,14 +1173,11 @@ void fmtpRecvv3::retxHandler()
         else if (header.flags == FMTP_RETX_REJ) {
             const bool hadBop = rmMisBOPinSet(header.prodindex);
             /*
-             * if associated bitmap exists, remove the bitmap. Also avoid
-             * duplicated notification if the product's bitmap has
+             * if associated segmap exists, remove the segmap. Also avoid
+             * duplicated notification if the product's segmap has
              * already been removed.
-             * Short-circuit evaluation guarantees the block map will not
-             * be removed if it is complete.
              */
-            if ((!pSegMNG->isComplete(header.prodindex) &&
-                pSegMNG->rmProd(header.prodindex)) || hadBop) {
+            if (pSegMNG->rmProd(header.prodindex) || hadBop) {
                 #ifdef MODBASE
                     uint32_t tmpidx = header.prodindex % MODBASE;
                 #else
@@ -1195,15 +1192,10 @@ void fmtpRecvv3::retxHandler()
                     WriteToLog(debugmsg);
                 #endif
 
-                bool inTracker;
-                {
-                    std::unique_lock<std::mutex> lock(trackermtx);
-                    inTracker = trackermap.count(header.prodindex);
-                }
                 if (notifier) {
                     notifier->notify_of_missed_prod(header.prodindex);
                 }
-                else if (inTracker) {
+                else {
                     /**
                      * Updates the most recently acknowledged product and
                      * notifies a dummy notification handler (getNotify()).
@@ -1440,7 +1432,7 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
                 std::to_string(tmpidx);
             debugmsg += ": Data block is missing. SeqNum = ";
             debugmsg += std::to_string(seqnum);
-            debugmsg += ", (merged) PayLen = ";
+            debugmsg += ", PayLen = ";
             debugmsg += std::to_string(mostRecent - seqnum);
             debugmsg += ". Request retx.";
             std::cout << debugmsg << std::endl;
