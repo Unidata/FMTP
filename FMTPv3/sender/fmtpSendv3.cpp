@@ -462,6 +462,14 @@ void fmtpSendv3::handleRetxReq(FmtpHeader* const   recvheader,
 {
     if (retxMeta) {
         retransmit(recvheader, retxMeta, sock);
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(recvheader->prodindex);
+            debugmsg += ": RETX_REQ accepted, RETX_DATA sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
     else {
         /**
@@ -469,6 +477,14 @@ void fmtpSendv3::handleRetxReq(FmtpHeader* const   recvheader,
          * the per-product timer thread.
          */
         rejRetxReq(recvheader->prodindex, sock);
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(recvheader->prodindex);
+            debugmsg += ": RETX_REQ rejected, RETX_REJ sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
 }
 
@@ -535,6 +551,14 @@ void fmtpSendv3::handleBopReq(FmtpHeader* const  recvheader,
 {
     if (retxMeta) {
         retransBOP(recvheader, retxMeta, sock);
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(recvheader->prodindex);
+            debugmsg += ": BOP_REQ accepted, RETX_BOP sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
     else {
         /**
@@ -542,6 +566,14 @@ void fmtpSendv3::handleBopReq(FmtpHeader* const  recvheader,
          * the per-product timer thread.
          */
         rejRetxReq(recvheader->prodindex, sock);
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(recvheader->prodindex);
+            debugmsg += ": BOP_REQ rejected, RETX_REJ sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
 }
 
@@ -561,6 +593,14 @@ void fmtpSendv3::handleEopReq(FmtpHeader* const  recvheader,
 {
     if (retxMeta) {
         retransEOP(recvheader, sock);
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(recvheader->prodindex);
+            debugmsg += ": EOP_REQ accepted, RETX_EOP sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
     else {
         /**
@@ -568,6 +608,14 @@ void fmtpSendv3::handleEopReq(FmtpHeader* const  recvheader,
          * the per-product timer thread.
          */
         rejRetxReq(recvheader->prodindex, sock);
+
+        #ifdef DEBUG2
+            std::string debugmsg = "Product #" +
+                std::to_string(recvheader->prodindex);
+            debugmsg += ": EOP_REQ rejected, RETX_REJ sent.";
+            std::cout << debugmsg << std::endl;
+            WriteToLog(debugmsg);
+        #endif
     }
 }
 
