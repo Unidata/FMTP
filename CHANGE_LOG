@@ -1,3 +1,9 @@
+1.0.1
+    Added comments for tcpAddr and tcpPort in fmtpRecvv3.h per Malathi's request. 
+        These are the sender-side IP address and TCP port number to which a receiver should connect. 
+        Since the TCP connection used by FMTP is over the multipoint VLAN, 
+        the IP address is the private IP address at the sender for the VLAN. 
+
 1.0.0
     Initial release.
     Add Ryan to Github repository as contributor.

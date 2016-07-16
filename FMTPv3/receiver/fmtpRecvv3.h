@@ -252,8 +252,9 @@ private:
     void stopJoinRetxHandler();
     void stopJoinTimerThread();
     void stopJoinMcastHandler();
-
+    /* Sender VLAN Unique IP address */
     std::string             tcpAddr;
+    /* Sender FMTP TCP Connection port number */
     unsigned short          tcpPort;
     std::string             mcastAddr;
     unsigned short          mcastPort;
