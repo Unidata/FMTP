@@ -96,7 +96,7 @@ fmtpRecvv3::fmtpRecvv3(
     timer_t(),
     //linkspeed(0),
     /* Coverity Scan #1: Issue #2. Initialize notifyprodidx to 0 for product index */
-    notifyprodidxt(0),
+    notifyprodidx(0),
     linkspeed(20000000),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
     mcastHandlerCanceled(ATOMIC_FLAG_INIT),
