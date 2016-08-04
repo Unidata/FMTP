@@ -93,7 +93,10 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     coor_t(),
     timer_t(),
     tsnd(tsnd),
-    txdone(false)
+    txdone(false),
+    /* Coverity Scan #1: Fix #1: Initialize notifyprodidx, suppressor to 0 as product index*/
+    notifyprodidx(0),
+    suppressor(0)
 {
 }
 

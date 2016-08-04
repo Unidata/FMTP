@@ -95,6 +95,8 @@ fmtpRecvv3::fmtpRecvv3(
     mcast_t(),
     timer_t(),
     //linkspeed(0),
+    /* Coverity Scan #1: Issue #2. Initialize notifyprodidx to 0 for product index */
+    notifyprodidxt(0),
     linkspeed(20000000),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
     mcastHandlerCanceled(ATOMIC_FLAG_INIT),
@@ -719,7 +721,14 @@ void fmtpRecvv3::mcastHandler()
     while(1)
     {
         FmtpHeader   header;
-        const ssize_t nbytes = recv(mcastSock, &header, sizeof(header),
+        /* 
+         * Coverity Scan #1: Issue 5: Medium risk, coverity interprets recv() as "tainting" header object. 
+         * If my understanding is correct, Coverity sees the recv() changing the header object as an error,
+         * however this is simply the way that the recv() function works (a limitation of C++'s inability to return
+         * more than one return value).
+         */
+        
+	const ssize_t nbytes = recv(mcastSock, &header, sizeof(header),
                                     MSG_PEEK);
         /*
          * Allow the current thread to be cancelled only when it is likely
@@ -934,7 +943,10 @@ void fmtpRecvv3::retxHandler()
         }
         else {
             /* TcpRecv::recvData() will return requested number of bytes */
-            decodeHeader(pktHead, header);
+            /*This should initialize header: Check Coverity check #3 below. 
+ 	     * Coverity only complained about header being uninitialized there. 
+ 	     */
+	    decodeHeader(pktHead, header);
         }
 
         /* dynamically creates a buffer on stack based on payload size */
@@ -1167,7 +1179,11 @@ void fmtpRecvv3::retxHandler()
                 measure->setRetxClock(header.prodindex);
                 measure->setEOPmiss(header.prodindex);
             #endif
-
+            /*
+ 	     * Coverity Scan #1: Issue 3: Priority supposedly high, claims header is uninitialized.
+ 	     * Header should be initialized in the decodeHeader function called above. Ignore for now..
+ 	     * 8/3/2016 - Ryan Aubrey
+ 	     */
             retxEOPHandler(header);
         }
         else if (header.flags == FMTP_RETX_REJ) {
@@ -2041,8 +2057,19 @@ void fmtpRecvv3::WriteToLog(const std::string& content)
     char buf[30];
     /* create logs  directory if it doesn't exist */
     struct stat st = {0};
+    /* 
+     * Coverity Scan #1: Issue 4: Low risk, race condition on this check if the logs directory yet exists.
+     * For now, we are ignoring this known issue. The cost of locking on this simple check would slow the very crucial
+     * logging process down too much. Make note in future scans - 8/3/2016 Ryan Aubrey.
+     */
     if (stat("logs", &st) == -1) {
-        mkdir("logs", 0755);
+        /*
+ 	 * Coverity Scan #1: Fix #6: Handle mkdir possible failure return value of -1. 
+ 	 * This could fail because of lack of permissions.
+ 	 */
+	if (mkdir("logs", 0755) < 0){
+		throw std::runtime_error("fmtpRecvv3::WriteToLog(): unable to create logs directory. This could be a permissions issue.");	
+	}
     }
     /* allocate a large enough buffer in case some long hostnames */
     char hostname[1024];
