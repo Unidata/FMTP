@@ -718,6 +718,7 @@ void fmtpRecvv3::joinGroup(
  */
 void fmtpRecvv3::mcastHandler()
 {
+    static bool started = false; // Has this method been called?
     while(1)
     {
         FmtpHeader   header;
@@ -749,6 +750,11 @@ void fmtpRecvv3::mcastHandler()
         }
 
         decodeHeader(header);
+
+        if (!started) {
+            prodidx_mcast = header.prodindex;
+            started = true;
+        }
 
         if (header.flags == FMTP_BOP) {
             mcastBOPHandler(header);
